@@ -1123,15 +1123,9 @@ function emailQuote() {
 // ============================================================
 // AI CHAT
 // ============================================================
-const CHAT_SYSTEM = `You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque (17630 Preston Rd, Dallas TX 75252, 214-514-8684, blusbarbeque.com).
-
-Current pipeline: ${JSON.stringify(leads)}
-
-Menu highlights: Brisket $31.99/lb, Pulled Pork $22.99/lb, Sausage $22.99/lb, Turkey $28/lb, Burnt Ends $31.99/lb. Buffet packages: 2-meat $19.99/person, 3-meat $23.99/person, 4-meat $29.99/person. Sides: Mac & Cheese half pan $55, Potato Salad $45, Beans $45. Delivery minimum $50. Service charge typically 0-18% depending on service type and budget.
-
-Zach's email style: Warm, concise, friendly. Opens "Hi [Name],", ends "Thanks, Zach / Blu's Barbeque / 214-514-8684". Never overly salesy. Mentions "true Texas barbecue" occasionally.
-
-You can help with: drafting emails, quote advice, pipeline questions, menu pricing, service charge recommendations, analyzing uploaded files, and answering business questions. Be concise and practical.`;
+function getChatSystem() {
+  return "You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque (17630 Preston Rd, Dallas TX 75252, 214-514-8684, blusbarbeque.com).\n\nCurrent pipeline: " + JSON.stringify(leads) + "\n\nMenu highlights: Brisket $31.99/lb, Pulled Pork $22.99/lb, Sausage $22.99/lb, Turkey $28/lb, Burnt Ends $31.99/lb. Buffet packages: 2-meat $19.99/person, 3-meat $23.99/person, 4-meat $29.99/person. Sides: Mac & Cheese half pan $55, Potato Salad $45, Beans $45. Delivery minimum $50. Service charge typically 0-18% depending on service type and budget.\n\nZach's email style: Warm, concise, friendly. Opens 'Hi [Name],', ends 'Thanks, Zach / Blu's Barbeque / 214-514-8684'. Never overly salesy. Mentions 'true Texas barbecue' occasionally.\n\nYou can help with: drafting emails, quote advice, pipeline questions, menu pricing, service charge recommendations, analyzing uploaded files, and answering business questions. Be concise and practical.";
+}
 
 async function sendChat() {
   const input = document.getElementById('chat-input');
@@ -1153,7 +1147,7 @@ async function sendChat() {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1500,
-        system: CHAT_SYSTEM,
+        system: getChatSystem(),
         messages: chatHistory
       })
     });
@@ -1164,7 +1158,7 @@ async function sendChat() {
     chatHistory.push({ role: 'assistant', content: reply });
   } catch(e) {
     removeTyping(typingId);
-    appendChatMsg('ai', 'Could not connect to AI. Please check your internet connection and try again.');
+    appendChatMsg('ai', 'Could not connect to AI. Error: ' + e.message + '. Please check that your ANTHROPIC_API_KEY is set in Vercel environment variables and the project has been redeployed.');
   }
 }
 
@@ -1236,7 +1230,7 @@ async function sendImageToChat(base64, mediaType, filename) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1500,
-        system: CHAT_SYSTEM,
+        system: getChatSystem(),
         messages: [...chatHistory, {
           role: 'user',
           content: [
@@ -1253,7 +1247,7 @@ async function sendImageToChat(base64, mediaType, filename) {
     chatHistory.push({ role: 'assistant', content: reply });
   } catch(e) {
     removeTyping(typingId);
-    appendChatMsg('ai', 'Could not analyze image. Please try again.');
+    appendChatMsg('ai', 'Could not analyze image. Error: ' + e.message);
   }
 }
 
