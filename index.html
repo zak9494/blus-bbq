@@ -345,15 +345,15 @@ tr:hover td { background: var(--surface2); }
         <div class="alerts-section" id="alerts-section">
           <div class="alert alert-urgent">
             <span>⚑ Sherika Rodgers — event Apr 19, no payment received</span>
-            <button onclick="openFollowup(3)" style="font-size:11px;padding:4px 10px;border-radius:4px;border:0.5px solid rgba(192,57,43,0.4);background:rgba(192,57,43,0.2);color:#f5a5a0;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;white-space:nowrap;">✉ Draft &amp; Review →</button>
+            <span class="alert-action" onclick="openFollowup(3)">Send follow-up →</span>
           </div>
           <div class="alert alert-warn">
             <span>⚑ Audrea Cowan — no response in 3+ days</span>
-            <button onclick="openFollowup(5)" style="font-size:11px;padding:4px 10px;border-radius:4px;border:0.5px solid rgba(212,130,58,0.4);background:rgba(212,130,58,0.2);color:#f0c080;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;white-space:nowrap;">✉ Draft &amp; Review →</button>
+            <span class="alert-action" onclick="openFollowup(5)">Draft email →</span>
           </div>
           <div class="alert alert-warn">
             <span>⚑ Danielle Woods — quote sent, awaiting reply</span>
-            <button onclick="openFollowup(1)" style="font-size:11px;padding:4px 10px;border-radius:4px;border:0.5px solid rgba(212,130,58,0.4);background:rgba(212,130,58,0.2);color:#f0c080;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;white-space:nowrap;">✉ Draft &amp; Review →</button>
+            <span class="alert-action" onclick="openFollowup(1)">Draft email →</span>
           </div>
         </div>
 
@@ -563,7 +563,7 @@ tr:hover td { background: var(--surface2); }
           </div>
         </div>
         <div class="topbar-actions">
-          <button class="btn" onclick="showPage('pipeline')" style="font-size:18px;padding:4px 12px;line-height:1;" title="Close AI Assistant">&#x2715;</button>
+          <button class="btn" onclick="showPage('pipeline')" style="font-size:20px;padding:2px 12px;line-height:1;" title="Back to Pipeline">&times;</button>
         </div>
       </div>
       <div class="content" style="padding:16px 24px; height:calc(100vh - 65px);">
@@ -711,8 +711,7 @@ tr:hover td { background: var(--surface2); }
     <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="fu-body" rows="10"></textarea></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('followup-modal')">Cancel</button>
-      <button class="btn" onclick="copyFollowupToClipboard()" style="color:#80b4e8;border-color:var(--blue-border);">Copy Email</button>
-      <button class="btn btn-primary" onclick="sendFollowupEmail()">&#10003; Approve &amp; Send via Gmail</button>
+      <button class="btn btn-primary" onclick="sendFollowupEmail()">Send via Gmail →</button>
     </div>
   </div>
 </div>
@@ -847,16 +846,10 @@ function renderKanban() {
         <span class="k-count">${colLeads.length}</span>
       </div>
       ${colLeads.map(l => `
-        <div class="k-card ${l.followup && status!=='booked' ? 'urgent':''}">
-          <div class="k-name" onclick="openEditLead(${l.id})" style="cursor:pointer">${l.name}</div>
+        <div class="k-card ${l.followup && status!=='booked' ? 'urgent':''}" onclick="openEditLead(${l.id})">
+          <div class="k-name">${l.name}</div>
           <div class="k-meta">${l.guests ? l.guests+' guests · ':'' }${l.eventDate || 'Date TBD'}</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
-            <span class="k-badge ${STATUS_BADGE[l.status]}">${STATUS_LABELS[l.status]}</span>
-            <div style="display:flex;gap:4px;">
-              <button onclick="openFollowup(${l.id})" style="font-size:10px;padding:3px 7px;border-radius:4px;border:0.5px solid var(--blue-border);background:var(--blue-bg);color:#80b4e8;cursor:pointer;font-family:DM Sans,sans-serif;" title="Draft follow-up email">✉ Email</button>
-              <button onclick="openEditLead(${l.id})" style="font-size:10px;padding:3px 7px;border-radius:4px;border:0.5px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-family:DM Sans,sans-serif;" title="Edit lead">Edit</button>
-            </div>
-          </div>
+          <span class="k-badge ${STATUS_BADGE[l.status]}">${STATUS_LABELS[l.status]}</span>
         </div>`).join('')}
     </div>`;
   }).join('');
@@ -1123,9 +1116,15 @@ function emailQuote() {
 // ============================================================
 // AI CHAT
 // ============================================================
-function getChatSystem() {
-  return "You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque (17630 Preston Rd, Dallas TX 75252, 214-514-8684, blusbarbeque.com).\n\nCurrent pipeline: " + JSON.stringify(leads) + "\n\nMenu highlights: Brisket $31.99/lb, Pulled Pork $22.99/lb, Sausage $22.99/lb, Turkey $28/lb, Burnt Ends $31.99/lb. Buffet packages: 2-meat $19.99/person, 3-meat $23.99/person, 4-meat $29.99/person. Sides: Mac & Cheese half pan $55, Potato Salad $45, Beans $45. Delivery minimum $50. Service charge typically 0-18% depending on service type and budget.\n\nZach's email style: Warm, concise, friendly. Opens 'Hi [Name],', ends 'Thanks, Zach / Blu's Barbeque / 214-514-8684'. Never overly salesy. Mentions 'true Texas barbecue' occasionally.\n\nYou can help with: drafting emails, quote advice, pipeline questions, menu pricing, service charge recommendations, analyzing uploaded files, and answering business questions. Be concise and practical.";
-}
+const CHAT_SYSTEM = `You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque (17630 Preston Rd, Dallas TX 75252, 214-514-8684, blusbarbeque.com).
+
+Current pipeline: ${JSON.stringify(leads)}
+
+Menu highlights: Brisket $31.99/lb, Pulled Pork $22.99/lb, Sausage $22.99/lb, Turkey $28/lb, Burnt Ends $31.99/lb. Buffet packages: 2-meat $19.99/person, 3-meat $23.99/person, 4-meat $29.99/person. Sides: Mac & Cheese half pan $55, Potato Salad $45, Beans $45. Delivery minimum $50. Service charge typically 0-18% depending on service type and budget.
+
+Zach's email style: Warm, concise, friendly. Opens "Hi [Name],", ends "Thanks, Zach / Blu's Barbeque / 214-514-8684". Never overly salesy. Mentions "true Texas barbecue" occasionally.
+
+You can help with: drafting emails, quote advice, pipeline questions, menu pricing, service charge recommendations, analyzing uploaded files, and answering business questions. Be concise and practical.`;
 
 async function sendChat() {
   const input = document.getElementById('chat-input');
@@ -1147,7 +1146,7 @@ async function sendChat() {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1500,
-        system: getChatSystem(),
+        system: CHAT_SYSTEM,
         messages: chatHistory
       })
     });
@@ -1158,7 +1157,7 @@ async function sendChat() {
     chatHistory.push({ role: 'assistant', content: reply });
   } catch(e) {
     removeTyping(typingId);
-    appendChatMsg('ai', 'Could not connect to AI. Error: ' + e.message + '. Please check that your ANTHROPIC_API_KEY is set in Vercel environment variables and the project has been redeployed.');
+    appendChatMsg('ai', 'Could not connect to AI. Please check your internet connection and try again.');
   }
 }
 
@@ -1230,7 +1229,7 @@ async function sendImageToChat(base64, mediaType, filename) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1500,
-        system: getChatSystem(),
+        system: CHAT_SYSTEM,
         messages: [...chatHistory, {
           role: 'user',
           content: [
@@ -1247,7 +1246,7 @@ async function sendImageToChat(base64, mediaType, filename) {
     chatHistory.push({ role: 'assistant', content: reply });
   } catch(e) {
     removeTyping(typingId);
-    appendChatMsg('ai', 'Could not analyze image. Error: ' + e.message);
+    appendChatMsg('ai', 'Could not analyze image. Please try again.');
   }
 }
 
@@ -1372,17 +1371,6 @@ window.sendPrompt = function(msg) {
 };
 
 checkGmailStatus();
-
-function copyFollowupToClipboard() {
-  const body = document.getElementById('fu-body').value;
-  const subject = document.getElementById('fu-subject').value;
-  const text = 'Subject: ' + subject + '\n\n' + body;
-  navigator.clipboard.writeText(text).then(() => {
-    showToast('Email copied to clipboard!');
-  }).catch(() => {
-    showToast('Could not copy — please select and copy manually.');
-  });
-}
 
 window.markSent = function(id) {
   const l = leads.find(x => x.id === id);
