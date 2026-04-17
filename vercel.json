@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "routes": [
+    { "src": "/api/chat", "dest": "/api/chat.js" },
+    { "src": "/api/auth/gmail", "dest": "/api/auth/gmail.js" },
+    { "src": "/api/auth/callback", "dest": "/api/auth/callback.js" },
+    { "src": "/api/gmail/send", "dest": "/api/gmail/send.js" }
+  ]
+}

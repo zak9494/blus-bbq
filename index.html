@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blu's BBQ — Operations Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0e0d;
+  --surface: #1a1816;
+  --surface2: #242220;
+  --surface3: #2e2b28;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0ede8;
+  --text2: #9a9490;
+  --text3: #5e5a56;
+  --red: #c0392b;
+  --red-light: #e74c3c;
+  --red-bg: rgba(192,57,43,0.15);
+  --red-border: rgba(192,57,43,0.3);
+  --amber: #d4823a;
+  --amber-bg: rgba(212,130,58,0.12);
+  --amber-border: rgba(212,130,58,0.3);
+  --green: #4a9e6b;
+  --green-bg: rgba(74,158,107,0.12);
+  --green-border: rgba(74,158,107,0.3);
+  --blue: #4a7fb5;
+  --blue-bg: rgba(74,127,181,0.12);
+  --blue-border: rgba(74,127,181,0.3);
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.5; overflow-x: hidden; }
+h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
+
+/* LAYOUT */
+.app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.main { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid var(--border); }
+.sidebar-logo img { width: 110px; filter: invert(1); opacity: 0.9; }
+.sidebar-tagline { font-size: 10px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 6px; }
+.nav-section-label { padding: 16px 18px 6px; font-size: 10px; color: var(--text3); letter-spacing: 0.12em; text-transform: uppercase; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 18px; cursor: pointer; color: var(--text2); font-size: 13px; transition: all 0.15s; border-left: 2px solid transparent; }
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--surface2); color: var(--text); border-left-color: var(--red); }
+.nav-item.disabled { opacity: 0.35; cursor: not-allowed; }
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot-red { background: var(--red-light); }
+.dot-amber { background: var(--amber); }
+.dot-green { background: var(--green); }
+.dot-blue { background: var(--blue); }
+.dot-gray { background: var(--text3); }
+.sidebar-footer { margin-top: auto; padding: 14px 18px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text3); }
+
+/* TOPBAR */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10; }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.topbar-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.05em; }
+.topbar-sub { font-size: 12px; color: var(--text3); }
+.topbar-actions { display: flex; gap: 8px; align-items: center; }
+
+/* BUTTONS */
+.btn { padding: 7px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: transparent; color: var(--text2); font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+.btn-primary { background: var(--red); border-color: var(--red); color: #fff; font-weight: 500; }
+.btn-primary:hover { background: var(--red-light); border-color: var(--red-light); }
+.btn-ghost { border: none; background: transparent; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* CONTENT */
+.content { padding: 24px; flex: 1; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* STATS ROW */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+.stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+.stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 0.04em; line-height: 1; }
+.stat-val.red { color: var(--red-light); }
+.stat-val.amber { color: var(--amber); }
+.stat-val.green { color: var(--green); }
+.stat-val.white { color: var(--text); }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* ALERTS */
+.alert { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 8px; font-size: 12px; gap: 12px; }
+.alert-urgent { background: var(--red-bg); border: 1px solid var(--red-border); color: #f5a5a0; }
+.alert-warn { background: var(--amber-bg); border: 1px solid var(--amber-border); color: #f0c080; }
+.alert-action { font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; opacity: 0.9; }
+.alert-action:hover { opacity: 1; }
+.alerts-section { margin-bottom: 20px; }
+
+/* KANBAN */
+.kanban { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+.k-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; min-height: 200px; }
+.k-col-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.k-col-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); }
+.k-count { background: var(--surface3); border-radius: 99px; padding: 1px 7px; font-size: 11px; color: var(--text2); }
+.k-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s; }
+.k-card:hover { border-color: var(--border2); background: var(--surface3); }
+.k-card.urgent { border-color: var(--red-border); }
+.k-name { font-weight: 500; font-size: 13px; margin-bottom: 2px; }
+.k-meta { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+.k-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; letter-spacing: 0.04em; }
+.badge-new { background: var(--blue-bg); color: #80b4e8; border: 1px solid var(--blue-border); }
+.badge-quoted { background: var(--amber-bg); color: #e0a060; border: 1px solid var(--amber-border); }
+.badge-followup { background: var(--red-bg); color: #e09090; border: 1px solid var(--red-border); }
+.badge-booked { background: var(--green-bg); color: #80c898; border: 1px solid var(--green-border); }
+.badge-lost { background: var(--surface3); color: var(--text3); border: 1px solid var(--border); }
+
+/* SECTION HEADER */
+.section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.section-title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 0.05em; color: var(--text2); }
+
+/* TABS */
+.tabs { display: flex; gap: 0; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+.tab { padding: 8px 18px; font-size: 13px; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+.tab:hover { color: var(--text2); }
+.tab.active { color: var(--text); border-bottom-color: var(--red); font-weight: 500; }
+
+/* QUOTE BUILDER */
+.quote-layout { display: grid; grid-template-columns: 1fr 300px; gap: 16px; }
+.quote-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.quote-preview { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
+.form-input { width: 100%; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; transition: border 0.15s; }
+.form-input:focus { outline: none; border-color: var(--red); }
+.form-select { width: 100%; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+/* QUOTE LINE ITEMS */
+.quote-line { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.quote-line:last-child { border-bottom: none; }
+.q-item-name { color: var(--text2); }
+.q-item-price { font-weight: 500; color: var(--text); }
+.q-item-price.waived { color: var(--green); font-size: 11px; }
+.quote-total-row { display: flex; justify-content: space-between; padding: 12px 0 0; font-size: 15px; font-weight: 600; border-top: 1px solid var(--border2); margin-top: 4px; }
+.charge-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
+.charge-pct-input { width: 60px; padding: 4px 8px; background: var(--surface3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--amber); font-size: 12px; font-family: 'DM Sans', sans-serif; text-align: center; }
+.ai-suggestion { background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 11px; color: #e0a060; margin-bottom: 10px; display: none; }
+.ai-suggestion.show { display: block; }
+
+/* MENU PICKER */
+.menu-section { margin-bottom: 14px; }
+.menu-section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.menu-items-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.menu-item-check { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: var(--radius-sm); cursor: pointer; transition: background 0.1s; }
+.menu-item-check:hover { background: var(--surface3); }
+.menu-item-check input { accent-color: var(--red); }
+.menu-item-label { font-size: 12px; color: var(--text2); flex: 1; }
+.menu-item-price { font-size: 11px; color: var(--text3); }
+
+/* TOAST BUTTON */
+.toast-send-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: var(--green-bg); border: 1px solid var(--green-border); border-radius: var(--radius-sm); color: #80c898; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 14px; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+.toast-send-btn:hover { background: rgba(74,158,107,0.2); }
+.pdf-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 9px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text2); font-size: 12px; cursor: pointer; margin-top: 8px; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+.pdf-btn:hover { background: var(--surface3); color: var(--text); }
+
+/* AI CHAT */
+.chat-layout { display: grid; grid-template-columns: 1fr 340px; gap: 16px; height: calc(100vh - 120px); }
+.chat-main { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.chat-msg { display: flex; gap: 10px; max-width: 85%; }
+.chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+.chat-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; color: var(--text2); }
+.chat-avatar.ai { background: var(--red-bg); border-color: var(--red-border); color: #e09090; }
+.chat-bubble { padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.6; }
+.chat-msg.ai .chat-bubble { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 2px 10px 10px 10px; }
+.chat-msg.user .chat-bubble { background: var(--red); color: #fff; border-radius: 10px 2px 10px 10px; }
+.chat-input-row { display: flex; gap: 8px; padding: 14px; border-top: 1px solid var(--border); align-items: flex-end; }
+.chat-textarea { flex: 1; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; resize: none; min-height: 38px; max-height: 120px; transition: border 0.15s; }
+.chat-textarea:focus { outline: none; border-color: var(--red); }
+.chat-file-btn { padding: 8px 10px; background: var(--surface3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text2); cursor: pointer; font-size: 16px; transition: all 0.15s; }
+.chat-file-btn:hover { background: var(--surface2); color: var(--text); }
+.chat-send-btn { padding: 8px 16px; background: var(--red); border: none; border-radius: var(--radius-sm); color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
+.chat-send-btn:hover { background: var(--red-light); }
+.chat-sidebar-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; overflow-y: auto; }
+.chat-panel-title { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 0.05em; margin-bottom: 12px; color: var(--text2); }
+.quick-action { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; cursor: pointer; transition: all 0.15s; }
+.quick-action:hover { background: var(--surface3); border-color: var(--border2); }
+.qa-icon { font-size: 16px; width: 20px; text-align: center; }
+.qa-text { font-size: 12px; color: var(--text2); line-height: 1.3; }
+.qa-text strong { display: block; color: var(--text); font-size: 12px; font-weight: 500; }
+.file-upload-area { border: 1px dashed var(--border2); border-radius: var(--radius-sm); padding: 16px; text-align: center; margin-top: 12px; cursor: pointer; transition: all 0.15s; }
+.file-upload-area:hover { border-color: var(--red-border); background: var(--red-bg); }
+.file-upload-area input { display: none; }
+.file-upload-label { font-size: 12px; color: var(--text3); }
+.file-upload-label strong { display: block; color: var(--text2); margin-bottom: 4px; font-size: 13px; }
+.uploaded-file { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--surface2); border: 1px solid var(--green-border); border-radius: var(--radius-sm); margin-top: 6px; font-size: 12px; color: #80c898; }
+
+/* LEADS TABLE */
+.leads-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { text-align: left; padding: 10px 14px; color: var(--text3); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); background: var(--surface2); }
+td { padding: 11px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface2); }
+.td-name { font-weight: 500; }
+.td-email { color: var(--text3); font-size: 11px; }
+.td-actions { display: flex; gap: 5px; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
+.modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.05em; margin-bottom: 4px; }
+.modal-sub { font-size: 12px; color: var(--text3); margin-bottom: 20px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.meta-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--surface3); border: 1px solid var(--border); border-radius: 99px; padding: 3px 10px; font-size: 11px; color: var(--text2); margin-right: 6px; margin-bottom: 8px; }
+
+/* NOTIFICATION BADGE */
+.notif-badge { background: var(--red); color: #fff; border-radius: 99px; padding: 1px 6px; font-size: 10px; font-weight: 700; margin-left: auto; }
+
+/* TYPING INDICATOR */
+.typing { display: flex; gap: 4px; padding: 8px 12px; }
+.typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); animation: bounce 1.2s infinite; }
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .stats-row { grid-template-columns: repeat(2,1fr); }
+  .kanban { grid-template-columns: 1fr 1fr; }
+  .quote-layout { grid-template-columns: 1fr; }
+  .chat-layout { grid-template-columns: 1fr; height: auto; }
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+/* EMPTY STATE */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text3); }
+.empty-state-title { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 0.05em; color: var(--text2); margin-bottom: 8px; }
+
+/* COMING SOON */
+.coming-soon { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; text-align: center; gap: 12px; }
+.coming-soon-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 99px; padding: 4px 14px; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; }
+.coming-soon-title { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 0.05em; color: var(--text2); }
+.coming-soon-sub { font-size: 13px; color: var(--text3); max-width: 300px; }
+
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="Black_Logo.png" alt="Blu's Barbeque" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+      <div style="display:none; font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.05em; color:var(--text);">Blu's Barbeque</div>
+      <div class="sidebar-tagline">Operations Dashboard</div>
+    </div>
+
+    <div class="nav-section-label">Catering</div>
+    <div class="nav-item active" onclick="showPage('pipeline')"><span class="nav-dot dot-red"></span>Pipeline <span class="notif-badge" id="notif-badge">2</span></div>
+    <div class="nav-item" onclick="showPage('quotes')"><span class="nav-dot dot-amber"></span>Quote Builder</div>
+    <div class="nav-item disabled"><span class="nav-dot dot-green"></span>Invoices</div>
+    <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Outbound Leads</div>
+
+    <div class="nav-section-label">Restaurant</div>
+    <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Task Monitor</div>
+    <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Schedule</div>
+    <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Sales & Trends</div>
+
+    <div class="nav-section-label">Marketing</div>
+    <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Social Media</div>
+    <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Reviews</div>
+    <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>SMS / Email</div>
+
+    <div class="nav-section-label">AI Assistant</div>
+    <div class="nav-item" onclick="showPage('ai')"><span class="nav-dot dot-blue"></span>AI Chat</div>
+
+    <div class="nav-section-label">Settings</div>
+    <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Integrations</div>
+    <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Account</div>
+
+    <div class="sidebar-footer">
+      Blu's Barbeque &nbsp;&bull;&nbsp; Dallas, TX<br>
+      214-514-8684 &nbsp;&bull;&nbsp; blusbarbeque.com
+      <div style="margin-top:10px;">
+        <div id="gmail-status" style="font-size:11px;color:var(--text3);margin-bottom:6px;">○ Gmail not connected</div>
+        <button onclick="connectGmail()" class="btn btn-sm" style="width:100%;font-size:11px;">Connect Gmail</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- PIPELINE PAGE -->
+    <div id="page-pipeline" class="page active">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div>
+            <div class="topbar-title">Catering Pipeline</div>
+            <div class="topbar-sub">All active leads &amp; inquiries</div>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn" onclick="showPage('ai')">AI Assistant</button>
+          <button class="btn btn-primary" onclick="openNewLead()">+ New Lead</button>
+        </div>
+      </div>
+      <div class="content">
+        <!-- Stats -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Active Leads</div>
+            <div class="stat-val red" id="stat-active">7</div>
+            <div class="stat-sub">across all stages</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Quotes Sent</div>
+            <div class="stat-val amber" id="stat-quoted">3</div>
+            <div class="stat-sub">awaiting response</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Follow-ups Needed</div>
+            <div class="stat-val red" id="stat-followup">3</div>
+            <div class="stat-sub">action required</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Booked</div>
+            <div class="stat-val green" id="stat-booked">1</div>
+            <div class="stat-sub">this month</div>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div class="alerts-section" id="alerts-section">
+          <div class="alert alert-urgent">
+            <span>⚑ Sherika Rodgers — event Apr 19, no payment received</span>
+            <span class="alert-action" onclick="openFollowup(3)">Send follow-up →</span>
+          </div>
+          <div class="alert alert-warn">
+            <span>⚑ Audrea Cowan — no response in 3+ days</span>
+            <span class="alert-action" onclick="openFollowup(5)">Draft email →</span>
+          </div>
+          <div class="alert alert-warn">
+            <span>⚑ Danielle Woods — quote sent, awaiting reply</span>
+            <span class="alert-action" onclick="openFollowup(1)">Draft email →</span>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab('kanban',this)">Kanban</div>
+          <div class="tab" onclick="switchTab('list',this)">List View</div>
+        </div>
+
+        <!-- Kanban -->
+        <div id="view-kanban">
+          <div class="kanban" id="kanban-board"></div>
+        </div>
+
+        <!-- List -->
+        <div id="view-list" style="display:none">
+          <div class="leads-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Event Date</th>
+                  <th>Guests</th>
+                  <th>Status</th>
+                  <th>Notes</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="leads-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUOTE BUILDER PAGE -->
+    <div id="page-quotes" class="page">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div>
+            <div class="topbar-title">Quote Builder</div>
+            <div class="topbar-sub">Build, price &amp; send catering quotes</div>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-primary" onclick="newQuote()">+ New Quote</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="quote-layout">
+          <!-- Left: Form -->
+          <div class="quote-form">
+            <div class="section-hdr" style="margin-bottom:16px">
+              <div class="section-title">Quote Details</div>
+              <span id="quote-number" style="font-size:12px;color:var(--text3)">#QT-1043</span>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">Customer Name</label>
+                <input class="form-input" id="q-name" placeholder="Full name" oninput="updatePreview()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input class="form-input" id="q-email" placeholder="email@example.com">
+              </div>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label class="form-label">Event Date</label>
+                <input class="form-input" id="q-date" type="date" oninput="updatePreview()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Event Time</label>
+                <input class="form-input" id="q-time" type="time">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Guest Count</label>
+                <input class="form-input" id="q-guests" type="number" placeholder="50" oninput="updateChargeSuggestion(); updatePreview()">
+              </div>
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">Service Type</label>
+                <select class="form-select" id="q-service" onchange="updateChargeSuggestion(); updatePreview()">
+                  <option value="pickup">Pickup</option>
+                  <option value="delivery">Delivery</option>
+                  <option value="delivery_setup">Delivery &amp; Setup</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Budget Signal</label>
+                <select class="form-select" id="q-budget" onchange="updateChargeSuggestion()">
+                  <option value="unknown">Not stated</option>
+                  <option value="tight">Tight budget</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="flexible">Flexible</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Delivery Address (if applicable)</label>
+              <input class="form-input" id="q-address" placeholder="Full delivery address">
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Menu Picker -->
+            <div class="menu-section">
+              <div class="menu-section-title">Meats (select items)</div>
+              <div class="menu-items-grid" id="menu-meats"></div>
+            </div>
+            <div class="menu-section">
+              <div class="menu-section-title">Buffet Packages</div>
+              <div class="menu-items-grid" id="menu-packages"></div>
+            </div>
+            <div class="menu-section">
+              <div class="menu-section-title">Sides</div>
+              <div class="menu-items-grid" id="menu-sides"></div>
+            </div>
+            <div class="menu-section">
+              <div class="menu-section-title">Desserts</div>
+              <div class="menu-items-grid" id="menu-desserts"></div>
+            </div>
+            <div class="menu-section">
+              <div class="menu-section-title">Drinks</div>
+              <div class="menu-items-grid" id="menu-drinks"></div>
+            </div>
+            <div class="menu-section">
+              <div class="menu-section-title">Extras</div>
+              <div class="menu-items-grid" id="menu-extras"></div>
+            </div>
+
+            <div class="form-group" style="margin-top:14px">
+              <label class="form-label">Notes / Special Requests</label>
+              <textarea class="form-input" id="q-notes" rows="2" placeholder="Any special instructions..."></textarea>
+            </div>
+          </div>
+
+          <!-- Right: Preview -->
+          <div class="quote-preview">
+            <div style="text-align:center; padding-bottom:14px; border-bottom:1px solid var(--border); margin-bottom:14px;">
+              <div style="font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:0.05em; color:var(--text);">Blu's Barbeque</div>
+              <div style="font-size:11px; color:var(--text3); line-height:1.8;">17630 Preston Rd · Dallas, TX 75252<br>214-514-8684 · blusbarbeque.com</div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+              <div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;">Quote for</div>
+                <div style="font-weight:500;" id="preview-name">—</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;">Event date</div>
+                <div style="font-weight:500;" id="preview-date">—</div>
+              </div>
+            </div>
+
+            <div id="preview-lines" style="margin-bottom:10px;min-height:60px;">
+              <div style="color:var(--text3); font-size:12px; text-align:center; padding:20px 0;">Select items to build quote</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Service charge -->
+            <div id="ai-suggestion-box" class="ai-suggestion"></div>
+            <div class="charge-row">
+              <span style="font-size:12px; color:var(--text2);">Service charge</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <input type="number" class="charge-pct-input" id="charge-pct" value="0" min="0" max="30" oninput="updatePreview()">
+                <span style="font-size:12px; color:var(--text3);">%</span>
+              </div>
+            </div>
+            <div class="charge-row" id="delivery-row" style="display:none;">
+              <span style="font-size:12px; color:var(--text2);">Delivery fee</span>
+              <span style="font-size:12px; color:var(--text);" id="delivery-fee-display">$50.00</span>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="quote-total-row">
+              <span>Total</span>
+              <span id="preview-total" style="color:var(--red-light);">$0.00</span>
+            </div>
+
+            <div style="font-size:11px; color:var(--text3); margin-top:8px;" id="preview-service-type">Pickup</div>
+
+            <button class="toast-send-btn" onclick="sendToast()">
+              Send Toast Payment Link
+            </button>
+            <button class="pdf-btn" onclick="generatePDF()">
+              Download PDF Quote
+            </button>
+            <button class="pdf-btn" onclick="emailQuote()" style="margin-top:4px; color:#80b4e8; border-color:var(--blue-border);">
+              Email Quote to Customer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI CHAT PAGE -->
+    <div id="page-ai" class="page">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div>
+            <div class="topbar-title">AI Assistant</div>
+            <div class="topbar-sub">Ask anything — change the app, draft emails, analyze data</div>
+          </div>
+        </div>
+      </div>
+      <div class="content" style="padding:16px 24px; height:calc(100vh - 65px);">
+        <div class="chat-layout">
+          <div class="chat-main">
+            <div class="chat-messages" id="chat-messages">
+              <div class="chat-msg ai">
+                <div class="chat-avatar ai">AI</div>
+                <div class="chat-bubble">
+                  Hey Zach! I'm your Blu's BBQ AI assistant. I can help you:<br><br>
+                  • Draft or send follow-up emails to leads<br>
+                  • Build and adjust catering quotes<br>
+                  • Analyze uploaded files (menus, invoices, reports)<br>
+                  • Make changes to the dashboard<br>
+                  • Answer questions about your pipeline<br><br>
+                  What do you need?
+                </div>
+              </div>
+            </div>
+            <div style="padding:0 20px 6px; display:flex; flex-wrap:wrap; gap:6px;" id="chat-suggestions">
+              <button class="btn btn-sm" onclick="quickAsk('Draft a follow-up email for Danielle Woods')">Draft Danielle follow-up</button>
+              <button class="btn btn-sm" onclick="quickAsk('Who needs a follow-up today?')">Who needs follow-up?</button>
+              <button class="btn btn-sm" onclick="quickAsk('Show me my pipeline summary')">Pipeline summary</button>
+              <button class="btn btn-sm" onclick="quickAsk('What should I quote for a 50-person pickup order?')">Quote suggestion</button>
+            </div>
+            <div class="chat-input-row">
+              <label class="chat-file-btn" title="Upload file">
+                📎
+                <input type="file" id="chat-file-input" style="display:none" accept=".xlsx,.csv,.pdf,.png,.jpg,.jpeg" onchange="handleFileUpload(this)">
+              </label>
+              <textarea class="chat-textarea" id="chat-input" placeholder="Ask anything or request a change..." rows="1"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"
+                oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+              <button class="chat-send-btn" onclick="sendChat()">Send</button>
+            </div>
+          </div>
+
+          <!-- Chat sidebar -->
+          <div class="chat-sidebar-panel">
+            <div class="chat-panel-title">Quick Actions</div>
+
+            <div class="quick-action" onclick="quickAsk('Draft a follow-up email for all leads that haven\'t responded in 2+ days')">
+              <span class="qa-icon">✉</span>
+              <div class="qa-text"><strong>Bulk follow-up drafts</strong>Draft emails for all overdue leads</div>
+            </div>
+            <div class="quick-action" onclick="quickAsk('Give me a full summary of my current catering pipeline including all leads and their status')">
+              <span class="qa-icon">📋</span>
+              <div class="qa-text"><strong>Pipeline summary</strong>Full status of all active leads</div>
+            </div>
+            <div class="quick-action" onclick="quickAsk('Help me build a quote for a new catering inquiry')">
+              <span class="qa-icon">💲</span>
+              <div class="qa-text"><strong>New quote help</strong>AI-assisted quote building</div>
+            </div>
+            <div class="quick-action" onclick="quickAsk('What service charge % would you recommend for a delivery order for 40 guests with a tight budget?')">
+              <span class="qa-icon">⚙</span>
+              <div class="qa-text"><strong>Charge % advisor</strong>Get AI service charge recommendation</div>
+            </div>
+            <div class="quick-action" onclick="showPage('quotes')">
+              <span class="qa-icon">+</span>
+              <div class="qa-text"><strong>Open quote builder</strong>Start a new quote</div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="chat-panel-title">Upload a File</div>
+            <div class="file-upload-area" onclick="document.getElementById('chat-file-input').click()">
+              <div class="file-upload-label">
+                <strong>Drop or click to upload</strong>
+                Excel menu, invoice PDF, photo, report
+              </div>
+            </div>
+            <div id="uploaded-files-list"></div>
+
+            <div class="divider"></div>
+            <div style="font-size:11px; color:var(--text3); line-height:1.8;">
+              <strong style="color:var(--text2); display:block; margin-bottom:4px;">Tips</strong>
+              You can say things like:<br>
+              "Add a new menu item: XL Brisket $220"<br>
+              "Change Joy's status to quoted"<br>
+              "What's my revenue this month?"<br>
+              "Draft a reply to Sherika about payment"
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMING SOON PAGES -->
+    <div id="page-invoices" class="page">
+      <div class="topbar"><div class="topbar-title">Invoices</div></div>
+      <div class="content"><div class="coming-soon"><div class="coming-soon-badge">Coming Soon</div><div class="coming-soon-title">Invoice Manager</div><div class="coming-soon-sub">Track paid, unpaid, and overdue invoices with one-click Toast payment link integration.</div></div></div>
+    </div>
+    <div id="page-outbound" class="page">
+      <div class="topbar"><div class="topbar-title">Outbound Leads</div></div>
+      <div class="content"><div class="coming-soon"><div class="coming-soon-badge">Coming Soon</div><div class="coming-soon-title">Outbound Prospecting</div><div class="coming-soon-sub">Find and contact schools, businesses, and event planners around DFW.</div></div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL: New Lead / Edit Lead -->
+<div class="modal-overlay" id="lead-modal">
+  <div class="modal">
+    <div class="modal-title" id="lead-modal-title">New Lead</div>
+    <div class="modal-sub" id="lead-modal-sub">Add a new catering inquiry to the pipeline</div>
+    <div class="form-row-2">
+      <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="lm-name" placeholder="Full name"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="lm-email" placeholder="email@example.com"></div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="lm-phone" placeholder="214-xxx-xxxx"></div>
+      <div class="form-group"><label class="form-label">Event Date</label><input class="form-input" id="lm-date" type="date"></div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-group"><label class="form-label">Guest Count</label><input class="form-input" id="lm-guests" type="number" placeholder="50"></div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-select" id="lm-status">
+          <option value="new">New Inquiry</option>
+          <option value="quoted">Quote Sent</option>
+          <option value="followup">Follow-up Needed</option>
+          <option value="booked">Booked</option>
+          <option value="lost">Lost</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="lm-notes" rows="3" placeholder="Event type, preferences, budget signals..."></textarea></div>
+    <div class="form-group">
+      <label class="form-label"><input type="checkbox" id="lm-followup" style="accent-color:var(--red);margin-right:6px">Flag for follow-up</label>
+    </div>
+    <div class="modal-footer">
+      <div style="margin-right:auto;">
+        <button class="btn" id="lm-delete-btn" style="color:#e09090;border-color:var(--red-border);display:none" onclick="deleteLead()">Delete Lead</button>
+      </div>
+      <button class="btn" onclick="closeModal('lead-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLead()">Save Lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Follow-up email -->
+<div class="modal-overlay" id="followup-modal">
+  <div class="modal">
+    <div class="modal-title">Follow-up Email</div>
+    <div class="modal-sub" id="fu-meta"></div>
+    <div class="form-group"><label class="form-label">Subject</label><input class="form-input" id="fu-subject" value="Re: Blu's BBQ - Catering Request"></div>
+    <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="fu-body" rows="10"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('followup-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="sendFollowupEmail()">Send via Gmail →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Toast payment -->
+<div class="modal-overlay" id="toast-modal">
+  <div class="modal">
+    <div class="modal-title">Send Toast Payment Link</div>
+    <div class="modal-sub">Paste the payment link you generated in Toast — I'll send it to the customer automatically.</div>
+    <div class="form-group"><label class="form-label">Customer Email</label><input class="form-input" id="tm-email" placeholder="customer@email.com"></div>
+    <div class="form-group"><label class="form-label">Toast Payment Link</label><input class="form-input" id="tm-link" placeholder="https://order.toasttab.com/..."></div>
+    <div class="form-group"><label class="form-label">Amount Due</label><input class="form-input" id="tm-amount" placeholder="$0.00"></div>
+    <div class="form-group"><label class="form-label">Message to Customer</label>
+      <textarea class="form-input" id="tm-message" rows="4">Hi, please find your Blu's Barbeque payment link below. Please complete payment at your earliest convenience to confirm your catering order. Thank you!</textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('toast-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="sendToastLink()">Send Payment Link</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const MENU = {
+  meats: [
+    { id:'brisket-sliced', name:'Brisket (sliced)', unit:'lbs', price:31.99 },
+    { id:'brisket-chopped', name:'Brisket (chopped)', unit:'lbs', price:31.99 },
+    { id:'pulled-pork', name:'Pulled Pork', unit:'lbs', price:22.99 },
+    { id:'sausage-pb', name:'Sausage (pork & beef)', unit:'lbs', price:22.99 },
+    { id:'sausage-bj', name:'Sausage (beef & jalapeño)', unit:'lbs', price:22.99 },
+    { id:'chicken-half', name:'Chicken - Half', unit:'ea', price:11 },
+    { id:'chicken-whole', name:'Chicken - Whole', unit:'ea', price:18 },
+    { id:'burnt-ends-brisket', name:'Burnt Ends (brisket)', unit:'lbs', price:31.99 },
+    { id:'burnt-ends-pork', name:'Burnt Ends (pork belly)', unit:'lbs', price:31.99 },
+    { id:'rib-tips', name:'Rib Tips', unit:'lbs', price:24 },
+    { id:'beef-rib', name:'Beef Rib (dino)', unit:'piece', price:39 },
+    { id:'turkey', name:'Turkey (sliced)', unit:'lbs', price:28 },
+    { id:'jalapeno-poppers', name:'Jalapeño Poppers (brisket)', unit:'piece', price:5.5 },
+  ],
+  packages: [
+    { id:'pkg-2meat', name:'2 Meat & 2 Sides (buffet)', unit:'per person', price:19.99 },
+    { id:'pkg-3meat', name:'3 Meat & 2 Sides (buffet)', unit:'per person', price:23.99 },
+    { id:'pkg-4meat', name:'4 Meat & 2 Sides (buffet)', unit:'per person', price:29.99 },
+  ],
+  sides: [
+    { id:'mac-5cheese', name:'5 Cheese Mac & Cheese', unit:'half pan', price:55 },
+    { id:'mac-bacon', name:'Bacon & Jalapeño Mac', unit:'half pan', price:65 },
+    { id:'beans', name:'Smoked Baked Beans', unit:'half pan', price:45 },
+    { id:'beans-loaded', name:'Smoked Baked Beans Loaded', unit:'half pan', price:55 },
+    { id:'coleslaw', name:'Cole Slaw', unit:'half pan', price:45 },
+    { id:'potato-salad', name:'Potato Salad', unit:'half pan', price:45 },
+    { id:'collard-greens', name:'Collard Greens', unit:'half pan', price:45 },
+    { id:'stuffed-potato', name:'Stuffed Baked Potato', unit:'piece', price:12.5 },
+  ],
+  desserts: [
+    { id:'banana-pudding', name:'Banana Pudding', unit:'half pan', price:45 },
+    { id:'bread-pudding', name:'Tipsy Campfire Bread Pudding', unit:'half pan', price:55 },
+    { id:'sweet-potato', name:'Sweet Potato Casserole', unit:'half pan', price:55 },
+    { id:'peach-cobbler', name:'Peach Cobbler', unit:'half pan', price:45 },
+    { id:'caramel-apple', name:'Caramel Apple Cobbler', unit:'half pan', price:45 },
+    { id:'bourbon-cherry', name:'Bourbon Cherry Cobbler', unit:'half pan', price:45 },
+  ],
+  drinks: [
+    { id:'sweet-tea', name:'Sweet Tea', unit:'gallon', price:9 },
+    { id:'reg-tea', name:'Regular Tea', unit:'gallon', price:9 },
+    { id:'lemonade', name:'Lemonade', unit:'gallon', price:9 },
+    { id:'water', name:'Water', unit:'gallon', price:5 },
+  ],
+  extras: [
+    { id:'plates-cutlery', name:'Plates & Cutlery Kit', unit:'per person', price:3.5 },
+    { id:'cutlery', name:'Cutlery Kit', unit:'per person', price:1.75 },
+    { id:'plates', name:'Plates', unit:'per person', price:1.75 },
+    { id:'bbq-sauce-hp', name:'BBQ Sauce (half pan)', unit:'half pan', price:45 },
+    { id:'buns', name:'Buns', unit:'each', price:0.65 },
+    { id:'bread-loaf', name:'White Bread Loaf', unit:'each', price:8 },
+  ]
+};
+
+let leads = [
+  { id:1, name:'Danielle Woods', email:'daniellewoods2719@gmail.com', phone:'214-533-0379', eventDate:'2026-05-23', guests:50, status:'followup', notes:'Wants 3 meats (chicken, brisket, sausage). Budget-conscious, pickup or delivery. Quote sent. Asked about sheet pans — yes we do half pans.', followup:true },
+  { id:2, name:'Kara Gonzales', email:'karamgonzales@gmail.com', phone:'', eventDate:'', guests:0, status:'quoted', notes:'Quoted 3 meats + 2 sides. Offered 2-meat option if needed.', followup:false },
+  { id:3, name:'Sherika Rodgers', email:'sherikarodgers@yahoo.com', phone:'', eventDate:'2026-04-19', guests:0, status:'quoted', notes:'Revised quote sent — cut everything in half. Event in 2 days. No payment yet.', followup:true },
+  { id:4, name:'Northwood Hills PTA', email:'mjesusc1980@gmail.com', phone:'', eventDate:'2026-05-07', guests:0, status:'booked', notes:'Booked at $1,329.22. Half deposit ~$644 arriving today. W-9 sent.', followup:false },
+  { id:5, name:'Audrea Cowan (KJ Dance)', email:'audreacowan@gmail.com', phone:'469-744-4180', eventDate:'', guests:0, status:'followup', notes:'Budget: $10/person. Sent best quote for pickup + cash/check. No response 3+ days.', followup:true },
+  { id:6, name:'Abby Peterson', email:'ampeterson5@verizon.net', phone:'214-808-2330', eventDate:'2026-05-31', guests:40, status:'new', notes:'Pool party 1-5pm, delivery + setup to 4732 Nashwood Ln Dallas. Awaiting meat/side preferences.', followup:true },
+  { id:7, name:'Joy Mate', email:'pje210@yahoo.com', phone:'1-917-449-9194', eventDate:'2026-05-22', guests:50, status:'new', notes:'High school graduation party, delivery, buffet trays. Awaiting meat/side preferences.', followup:true },
+];
+let nextLeadId = 8;
+let editingLeadId = null;
+let currentQuoteNumber = 1043;
+let selectedItems = {};
+let chatHistory = [];
+
+// ============================================================
+// NAV
+// ============================================================
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pageEl = document.getElementById('page-' + page);
+  if (pageEl) pageEl.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
+  });
+}
+
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('view-kanban').style.display = tab === 'kanban' ? 'block' : 'none';
+  document.getElementById('view-list').style.display = tab === 'list' ? 'block' : 'none';
+}
+
+// ============================================================
+// PIPELINE
+// ============================================================
+const STATUS_ORDER = ['new','quoted','followup','booked','lost'];
+const STATUS_LABELS = { new:'New Inquiry', quoted:'Quote Sent', followup:'Follow-up Needed', booked:'Booked', lost:'Lost' };
+const STATUS_BADGE = { new:'badge-new', quoted:'badge-quoted', followup:'badge-followup', booked:'badge-booked', lost:'badge-lost' };
+
+function renderKanban() {
+  const board = document.getElementById('kanban-board');
+  const cols = ['new','quoted','followup','booked'];
+  board.innerHTML = cols.map(status => {
+    const colLeads = leads.filter(l => l.status === status);
+    return `<div class="k-col">
+      <div class="k-col-header">
+        <span class="k-col-title">${STATUS_LABELS[status]}</span>
+        <span class="k-count">${colLeads.length}</span>
+      </div>
+      ${colLeads.map(l => `
+        <div class="k-card ${l.followup && status!=='booked' ? 'urgent':''}" onclick="openEditLead(${l.id})">
+          <div class="k-name">${l.name}</div>
+          <div class="k-meta">${l.guests ? l.guests+' guests · ':'' }${l.eventDate || 'Date TBD'}</div>
+          <span class="k-badge ${STATUS_BADGE[l.status]}">${STATUS_LABELS[l.status]}</span>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderTable() {
+  const body = document.getElementById('leads-table-body');
+  body.innerHTML = leads.map(l => `
+    <tr>
+      <td><div class="td-name">${l.name}</div><div class="td-email">${l.email}</div></td>
+      <td>${l.eventDate || '—'}</td>
+      <td>${l.guests || '—'}</td>
+      <td><span class="k-badge ${STATUS_BADGE[l.status]}">${STATUS_LABELS[l.status]}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text3)">${l.notes || '—'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-sm" onclick="openEditLead(${l.id})">Edit</button>
+        <button class="btn btn-sm" style="color:#80b4e8;border-color:var(--blue-border)" onclick="openFollowup(${l.id})">Email</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function updateStats() {
+  document.getElementById('stat-active').textContent = leads.filter(l => l.status !== 'lost').length;
+  document.getElementById('stat-quoted').textContent = leads.filter(l => l.status === 'quoted').length;
+  document.getElementById('stat-followup').textContent = leads.filter(l => l.followup).length;
+  document.getElementById('stat-booked').textContent = leads.filter(l => l.status === 'booked').length;
+  document.getElementById('notif-badge').textContent = leads.filter(l => l.followup).length;
+}
+
+function renderAll() { renderKanban(); renderTable(); updateStats(); }
+
+// ============================================================
+// LEAD MODAL
+// ============================================================
+function openNewLead() {
+  editingLeadId = null;
+  document.getElementById('lead-modal-title').textContent = 'New Lead';
+  document.getElementById('lead-modal-sub').textContent = 'Add a new catering inquiry to the pipeline';
+  document.getElementById('lm-name').value = '';
+  document.getElementById('lm-email').value = '';
+  document.getElementById('lm-phone').value = '';
+  document.getElementById('lm-date').value = '';
+  document.getElementById('lm-guests').value = '';
+  document.getElementById('lm-status').value = 'new';
+  document.getElementById('lm-notes').value = '';
+  document.getElementById('lm-followup').checked = false;
+  document.getElementById('lm-delete-btn').style.display = 'none';
+  openModal('lead-modal');
+}
+
+function openEditLead(id) {
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  editingLeadId = id;
+  document.getElementById('lead-modal-title').textContent = 'Edit Lead';
+  document.getElementById('lead-modal-sub').textContent = l.email;
+  document.getElementById('lm-name').value = l.name;
+  document.getElementById('lm-email').value = l.email;
+  document.getElementById('lm-phone').value = l.phone || '';
+  document.getElementById('lm-date').value = l.eventDate || '';
+  document.getElementById('lm-guests').value = l.guests || '';
+  document.getElementById('lm-status').value = l.status;
+  document.getElementById('lm-notes').value = l.notes || '';
+  document.getElementById('lm-followup').checked = l.followup;
+  document.getElementById('lm-delete-btn').style.display = 'inline-flex';
+  openModal('lead-modal');
+}
+
+function saveLead() {
+  const data = {
+    name: document.getElementById('lm-name').value.trim(),
+    email: document.getElementById('lm-email').value.trim(),
+    phone: document.getElementById('lm-phone').value.trim(),
+    eventDate: document.getElementById('lm-date').value,
+    guests: parseInt(document.getElementById('lm-guests').value) || 0,
+    status: document.getElementById('lm-status').value,
+    notes: document.getElementById('lm-notes').value.trim(),
+    followup: document.getElementById('lm-followup').checked,
+  };
+  if (!data.name) return;
+  if (editingLeadId) {
+    const idx = leads.findIndex(l => l.id === editingLeadId);
+    leads[idx] = { ...leads[idx], ...data };
+  } else {
+    leads.push({ id: nextLeadId++, ...data });
+  }
+  closeModal('lead-modal');
+  renderAll();
+}
+
+function deleteLead() {
+  if (!editingLeadId) return;
+  if (!confirm('Remove this lead?')) return;
+  leads = leads.filter(l => l.id !== editingLeadId);
+  closeModal('lead-modal');
+  renderAll();
+}
+
+// ============================================================
+// FOLLOW-UP EMAIL
+// ============================================================
+function openFollowup(id) {
+  const l = leads.find(x => x.id === id);
+  if (!l) return;
+  document.getElementById('fu-meta').textContent = `To: ${l.name} <${l.email}>`;
+
+  let body = '';
+  if (l.status === 'quoted') {
+    body = `Hi ${l.name.split(' ')[0]},\n\nI just wanted to follow up on the quote I sent over. ${l.eventDate ? `With your event coming up on ${l.eventDate}, I want to make sure we get everything reserved in time.` : "I want to make sure you had a chance to review everything."}\n\nPlease let me know if you have any questions or if you'd like to make any changes to the quote. We'd love to take care of you!\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`;
+  } else {
+    body = `Hi ${l.name.split(' ')[0]},\n\nI just wanted to check in and see if you had any questions or if there's anything else I can help with for your event. We'd love the opportunity to serve you some true Texas BBQ!\n\nFeel free to reach out anytime.\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`;
+  }
+  document.getElementById('fu-body').value = body;
+  openModal('followup-modal');
+  window._followupLeadId = id;
+}
+
+function sendFollowupEmail() {
+  const subject = document.getElementById('fu-subject').value;
+  const body = document.getElementById('fu-body').value;
+  const id = window._followupLeadId;
+  const l = leads.find(x => x.id === id);
+  if (l) {
+    sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({id, to: l.email, name: l.name, subject, body})}`);
+    closeModal('followup-modal');
+    const idx = leads.findIndex(x => x.id === id);
+    if (idx >= 0) leads[idx].followup = false;
+    renderAll();
+    showToast('Email sent via Gmail!');
+  }
+}
+
+// ============================================================
+// QUOTE BUILDER
+// ============================================================
+function buildMenuPicker(category, containerId) {
+  const items = MENU[category];
+  const el = document.getElementById(containerId);
+  el.innerHTML = items.map(item => `
+    <label class="menu-item-check">
+      <input type="checkbox" data-id="${item.id}" data-price="${item.price}" data-name="${item.name}" data-unit="${item.unit}"
+        onchange="toggleItem('${item.id}', ${item.price}, '${item.name}', '${item.unit}')">
+      <span class="menu-item-label">${item.name}</span>
+      <span class="menu-item-price">$${item.price}</span>
+    </label>`).join('');
+}
+
+function toggleItem(id, price, name, unit) {
+  if (selectedItems[id]) { delete selectedItems[id]; }
+  else { selectedItems[id] = { price, name, unit }; }
+  updatePreview();
+}
+
+function updatePreview() {
+  document.getElementById('preview-name').textContent = document.getElementById('q-name').value || '—';
+  const dateVal = document.getElementById('q-date').value;
+  document.getElementById('preview-date').textContent = dateVal ? new Date(dateVal + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : '—';
+
+  const lines = document.getElementById('preview-lines');
+  const items = Object.values(selectedItems);
+  if (!items.length) {
+    lines.innerHTML = '<div style="color:var(--text3); font-size:12px; text-align:center; padding:20px 0;">Select items to build quote</div>';
+    document.getElementById('preview-total').textContent = '$0.00';
+    return;
+  }
+
+  let subtotal = 0;
+  lines.innerHTML = items.map(item => {
+    subtotal += item.price;
+    return `<div class="quote-line"><span class="q-item-name">${item.name} <span style="color:var(--text3)">(${item.unit})</span></span><span class="q-item-price">$${item.price.toFixed(2)}</span></div>`;
+  }).join('');
+
+  const pct = parseFloat(document.getElementById('charge-pct').value) || 0;
+  const service = document.getElementById('q-service').value;
+  const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? 50 : 0;
+  const charge = subtotal * (pct / 100);
+  const total = subtotal + charge + deliveryFee;
+
+  document.getElementById('preview-total').textContent = '$' + total.toFixed(2);
+  document.getElementById('delivery-row').style.display = deliveryFee ? 'flex' : 'none';
+
+  const serviceLabels = { pickup:'Pickup order', delivery:'Delivery order (+$50)', delivery_setup:'Delivery & setup (+$50)' };
+  document.getElementById('preview-service-type').textContent = serviceLabels[service] || '';
+}
+
+function updateChargeSuggestion() {
+  const service = document.getElementById('q-service').value;
+  const budget = document.getElementById('q-budget').value;
+  const guests = parseInt(document.getElementById('q-guests').value) || 0;
+
+  let suggested = 0;
+  let reason = '';
+
+  if (service === 'pickup') {
+    if (budget === 'tight') { suggested = 0; reason = 'Waiving charge — customer is budget-conscious and doing pickup.'; }
+    else if (budget === 'flexible') { suggested = 10; reason = 'Pickup order with flexible budget — light service charge applied.'; }
+    else { suggested = 0; reason = 'Pickup order — no service charge recommended.'; }
+  } else if (service === 'delivery') {
+    if (budget === 'tight') { suggested = 8; reason = 'Delivery adds cost — applying reduced charge given tight budget.'; }
+    else if (budget === 'flexible') { suggested = 18; reason = 'Delivery with flexible budget — full 18% recommended.'; }
+    else if (guests > 75) { suggested = 15; reason = 'Large delivery order — 15% service charge recommended.'; }
+    else { suggested = 12; reason = 'Standard delivery — 12% service charge suggested.'; }
+  } else if (service === 'delivery_setup') {
+    if (budget === 'tight') { suggested = 12; reason = 'Full service with tight budget — 12% minimum recommended.'; }
+    else { suggested = 18; reason = 'Full delivery & setup — 18% service charge recommended.'; }
+  }
+
+  const box = document.getElementById('ai-suggestion-box');
+  box.textContent = `AI suggestion: ${suggested}% — ${reason}`;
+  box.classList.add('show');
+  document.getElementById('charge-pct').value = suggested;
+  updatePreview();
+}
+
+function newQuote() {
+  currentQuoteNumber++;
+  document.getElementById('quote-number').textContent = `#QT-${currentQuoteNumber}`;
+  selectedItems = {};
+  document.querySelectorAll('#page-quotes input[type=checkbox]').forEach(cb => cb.checked = false);
+  ['q-name','q-email','q-date','q-time','q-address','q-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('q-guests').value = '';
+  document.getElementById('q-service').value = 'pickup';
+  document.getElementById('q-budget').value = 'unknown';
+  document.getElementById('charge-pct').value = '0';
+  document.getElementById('ai-suggestion-box').classList.remove('show');
+  updatePreview();
+}
+
+function sendToast() {
+  const email = document.getElementById('q-email').value;
+  const total = document.getElementById('preview-total').textContent;
+  document.getElementById('tm-email').value = email;
+  document.getElementById('tm-amount').value = total;
+  openModal('toast-modal');
+}
+
+function sendToastLink() {
+  const link = document.getElementById('tm-link').value;
+  const email = document.getElementById('tm-email').value;
+  const amount = document.getElementById('tm-amount').value;
+  const message = document.getElementById('tm-message').value;
+  if (!link || !email) { alert('Please enter email and payment link'); return; }
+  sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({to: email, name: email, subject: "Blu's BBQ — Payment Link for Your Catering Order", body: `${message}\n\nPayment link: ${link}\nAmount due: ${amount}\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`})}`);
+  closeModal('toast-modal');
+  showToast('Payment link sent!');
+}
+
+function generatePDF() {
+  const name = document.getElementById('q-name').value || 'Customer';
+  alert(`PDF quote for ${name} would be generated here.\n\nIn the full deployment this creates a professional branded PDF with your logo, address, and all line items — ready to email or download.`);
+}
+
+function emailQuote() {
+  const email = document.getElementById('q-email').value;
+  const name = document.getElementById('q-name').value;
+  if (!email) { alert('Please enter a customer email first'); return; }
+  const items = Object.values(selectedItems).map(i => `• ${i.name}: $${i.price.toFixed(2)}`).join('\n');
+  const total = document.getElementById('preview-total').textContent;
+  const body = `Hi ${name.split(' ')[0] || 'there'},\n\nPlease see the attached quote for your review!\n\nOrder summary:\n${items}\n\nTotal: ${total}\n\nPlease let me know if you have any questions or would like any changes. You're also welcome to stop by anytime after 1PM, Wednesday through Sunday to try some samples — just ask for the manager, Raul!\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`;
+  sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({to: email, name, subject: "Re: Blu's BBQ - Catering Quote", body})}`);
+  showToast('Quote emailed to customer!');
+}
+
+// ============================================================
+// AI CHAT
+// ============================================================
+const CHAT_SYSTEM = `You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque (17630 Preston Rd, Dallas TX 75252, 214-514-8684, blusbarbeque.com).
+
+Current pipeline: ${JSON.stringify(leads)}
+
+Menu highlights: Brisket $31.99/lb, Pulled Pork $22.99/lb, Sausage $22.99/lb, Turkey $28/lb, Burnt Ends $31.99/lb. Buffet packages: 2-meat $19.99/person, 3-meat $23.99/person, 4-meat $29.99/person. Sides: Mac & Cheese half pan $55, Potato Salad $45, Beans $45. Delivery minimum $50. Service charge typically 0-18% depending on service type and budget.
+
+Zach's email style: Warm, concise, friendly. Opens "Hi [Name],", ends "Thanks, Zach / Blu's Barbeque / 214-514-8684". Never overly salesy. Mentions "true Texas barbecue" occasionally.
+
+You can help with: drafting emails, quote advice, pipeline questions, menu pricing, service charge recommendations, analyzing uploaded files, and answering business questions. Be concise and practical.`;
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  appendChatMsg('user', text);
+  input.value = '';
+  input.style.height = 'auto';
+
+  chatHistory.push({ role: 'user', content: text });
+
+  const typingId = appendTyping();
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        system: CHAT_SYSTEM,
+        messages: chatHistory
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.find(c => c.type === 'text')?.text || 'Sorry, something went wrong. Please try again.';
+    removeTyping(typingId);
+    appendChatMsg('ai', reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch(e) {
+    removeTyping(typingId);
+    appendChatMsg('ai', 'Could not connect to AI. Please check your internet connection and try again.');
+  }
+}
+
+function quickAsk(text) {
+  document.getElementById('chat-input').value = text;
+  sendChat();
+}
+
+function appendChatMsg(role, text) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  const formatted = text.replace(/\n/g, '<br>');
+  div.innerHTML = `
+    <div class="chat-avatar ${role}">${role === 'ai' ? 'AI' : 'Z'}</div>
+    <div class="chat-bubble">${formatted}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+let typingCounter = 0;
+function appendTyping() {
+  const id = 'typing-' + (++typingCounter);
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ai';
+  div.id = id;
+  div.innerHTML = `<div class="chat-avatar ai">AI</div><div class="chat-bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return id;
+}
+function removeTyping(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function handleFileUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const list = document.getElementById('uploaded-files-list');
+  const div = document.createElement('div');
+  div.className = 'uploaded-file';
+  div.textContent = '✓ ' + file.name;
+  list.appendChild(div);
+
+  const reader = new FileReader();
+  if (file.type.startsWith('image/')) {
+    reader.onload = e => {
+      const base64 = e.target.result.split(',')[1];
+      const mediaType = file.type;
+      appendChatMsg('user', `[Uploaded image: ${file.name}]`);
+      sendImageToChat(base64, mediaType, file.name);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    appendChatMsg('user', `[Uploaded file: ${file.name}] — Please analyze this file.`);
+    quickAsk(`I just uploaded a file called "${file.name}". Please acknowledge and let me know what you can help with based on this file type.`);
+  }
+  input.value = '';
+}
+
+async function sendImageToChat(base64, mediaType, filename) {
+  const typingId = appendTyping();
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        system: CHAT_SYSTEM,
+        messages: [...chatHistory, {
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: `I uploaded this image (${filename}). Please analyze it and tell me anything useful — if it's a quote, invoice, menu, or business card, extract the key information.` }
+          ]
+        }]
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.find(c => c.type === 'text')?.text || 'Could not analyze image.';
+    removeTyping(typingId);
+    appendChatMsg('ai', reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch(e) {
+    removeTyping(typingId);
+    appendChatMsg('ai', 'Could not analyze image. Please try again.');
+  }
+}
+
+// ============================================================
+// MODALS & TOASTS
+// ============================================================
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1816;border:1px solid var(--green-border);color:#80c898;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;white-space:nowrap;';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  buildMenuPicker('meats', 'menu-meats');
+  buildMenuPicker('packages', 'menu-packages');
+  buildMenuPicker('sides', 'menu-sides');
+  buildMenuPicker('desserts', 'menu-desserts');
+  buildMenuPicker('drinks', 'menu-drinks');
+  buildMenuPicker('extras', 'menu-extras');
+  renderAll();
+}
+
+
+// ============================================================
+// GMAIL DIRECT SEND
+// ============================================================
+let gmailConnected = false;
+
+async function checkGmailStatus() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('gmail_connected') === 'true') {
+    gmailConnected = true;
+    updateGmailStatus(true);
+    window.history.replaceState({}, '', '/');
+  } else if (params.get('gmail_error')) {
+    updateGmailStatus(false);
+    showToast('Gmail connection failed: ' + params.get('gmail_error'));
+  }
+  // Try a test to see if we have a token
+  const res = await fetch('/api/gmail/send', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({to:'test@test.com', subject:'test', body:'test', _check:true}) }).catch(() => null);
+  if (res && res.status !== 401) { gmailConnected = true; updateGmailStatus(true); }
+}
+
+function updateGmailStatus(connected) {
+  const el = document.getElementById('gmail-status');
+  if (el) {
+    el.textContent = connected ? '● Gmail connected' : '○ Gmail not connected';
+    el.style.color = connected ? 'var(--green)' : 'var(--text3)';
+  }
+}
+
+async function connectGmail() {
+  const res = await fetch('/api/auth/gmail');
+  const { url } = await res.json();
+  window.location.href = url;
+}
+
+async function sendEmailViaAPI(to, name, subject, body) {
+  if (!gmailConnected) {
+    const connect = confirm('Gmail not connected yet. Connect now to send emails directly from the app?');
+    if (connect) connectGmail();
+    return false;
+  }
+  try {
+    const res = await fetch('/api/gmail/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, name, subject, body })
+    });
+    const data = await res.json();
+    if (data.needsAuth) {
+      const connect = confirm('Gmail session expired. Reconnect?');
+      if (connect) connectGmail();
+      return false;
+    }
+    if (data.success) {
+      showToast('Email sent via Gmail!');
+      return true;
+    }
+    showToast('Send failed: ' + (data.error || 'Unknown error'));
+    return false;
+  } catch (err) {
+    showToast('Could not send email. Check connection.');
+    return false;
+  }
+}
+
+// Override sendPrompt SEND_EMAIL_NOW to use direct API
+const _origSendPrompt = typeof sendPrompt !== 'undefined' ? sendPrompt : null;
+window.addEventListener('message', (e) => {
+  if (e.data && typeof e.data === 'string' && e.data.startsWith('SEND_EMAIL_NOW::')) {
+    try {
+      const payload = JSON.parse(e.data.replace('SEND_EMAIL_NOW::', ''));
+      sendEmailViaAPI(payload.to, payload.name, payload.subject, payload.body);
+    } catch(err) {}
+  }
+});
+
+// Intercept sendPrompt calls for email
+const _realSendPrompt = window.sendPrompt;
+window.sendPrompt = function(msg) {
+  if (msg && msg.startsWith('SEND_EMAIL_NOW::')) {
+    try {
+      const payload = JSON.parse(msg.replace('SEND_EMAIL_NOW::', ''));
+      sendEmailViaAPI(payload.to, payload.name, payload.subject, payload.body);
+    } catch(e) { console.error(e); }
+    return;
+  }
+  if (_realSendPrompt) _realSendPrompt(msg);
+};
+
+checkGmailStatus();
+
+window.markSent = function(id) {
+  const l = leads.find(x => x.id === id);
+  if (l) { l.followup = false; }
+  renderAll();
+  showToast('Email sent via Gmail!');
+};
+
+init();
+</script>
+</body>
+</html>
