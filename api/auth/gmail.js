@@ -1,8 +1,6 @@
 export default function handler(req, res) {
   const clientId = process.env.GMAIL_CLIENT_ID;
-  const redirectUri = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}/api/auth/callback`
-    : 'http://localhost:3000/api/auth/callback';
+  const redirectUri = 'https://blus-bbq.vercel.app/api/auth/callback';
 
   const params = new URLSearchParams({
     client_id: clientId,

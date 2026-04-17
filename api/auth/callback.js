@@ -11,9 +11,7 @@ export default async function handler(req, res) {
 
   const clientId = process.env.GMAIL_CLIENT_ID;
   const clientSecret = process.env.GMAIL_CLIENT_SECRET;
-  const redirectUri = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}/api/auth/callback`
-    : 'http://localhost:3000/api/auth/callback';
+  const redirectUri = 'https://blus-bbq.vercel.app/api/auth/callback';
 
   try {
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
