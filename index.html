@@ -1289,7 +1289,7 @@ function appendChatMsg(role, text) {
           div.className = 'chat-msg ' + role;
           let optionsBlock = null;
           let body = String(text == null ? '' : text);
-          if (role === 'assistant') {
+          if ((role === 'ai' || role === 'assistant')) {
             const optsRe = /<options>([\s\S]*?)<\/options>/i;
             const m = body.match(optsRe);
             if (m) { optionsBlock = m[1]; body = body.replace(optsRe, '').trim(); }
