@@ -1528,7 +1528,7 @@ async function confirmModify() {
     // Read SSE stream from Anthropic streaming edge function
     const reader = r2.body.getReader();
     const decoder = new TextDecoder();
-    let sseBuffer = '', newHtml = '';
+    let sseBuffer = '';
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
