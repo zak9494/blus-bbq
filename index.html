@@ -563,7 +563,7 @@ tr:hover td { background: var(--surface2); }
           </div>
         </div>
         <div class="topbar-actions">
-          <button class="btn" onclick="showPage('pipeline')" style="font-size:20px;padding:2px 12px;line-height:1;" title="Back to Pipeline">&times;</button>
+          <button class="btn" onclick="showPage('pipeline')" style="font-size:20px;padding:2px 12px;line-height:1;" title="Back">&times;</button>
         </div>
       </div>
       <div class="content" style="padding:16px 24px; height:calc(100vh - 65px);">
@@ -639,11 +639,15 @@ tr:hover td { background: var(--surface2); }
             <div class="divider"></div>
             <div style="font-size:11px; color:var(--text3); line-height:1.8;">
               <strong style="color:var(--text2); display:block; margin-bottom:4px;">Tips</strong>
-              You can say things like:<br>
-              "Add a new menu item: XL Brisket $220"<br>
-              "Change Joy's status to quoted"<br>
-              "What's my revenue this month?"<br>
-              "Draft a reply to Sherika about payment"
+              <strong style="color:var(--text2);display:block;margin-bottom:3px;">App changes</strong>
+              "Add a deposit field to each lead"<br>
+              "Add a new page called Invoices"<br>
+              "Change the pipeline to 5 columns"<br><br>
+              <strong style="color:var(--text2);display:block;margin-bottom:3px;">Business tasks</strong>
+              "Who needs follow-up today?"<br>
+              "Draft a reply to Sherika re: payment"<br>
+              "Write a response to a 2-star review"<br>
+              "What service charge for 40 guests delivery?"
             </div>
           </div>
         </div>
@@ -846,10 +850,13 @@ function renderKanban() {
         <span class="k-count">${colLeads.length}</span>
       </div>
       ${colLeads.map(l => `
-        <div class="k-card ${l.followup && status!=='booked' ? 'urgent':''}" onclick="openEditLead(${l.id})">
-          <div class="k-name">${l.name}</div>
+        <div class="k-card ${l.followup && status!=='booked' ? 'urgent':''}">
+          <div class="k-name" onclick="openEditLead(${l.id})" style="cursor:pointer">${l.name}</div>
           <div class="k-meta">${l.guests ? l.guests+' guests · ':'' }${l.eventDate || 'Date TBD'}</div>
-          <span class="k-badge ${STATUS_BADGE[l.status]}">${STATUS_LABELS[l.status]}</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+            <span class="k-badge ${STATUS_BADGE[l.status]}">${STATUS_LABELS[l.status]}</span>
+            <button onclick="openFollowup(${l.id})" style="font-size:10px;padding:3px 8px;border-radius:4px;border:0.5px solid #4a7fb550;background:#4a7fb518;color:#80b4e8;cursor:pointer;font-family:inherit;white-space:nowrap;">&#9993; Follow-up</button>
+          </div>
         </div>`).join('')}
     </div>`;
   }).join('');
@@ -1116,15 +1123,33 @@ function emailQuote() {
 // ============================================================
 // AI CHAT
 // ============================================================
-const CHAT_SYSTEM = `You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque (17630 Preston Rd, Dallas TX 75252, 214-514-8684, blusbarbeque.com).
+const CHAT_SYSTEM = `You are the AI operations assistant for Zach, owner of Blu's Barbeque (17630 Preston Rd, Dallas TX 75252, 214-514-8684, blusbarbeque.com). You run inside his private business dashboard.
 
-Current pipeline: ${JSON.stringify(leads)}
+COMMUNICATION STYLE: Professional and concise. No fluff. Lead with the answer. Use bullet points for lists. When offering choices present numbered options. Never say Great question or Certainly.
 
-Menu highlights: Brisket $31.99/lb, Pulled Pork $22.99/lb, Sausage $22.99/lb, Turkey $28/lb, Burnt Ends $31.99/lb. Buffet packages: 2-meat $19.99/person, 3-meat $23.99/person, 4-meat $29.99/person. Sides: Mac & Cheese half pan $55, Potato Salad $45, Beans $45. Delivery minimum $50. Service charge typically 0-18% depending on service type and budget.
+BUSINESS: Hours Tue-Sun 11am-8pm closed Monday. Pickup 17630 Preston Rd Dallas TX 75252. Delivery $50 min fee DFW area only. Delivery+Setup $50+$11/rack, customer returns equipment by 11am next day. Payment: Toast link preferred, cash or check waives service charge. Samples: after 1PM Wed-Sun ask for Raul. Quote turnaround goal same day. Deposit: full by invoice date or 50% deposit + 50% day of event.
 
-Zach's email style: Warm, concise, friendly. Opens "Hi [Name],", ends "Thanks, Zach / Blu's Barbeque / 214-514-8684". Never overly salesy. Mentions "true Texas barbecue" occasionally.
+FULL MENU: MEATS/lb: Brisket sliced $31.99, Brisket chopped $31.99, Pulled Pork $22.99, Sausage pork&beef $22.99, Sausage beef&jalapeño $22.99, Turkey $28, Burnt Ends brisket $31.99, Burnt Ends pork belly $31.99, Rib Tips $24, Beef Rib dino $39/piece, Jalapeño Poppers $5.50/piece, Chicken half $11, Chicken whole $18. PACKAGES/person incl 2 sides: 2-meat $19.99, 3-meat $23.99, 4-meat $29.99. SIDES half pan: Mac&Cheese $55, Bacon Jalapeño Mac $65, Baked Beans $45, Loaded Beans $55, Cole Slaw $45, Potato Salad $45, Collard Greens $45, Stuffed Baked Potato $12.50/pc. DESSERTS half pan: Banana Pudding $45, Bread Pudding $55, Sweet Potato Casserole $55, Peach Cobbler $45, Caramel Apple Cobbler $45, Bourbon Cherry Cobbler $45. DRINKS/gallon: Sweet Tea $9, Regular Tea $9, Lemonade $9, Water $5. EXTRAS: Plates+Cutlery $3.50/person, Cutlery $1.75, Plates $1.75, BBQ Sauce half pan $45, Buns $0.65, Bread loaf $8.
 
-You can help with: drafting emails, quote advice, pipeline questions, menu pricing, service charge recommendations, analyzing uploaded files, and answering business questions. Be concise and practical.`;
+SERVICE CHARGE RULES: Pickup+cash/check 0%. Pickup+card 0%. Delivery standard 10-12%, tight budget 8%. Delivery+setup standard 15-18%, tight budget 12%. Large orders 75+ guests reduce as goodwill. Corporate/school 15-18%. Always offer cash/check waiver first for budget-sensitive customers.
+
+EMAIL STYLE - always write as Zach: Open Hi [FirstName], warm direct never pushy 3-5 sentences max for follow-ups, mention true Texas barbecue on first contact, offer samples after 1PM Wed-Sun ask for Raul, offer cash/check service charge waiver, close Thanks,\nZach\nBlu's Barbeque\n214-514-8684.
+
+LEAD SCORING: HOT=responded within 24hrs+has budget+event within 60 days. WARM=responded but vague+event 60-120 days. COLD=no response 3+ days or no event date. URGENT=event within 7 days no payment.
+
+QUOTE RECOMMENDATIONS: Under 25 guests suggest à la carte by lb. 25-75 guests suggest buffet packages+2-3 sides. 75+ guests suggest buffet+3-4 sides+dessert+drinks. Always mention sides and desserts available in half pans. Upsell naturally. Budget-tight lead with pickup+cash/check.
+
+REVIEW RESPONSES: 5-star: thank by name mention item they loved invite back 2-3 sentences. 4-star: thank acknowledge any concern invite back. 3-star: thank address concern offer to make it right give phone. 1-2 star: stay calm empathize take responsibility offer resolution never argue end with Please call 214-514-8684 so we can make this right.
+
+SOCIAL MEDIA VOICE: Casual proud Texas BBQ culture not corporate. Phrases: smoked to perfection, true Texas BBQ, Farm to Smoker. Facebook longer community-focused. Instagram visual short captions. TikTok casual behind-the-scenes. Post ideas: daily specials, smoker behind-the-scenes, customer photos, graduation season, new items, team spotlights.
+
+CALL ANALYSIS when recording uploaded: Summarize in 3 bullets who called what they wanted what was resolved. Flag complaints missed sales callbacks pricing questions. Note staff tone professionalism upsell attempts. Extract catering inquiries for pipeline.
+
+APP SELF-MODIFICATION: You can modify this dashboard. When user asks to change the app confirm with them then call requestAppChange(). You have full access to read and write the index.html file via GitHub API.
+
+Current pipeline: ` + JSON.stringify(leads) + `
+
+PROACTIVE: When user asks what needs attention check pipeline for events within 7 days not booked, no response 3+ days, quoted 5+ days no reply, leads missing key info.`;
 
 async function sendChat() {
   const input = document.getElementById('chat-input');
@@ -1135,20 +1160,39 @@ async function sendChat() {
   input.value = '';
   input.style.height = 'auto';
 
+  if (window._awaitingModifyConfirm) {
+    window._awaitingModifyConfirm = false;
+    const lower = text.toLowerCase().trim();
+    if (lower === '1' || lower.includes('yes') || lower.includes('do it') || lower.includes('go ahead') || lower.includes('make')) {
+      chatHistory.push({ role: 'user', content: text });
+      requestAppChange(window._pendingModifyRequest);
+      return;
+    } else {
+      appendChatMsg('ai', 'Got it — no changes made.');
+      window._pendingModifyRequest = null;
+      chatHistory.push({ role: 'user', content: text });
+      return;
+    }
+  }
+
+  if (isModifyRequest(text)) {
+    appendChatMsg('ai', 'That looks like an app change request. Confirm:
+
+1. Yes — modify the dashboard now
+2. No — just give me advice');
+    window._pendingModifyRequest = text;
+    window._awaitingModifyConfirm = true;
+    chatHistory.push({ role: 'user', content: text });
+    return;
+  }
+
   chatHistory.push({ role: 'user', content: text });
-
   const typingId = appendTyping();
-
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        system: CHAT_SYSTEM,
-        messages: chatHistory
-      })
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1500, system: CHAT_SYSTEM, messages: chatHistory })
     });
     const data = await res.json();
     const reply = data.content?.find(c => c.type === 'text')?.text || 'Sorry, something went wrong. Please try again.';
@@ -1157,7 +1201,7 @@ async function sendChat() {
     chatHistory.push({ role: 'assistant', content: reply });
   } catch(e) {
     removeTyping(typingId);
-    appendChatMsg('ai', 'Could not connect to AI. Please check your internet connection and try again.');
+    appendChatMsg('ai', 'Could not connect. Error: ' + e.message);
   }
 }
 
@@ -1379,7 +1423,101 @@ window.markSent = function(id) {
   showToast('Email sent via Gmail!');
 };
 
+// ============================================================
+// SELF-MODIFICATION ENGINE
+// ============================================================
+let _isModifying = false;
+window._awaitingModifyConfirm = false;
+window._pendingModifyRequest = null;
+
+const MODIFY_TRIGGERS = ['add a ','add an ','remove the ','remove a ','change the ','update the ','rename the ','move the ','delete the ','create a ','make the ','hide the ','show the ','fix the ','redesign ','add column','add field','add button','add feature','add section','add page','change color','change font','change layout','reorder '];
+
+function isModifyRequest(text) {
+  const lower = text.toLowerCase();
+  return MODIFY_TRIGGERS.some(t => lower.startsWith(t) || lower.includes(' ' + t));
+}
+
+async function requestAppChange(userRequest) {
+  if (_isModifying) { appendChatMsg('ai', 'A modification is already in progress.'); return; }
+  _isModifying = true;
+  appendChatMsg('ai', 'Step 1/3 — Reading current app code from GitHub...');
+  try {
+    const getRes = await fetch('/api/self-modify', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'get' })
+    });
+    const getJson = await getRes.json();
+    const currentCode = getJson.content;
+    if (!currentCode) throw new Error('Could not read app code. Check GITHUB_TOKEN env variable.');
+
+    appendChatMsg('ai', 'Step 2/3 — Generating code changes (20-30 seconds)...');
+    const aiRes = await fetch('/api/chat', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        system: 'You are a senior frontend developer. Return the COMPLETE modified HTML file only. No explanation, no markdown fences, no truncation. Start with <!DOCTYPE html> end with </html>. Preserve all existing functionality. Match existing dark theme.',
+        messages: [{ role: 'user', content: 'USER REQUEST: "' + userRequest + '"
+
+Modify this file and return the complete result:
+
+' + currentCode }]
+      })
+    });
+    const aiJson = await aiRes.json();
+    let newCode = aiJson.content?.find(c => c.type === 'text')?.text || '';
+    newCode = newCode.replace(/^```html
+?/i,'').replace(/^```
+?/i,'').replace(/
+?```$/i,'').trim();
+    if (!newCode.includes('<!DOCTYPE') && !newCode.includes('<html')) throw new Error('AI returned invalid HTML — change aborted for safety.');
+
+    appendChatMsg('ai', 'Step 3/3 — Pushing to GitHub...');
+    const pushRes = await fetch('/api/self-modify', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'update', content: newCode, message: 'AI: ' + userRequest.slice(0,72) })
+    });
+    const pushJson = await pushRes.json();
+    if (pushJson.success) {
+      appendChatMsg('ai', 'Done! Change pushed to GitHub. Vercel is redeploying — your app updates in ~30 seconds. Auto-reloading...');
+      showToast('App updated! Reloading in 35s...');
+      setTimeout(() => window.location.reload(), 35000);
+    } else {
+      throw new Error(pushJson.error || 'GitHub push failed — check GITHUB_TOKEN and GITHUB_REPO env variables.');
+    }
+  } catch(e) {
+    appendChatMsg('ai', 'Change failed: ' + e.message);
+  } finally { _isModifying = false; }
+}
+
+// ============================================================
+// SCHEDULED EMAILS
+// ============================================================
+let scheduledEmails = [];
+
+function saveScheduledEmails() {
+  try { localStorage.setItem('blus_scheduled', JSON.stringify(scheduledEmails)); } catch(e) {}
+}
+function loadScheduledEmails() {
+  try { const s = localStorage.getItem('blus_scheduled'); if (s) scheduledEmails = JSON.parse(s); } catch(e) {}
+  checkScheduledEmails();
+}
+function checkScheduledEmails() {
+  const now = new Date().getTime();
+  scheduledEmails.forEach(e => {
+    if (!e.sent && new Date(e.sendAt).getTime() <= now) {
+      e.sent = true;
+      fetch('/api/gmail/send', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({to:e.to,name:e.name,subject:e.subject,body:e.body}) }).catch(()=>{});
+      showToast('Scheduled email sent to ' + e.name + '!');
+    }
+  });
+  saveScheduledEmails();
+}
+setInterval(checkScheduledEmails, 30000);
+
+
 init();
+loadScheduledEmails();
 </script>
 </body>
 </html>
