@@ -835,24 +835,24 @@ tr:hover td { background: var(--surface2); }
       <button class="btn btn-primary" onclick="sendToastLink()">Send Payment Link</button>
     </div>
   </div>
-</div>
 
-<!-- MODIFICATION HISTORY PAGE -->
-<div id="page-history" class="page">
-  <div class="page-header" style="padding:20px 24px 0;">
-    <div class="page-title">MODIFICATION HISTORY</div>
-    <div class="page-sub">All AI-driven dashboard changes, newest first</div>
-    <div class="hist-controls" style="margin-top:12px;">
-      <select class="hist-select" id="hist-filter-status" onchange="loadModHistory()">
-        <option value="">All Status</option>
-        <option value="done">Completed</option>
-        <option value="failed">Failed</option>
-      </select>
+    <!-- MODIFICATION HISTORY PAGE -->
+    <div id="page-history" class="page" style="display:none;flex-direction:column;">
+      <div class="page-header" style="padding:20px 24px 12px;">
+        <div class="page-title">MODIFICATION HISTORY</div>
+        <div class="page-sub">All AI-driven dashboard changes, newest first</div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <select class="hist-select" id="hist-filter-status" onchange="loadModHistory()">
+            <option value="">All Status</option>
+            <option value="done">Completed</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+      </div>
+      <div style="padding:0 24px 24px;overflow-y:auto;flex:1;">
+        <div id="hist-list"><div class="history-empty-msg">Loading…</div></div>
+      </div>
     </div>
-  </div>
-  <div class="hist-list-wrap">
-    <div id="hist-list"><div class="history-empty-msg">Loading...</div></div>
-  </div>
 </div>
 
 <!-- SELF-MODIFY OVERLAY -->
@@ -1699,7 +1699,7 @@ async function loadModHistory() {
     const r = await fetch('/api/modify-history');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
-    let items = (data.items || []);
+    let items = data.items || data.history || [];
     if (filter) items = items.filter(i => i.status === filter);
     if (!items.length) { listEl.innerHTML = '<div class="history-empty-msg">No modifications yet.</div>'; return; }
     const icon = s => s === 'done' ? '✅' : s === 'failed' ? '❌' : '⏳';
