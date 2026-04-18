@@ -690,6 +690,19 @@ tr:hover td { background: var(--surface2); }
       </div>
     </div>
 
+      <!-- PAGE: SCHEDULED -->
+      <div id="page-scheduled" class="page" style="display:none">
+        <div class="page-header">
+          <h2>📅 Scheduled Emails</h2>
+          <p class="page-subtitle">Outbound emails queued for delivery</p>
+        </div>
+        <div id="sched-empty" class="empty-state" style="display:none">
+          <p>📭 No scheduled emails yet.</p>
+          <p style="color:var(--text2);font-size:0.9em">Use the follow-up tools in the Pipeline to schedule emails.</p>
+        </div>
+        <div id="sched-list" class="sched-list-container"></div>
+      </div>
+
     <!-- COMING SOON PAGES -->
     <div id="page-invoices" class="page">
       <div class="topbar"><div class="topbar-title">Invoices</div></div>
