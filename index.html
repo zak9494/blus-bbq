@@ -1211,7 +1211,7 @@ async function sendChat() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1500,
         system: CHAT_SYSTEM,
         messages: chatHistory
@@ -1294,7 +1294,7 @@ async function sendImageToChat(base64, mediaType, filename) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1500,
         system: CHAT_SYSTEM,
         messages: [...chatHistory, {
@@ -1386,7 +1386,7 @@ async function confirmModify() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 8000,
         system: 'You are a code editor. The user will give you an HTML file and a change request. Output ONLY the complete modified HTML file with no explanation, no markdown code fences — just raw HTML starting with <!DOCTYPE html>.',
         messages: [{ role: 'user', content: `Here is the current HTML:\n\n${currentHtml}\n\nChange request: ${prompt}\n\nOutput the complete modified HTML file:` }]
@@ -1475,13 +1475,13 @@ function updateGmailStatus(connected) {
   }
 }
 
-anync function connectGmail() {
+async function connectGmail() {
   const res = await fetch('/api/auth/gmail');
   const { url } = await res.json();
   window.location.href = url;
 }
 
-anync function sendEmailViaAPI(to, name, subject, body) {
+async function sendEmailViaAPI(to, name, subject, body) {
   if (!gmailConnected) {
     const connect = confirm('Gmail not connected yet. Connect now to send emails directly from the app?');
     if (connect) connectGmail();
