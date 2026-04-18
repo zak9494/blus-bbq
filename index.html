@@ -1237,8 +1237,8 @@ You can help with: drafting emails, quote advice, pipeline questions, menu prici
 
 IMPORTANT — Clarifying choices: When the user asks you to do something that requires a decision (which lead to follow up with, what date/time to schedule, which email template to use, etc.), propose 2-4 concrete options at the end of your reply in this exact format:
 <options>
-  <option label='Short label' value='Exact text to send as my next reply if I pick this'/>
-  <option label='Another' value='...'/>
+  <option value='Exact text to send as reply'>Short button label</option>
+  <option value='Another reply text'>Another label</option>
 </options>
 Only include <options> when a clarifying choice would genuinely help the user move forward. Skip them for pure Q&A or explanations where you already have enough info to answer.`;
 
@@ -1298,11 +1298,13 @@ function appendChatMsg(role, text) {
           if (optionsBlock) {
             const wrap = document.createElement('div');
             wrap.className = 'chat-options';
-            const optRe = /<option(?:\s+value="([^"]*)")?[^>]*>([\s\S]*?)<\/option>/gi;
+            const optRe = /<option([^>]*?)(?:\/>|>([\s\S]*?)<\/option>)/gi;
             let om;
             while ((om = optRe.exec(optionsBlock)) !== null) {
-              const value = om[1] || '';
-              const label = (om[2] || '').trim();
+              const attrStr = om[1] || ''; const content = (om[2] || '').trim();
+              const labelAttr = (attrStr.match(/label=["']([^"']+)["']/) || [])[1] || ''; const valueAttr = (attrStr.match(/value=["']([^"']+)["']/) || [])[1] || '';
+              const label = labelAttr || content;
+              const value = valueAttr || content || label;
               if (!label) continue;
               const btn = document.createElement('button');
               btn.className = 'chat-option-btn';
