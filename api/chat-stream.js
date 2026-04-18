@@ -14,7 +14,7 @@ export default async function handler(req) {
 
   try {
     const body = await req.json();
-    const anthropicBody = { model: 'claude-haiku-4-5-20251001', max_tokens: 64000, ...body, stream: true };
+    const anthropicBody = { model: 'claude-haiku-4-5-20251001', ...body, max_tokens: 64000, stream: true };
 
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
