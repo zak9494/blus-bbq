@@ -1299,7 +1299,7 @@ async function sendChat() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1500,
         system: CHAT_SYSTEM,
         messages: chatHistory
@@ -1520,7 +1520,7 @@ async function confirmModify() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 8000,
+        max_tokens: 30000,
         system: 'You are a code editor. The user will give you an HTML file and a change request. Output ONLY the complete modified HTML file with no explanation, no markdown code fences — just raw HTML starting with <!DOCTYPE html>.',
         messages: [{ role: 'user', content: `Here is the current HTML:\n\n${currentHtml}\n\nChange request: ${prompt}\n\nOutput the complete modified HTML file:` }]
       })
