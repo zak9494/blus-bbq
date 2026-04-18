@@ -9,11 +9,14 @@ const APP_URL = process.env.APP_URL || 'https://blus-bbq.vercel.app';
 
 function kvUrl()    { return process.env.KV_REST_API_URL    || process.env.UPSTASH_REDIS_REST_URL; }
 function kvToken()  { return process.env.KV_REST_API_TOKEN  || process.env.UPSTASH_REDIS_REST_TOKEN; }
+function qstashHost() {
+  const u = process.env.QSTASH_URL;
+  if (u) { try { return new URL(u).hostname; } catch {} }
+  return 'qstash.upstash.io';
+}
 
 async function kvExec(commands) {
-  // Upstash Redis REST API - pipeline
-  const url = kvUrl();
-  const token = kvToken();
+  const url = kvUrl(), token = kvToken();
   if (!url || !token) throw new Error('KV env vars not set (KV_REST_API_URL / KV_REST_API_TOKEN)');
   return new Promise((resolve, reject) => {
     const body = JSON.stringify(commands);
@@ -36,9 +39,10 @@ async function qstashPublish(destUrl, body, delaySeconds) {
   if (!token) throw new Error('QSTASH_TOKEN not set');
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
+    const host = qstashHost();
     const path = `/v2/publish/${encodeURIComponent(destUrl)}`;
     const opts = {
-      hostname: 'qstash.upstash.io', path, method: 'POST',
+      hostname: host, path, method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
