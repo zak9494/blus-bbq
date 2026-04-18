@@ -1575,24 +1575,7 @@ function updateGmailStatus(connected) {
 }
 
 async function connectGmail() {
-      window.location.href = '/api/auth/init';
-    });
-    const data = await res.json();
-    if (data.needsAuth) {
-      const connect = confirm('Gmail session expired. Reconnect?');
-      if (connect) connectGmail();
-      return false;
-    }
-    if (data.success) {
-      showToast('Email sent via Gmail!');
-      return true;
-    }
-    showToast('Send failed: ' + (data.error || 'Unknown error'));
-    return false;
-  } catch (err) {
-    showToast('Could not send email. Check connection.');
-    return false;
-  }
+  window.location.href = '/api/auth/init';
 }
 
 // Intercept sendPrompt calls for email
