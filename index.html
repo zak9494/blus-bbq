@@ -260,6 +260,12 @@ tr:hover td { background: var(--surface2); }
 .sched-card-time { font-size: 11px; color: var(--amber); margin-top: 2px; }
 .sched-card-preview { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sched-cancel-btn { font-size: 11px; padding: 3px 10px; border-radius: 4px; border: 0.5px solid var(--red-border); background: var(--red-bg); color: #e09090; cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0; }
+    .sched-retry-btn { font-size: 11px; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--green,#3a8); color: var(--green,#3a8); background: transparent; cursor: pointer; }
+    .sched-card-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .sched-status { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 4px; }
+    .sched-status-pending { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .sched-status-sent { background: rgba(52,211,153,0.15); color: #34d399; }
+    .sched-status-failed { background: rgba(239,68,68,0.15); color: #ef4444; }
 .import-zone { border: 1px dashed var(--border2); border-radius: var(--radius-sm); padding: 24px; text-align: center; cursor: pointer; transition: all 0.15s; }
 .import-zone:hover { border-color: var(--red-border); background: var(--red-bg); }
 .import-zone input { display: none; }
@@ -692,13 +698,13 @@ tr:hover td { background: var(--surface2); }
 
       <!-- PAGE: SCHEDULED -->
       <div id="page-scheduled" class="page" style="display:none">
-        <div class="page-header">
-          <h2>📅 Scheduled Emails</h2>
-          <p class="page-subtitle">Outbound emails queued for delivery</p>
+        <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
+          <div><h2>📅 Scheduled Emails</h2><p class="page-subtitle">Outbound emails queued for delivery</p></div>
+          <button class="btn btn-secondary" onclick="renderScheduled()" style="font-size:12px;padding:6px 12px">🔄 Refresh</button>
         </div>
         <div id="sched-empty" class="empty-state" style="display:none">
           <p>📭 No scheduled emails yet.</p>
-          <p style="color:var(--text2);font-size:0.9em">Use the follow-up tools in the Pipeline to schedule emails.</p>
+          <p style="color:var(--text2);font-size:0.9em">Schedule emails from the Pipeline page.</p>
         </div>
         <div id="sched-list" class="sched-list-container"></div>
       </div>
@@ -922,6 +928,7 @@ function showPage(page) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
+  if (page === 'scheduled') renderScheduled();
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
   });
@@ -1636,36 +1643,44 @@ function loadScheduled() {
 function saveScheduled() {
   try { localStorage.setItem('blus_scheduled', JSON.stringify(scheduledMessages)); } catch(e) {}
 }
-function renderScheduled() {
+async function renderScheduled() {
   const list = document.getElementById('sched-list');
   const empty = document.getElementById('sched-empty');
-  const badge = document.getElementById('sched-badge');
-  const now = new Date();
-  // Fire any due messages
-  scheduledMessages = scheduledMessages.filter(m => {
-    if (new Date(m.sendAt) <= now) {
-      sendEmailViaAPI(m.to, m.name, m.subject, m.body);
-      showToast('Scheduled email sent to ' + m.name + '!');
-      return false;
-    }
-    return true;
-  });
-  saveScheduled();
-  const pending = scheduledMessages.length;
-  badge.textContent = pending;
-  badge.style.display = pending > 0 ? 'inline-block' : 'none';
-  if (!pending) { empty.style.display = 'block'; list.innerHTML = ''; return; }
-  empty.style.display = 'none';
-  list.innerHTML = scheduledMessages.map((m, i) => `
-    <div class="sched-card">
-      <div class="sched-card-info">
-        <div class="sched-card-to">${m.name} &lt;${m.to}&gt;</div>
-        <div class="sched-card-time">⏰ ${new Date(m.sendAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
-        <div class="sched-card-preview"><strong style="color:var(--text2)">${m.subject}</strong> — ${m.body.substring(0,100).replace(/\n/g,' ')}...</div>
-      </div>
-      <button class="sched-cancel-btn" onclick="cancelScheduled(${i})">Cancel</button>
-    </div>`).join('');
+  if (!list || !empty) return;
+  list.innerHTML = '<p style="color:var(--text2);padding:16px;text-align:center">Loading...</p>';
+  try {
+    const resp = await fetch('/api/tasks');
+    const d = await resp.json();
+    const tasks = (d.tasks || []).sort((a,b) => new Date(b.sendAt) - new Date(a.sendAt));
+    if (!tasks.length) { empty.style.display = ''; list.innerHTML = ''; return; }
+    empty.style.display = 'none';
+    list.innerHTML = tasks.map(t => {
+      const isFuture = new Date(t.sendAt) > new Date();
+      const st = t.status;
+      const label = st === 'sent' ? '✅ Sent' : st === 'failed' ? '❌ Failed' : isFuture ? '⏰ Scheduled' : '⏳ Pending';
+      const cls = st === 'sent' ? 'sched-status-sent' : st === 'failed' ? 'sched-status-failed' : 'sched-status-pending';
+      const timeStr = new Date(t.sendAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+      const subj = (t.payload && t.payload.subject) || '(no subject)';
+      const to = (t.payload && t.payload.to) || '';
+      return `<div class="sched-card">
+        <div class="sched-card-info">
+          <span class="sched-status ${cls}">${label}</span>
+          <div class="sched-card-time">📧 ${timeStr}</div>
+          <div class="sched-card-preview"><strong style="color:var(--text)">${subj}</strong><br><small style="color:var(--text2)">To: ${to}</small></div>
+        </div>
+        <div class="sched-card-actions">
+          ${isFuture && st === 'scheduled' ? `<button class="sched-cancel-btn" onclick="cancelScheduledTask('${t.taskId}')">Cancel</button>` : ''}
+          ${st === 'failed' ? `<button class="sched-retry-btn" onclick="retryScheduledTask('${t.taskId}')">Retry</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<p style="color:var(--red);padding:16px">Failed to load scheduled emails.</p>';
+  }
 }
+
+function cancelScheduledTask(taskId) { showToast('Cancel not yet implemented.'); }
+function retryScheduledTask(taskId) { showToast('Retry not yet implemented.'); }
 function cancelScheduled(idx) {
   scheduledMessages.splice(idx, 1);
   saveScheduled();
