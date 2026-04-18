@@ -1,45 +1,56 @@
-export default async function handler(req, res) {
-  const { code, error } = req.query;
+/**
+ * GET /api/auth/callback
+ * OAuth 2.0 callback from Google. Exchanges code for tokens, stores in KV, redirects to dashboard.
+ */
+const https = require('https');
 
-  if (error) {
-    return res.redirect('/?gmail_error=' + encodeURIComponent(error));
-  }
+function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
+function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
 
-  if (!code) {
-    return res.status(400).json({ error: 'No authorization code provided' });
-  }
-
-  const clientId = process.env.GMAIL_CLIENT_ID;
-  const clientSecret = process.env.GMAIL_CLIENT_SECRET;
-  const redirectUri = 'https://blus-bbq.vercel.app/api/auth/callback';
-
-  try {
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code'
-      })
-    });
-
-    const tokens = await tokenRes.json();
-
-    if (tokens.error) {
-      return res.redirect('/?gmail_error=' + encodeURIComponent(tokens.error_description || tokens.error));
-    }
-
-    const cookieOpts = 'Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000';
-    res.setHeader('Set-Cookie', [
-      `gmail_access_token=${tokens.access_token}; ${cookieOpts}`,
-      `gmail_refresh_token=${tokens.refresh_token || ''}; ${cookieOpts}`
-    ]);
-
-    return res.redirect('/?gmail_connected=true');
-  } catch (err) {
-    return res.redirect('/?gmail_error=' + encodeURIComponent('Token exchange failed'));
-  }
+async function kvSet(key, value) {
+  const url = kvUrl(), token = kvToken();
+  if (!url) return;
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify(['SET', key, value]);
+    const u = new URL(`${url}/pipeline`);
+    const opts = { hostname: u.hostname, path: u.pathname, method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } };
+    const req = https.request(opts, r => { r.resume().on('end', resolve); });
+    req.on('error', resolve); req.write(body); req.end();
+  });
 }
+
+module.exports = async (req, res) => {
+  const { code, error } = req.query || {};
+  if (error) return res.redirect(`/?gmailError=${encodeURIComponent(error)}`);
+  if (!code) return res.status(400).send('Missing authorization code');
+
+  const redirectUri = `${process.env.APP_URL || 'https://blus-bbq.vercel.app'}/api/auth/callback`;
+  const tokenBody = new URLSearchParams({
+    code, client_id: process.env.GMAIL_CLIENT_ID,
+    client_secret: process.env.GMAIL_CLIENT_SECRET,
+    redirect_uri: redirectUri, grant_type: 'authorization_code',
+  }).toString();
+
+  const tokenResp = await new Promise((resolve, reject) => {
+    const opts = { hostname: 'oauth2.googleapis.com', path: '/token', method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(tokenBody) } };
+    const req = https.request(opts, r => {
+      let d = ''; r.on('data', c => d += c);
+      r.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({ error: 'parse_failed' }); } });
+    });
+    req.on('error', reject); req.write(tokenBody); req.end();
+  });
+
+  if (tokenResp.error) return res.redirect(`/?gmailError=${encodeURIComponent(tokenResp.error_description || tokenResp.error)}`);
+
+  await kvSet('gmail:tokens', JSON.stringify({
+    access_token: tokenResp.access_token,
+    refresh_token: tokenResp.refresh_token || null,
+    expiry_date: Date.now() + (tokenResp.expires_in || 3600) * 1000,
+    scope: tokenResp.scope, token_type: tokenResp.token_type,
+    storedAt: new Date().toISOString(),
+  }));
+
+  return res.redirect(`/?gmailConnected=1&hasRefreshToken=${tokenResp.refresh_token ? '1' : '0'}`);
+};
