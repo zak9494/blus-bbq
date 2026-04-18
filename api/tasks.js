@@ -6,6 +6,11 @@ const https = require('https');
 
 function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
 function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
+function qstashHost() {
+  const u = process.env.QSTASH_URL;
+  if (u) { try { return new URL(u).hostname; } catch {} }
+  return 'qstash.upstash.io';
+}
 
 async function kvPipeline(commands) {
   const url = kvUrl(), token = kvToken();
@@ -28,7 +33,7 @@ async function qstashDelete(messageId) {
   if (!token || !messageId) return;
   return new Promise(resolve => {
     const req = https.request({
-      hostname: 'qstash.upstash.io', path: `/v2/messages/${messageId}`, method: 'DELETE',
+      hostname: qstashHost(), path: `/v2/messages/${messageId}`, method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     }, r => r.resume().on('end', resolve));
     req.on('error', resolve); req.end();
@@ -54,8 +59,7 @@ module.exports = async (req, res) => {
       const gets = taskIds.map(id => ['GET', `task:${id}`]);
       const getResults = await kvPipeline(gets);
       const tasks = getResults
-        .map(r => r && r.result)
-        .filter(Boolean)
+        .map(r => r && r.result).filter(Boolean)
         .map(r => { try { return typeof r === 'string' ? JSON.parse(r) : r; } catch { return null; } })
         .filter(Boolean);
       return res.status(200).json({ ok: true, tasks });
