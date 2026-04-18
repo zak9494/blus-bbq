@@ -45,7 +45,8 @@ module.exports = async (req, res) => {
         error: body.error || null,
         timestamp: new Date().toISOString(),
       };
-      const existing = (await kvGet(HISTORY_KEY)) || [];
+      const rawExisting = (await kvGet(HISTORY_KEY)) || [];
+      const existing = Array.isArray(rawExisting) ? rawExisting : [];
       const updated = [entry, ...existing].slice(0, 30);
       await kvSet(HISTORY_KEY, updated);
       return res.status(200).json({ ok: true, entry });
