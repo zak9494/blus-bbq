@@ -1447,9 +1447,9 @@ async function confirmModify() {
   document.getElementById('modify-status-1').textContent = 'Reading current dashboard source...';
   let currentHtml = '';
   try {
-    const r1 = await fetch('/api/self-modify');
-    const d1 = await r1.json();
-    currentHtml = d1.content;
+    const r1 = await fetch('https://raw.githubusercontent.com/zak9494/blus-bbq/main/index.html?_t=' + Date.now());
+    if (!r1.ok) throw new Error('Failed to fetch source: HTTP ' + r1.status);
+    currentHtml = await r1.text();
     document.getElementById('modify-status-1').textContent = '✓ Source loaded (' + currentHtml.length + ' chars)';
   } catch(e) {
     document.getElementById('modify-status-1').textContent = '✗ Failed to read source: ' + e.message;
