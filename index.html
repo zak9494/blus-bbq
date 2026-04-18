@@ -1288,24 +1288,23 @@ function appendChatMsg(role, text) {
           const div = document.createElement('div');
           div.className = 'chat-msg ' + role;
           let optionsBlock = null;
-          let body = String(text == null ? '' : text);
-          if ((role === 'ai' || role === 'assistant')) {
+          if (role === 'ai' || role === 'assistant') {
             const optsRe = /<options>([\s\S]*?)<\/options>/i;
-            const m = body.match(optsRe);
-            if (m) { optionsBlock = m[1]; body = body.replace(optsRe, '').trim(); }
+            const optMatch = optsRe.exec(text);
+            optionsBlock = optMatch ? optMatch[1] : null;
+            if (optMatch) text = text.replace(/<options>[\s\S]*?<\/options>/i, '').trim();
           }
-          div.innerHTML = body.replace(/\n/g, '<br>');
+          div.textContent = text;
           if (optionsBlock) {
             const wrap = document.createElement('div');
             wrap.className = 'chat-options';
-            const optRe = /<option\s+label=(?:"([^"]*)"|'([^']*)')\s+value=(?:"([^"]*)"|'([^']*)')\s*\/?>/g;
+            const optRe = /<option(?:\s+value="([^"]*)")?[^>]*>([\s\S]*?)<\/option>/gi;
             let om;
             while ((om = optRe.exec(optionsBlock)) !== null) {
-              const label = om[1] || om[2] || '';
-              const value = om[3] || om[4] || '';
+              const value = om[1] || '';
+              const label = (om[2] || '').trim();
               if (!label) continue;
               const btn = document.createElement('button');
-              btn.type = 'button';
               btn.className = 'chat-option-btn';
               btn.textContent = label;
               btn.setAttribute('data-value', value);
