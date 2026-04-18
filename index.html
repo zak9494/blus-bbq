@@ -1542,7 +1542,6 @@ async function confirmModify() {
         try { const sseEvt = JSON.parse(sseData); if (sseEvt.type === 'content_block_delta' && sseEvt.delta && sseEvt.delta.type === 'text_delta') newHtml += sseEvt.delta.text; } catch(x) {}
       }
     }
-    newHtml = d2.content?.find(c => c.type === 'text')?.text || '';
     // Strip markdown fences if AI added them anyway
     newHtml = newHtml.replace(/^```html\s*/i, '').replace(/\s*```$/, '').trim();
     if (!newHtml || !newHtml.includes('<!DOCTYPE')) throw new Error('AI did not return valid HTML');
