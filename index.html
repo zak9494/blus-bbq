@@ -281,7 +281,13 @@ tr:hover td { background: var(--surface2); }
 .modify-textarea { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; resize: vertical; transition: border 0.15s; }
 .modify-textarea:focus { outline: none; border-color: var(--amber); }
 .modify-countdown { font-family: 'Bebas Neue', sans-serif; font-size: 56px; color: var(--amber); letter-spacing: 0.05em; text-align: center; margin: 10px 0 6px; line-height: 1; }
-</style>
+
+    .chat-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chat-option-btn { background: #1a1a1a; color: #e8e8e8; border: 1px solid #3a3a3a; border-radius: 14px; padding: 5px 11px; font-size: 12px; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .chat-option-btn:hover:not(:disabled) { background: #2a2a2a; border-color: #ff8800; color: #ff8800; }
+    .chat-option-btn:disabled { opacity: 0.5; cursor: default; }
+    .chat-option-btn.selected { background: #ff8800; color: #000; border-color: #ff8800; }
+  </style>
 </head>
 <body>
 
@@ -1214,7 +1220,14 @@ Menu highlights: Brisket $31.99/lb, Pulled Pork $22.99/lb, Sausage $22.99/lb, Tu
 
 Zach's email style: Warm, concise, friendly. Opens "Hi [Name],", ends "Thanks, Zach / Blu's Barbeque / 214-514-8684". Never overly salesy. Mentions "true Texas barbecue" occasionally.
 
-You can help with: drafting emails, quote advice, pipeline questions, menu pricing, service charge recommendations, analyzing uploaded files, and answering business questions. Be concise and practical.`;
+You can help with: drafting emails, quote advice, pipeline questions, menu pricing, service charge recommendations, analyzing uploaded files, and answering business questions. Be concise and practical.
+
+IMPORTANT — Clarifying choices: When the user asks you to do something that requires a decision (which lead to follow up with, what date/time to schedule, which email template to use, etc.), propose 2-4 concrete options at the end of your reply in this exact format:
+<options>
+  <option label='Short label' value='Exact text to send as my next reply if I pick this'/>
+  <option label='Another' value='...'/>
+</options>
+Only include <options> when a clarifying choice would genuinely help the user move forward. Skip them for pure Q&A or explanations where you already have enough info to answer.`;
 
 async function sendChat() {
   const input = document.getElementById('chat-input');
@@ -1257,16 +1270,59 @@ function quickAsk(text) {
 }
 
 function appendChatMsg(role, text) {
-  const msgs = document.getElementById('chat-messages');
-  const div = document.createElement('div');
-  div.className = `chat-msg ${role}`;
-  const formatted = text.replace(/\n/g, '<br>');
-  div.innerHTML = `
-    <div class="chat-avatar ${role}">${role === 'ai' ? 'AI' : 'Z'}</div>
-    <div class="chat-bubble">${formatted}</div>`;
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
-}
+          const msgs = document.getElementById('chat-messages');
+          if (!msgs) return null;
+          const div = document.createElement('div');
+          div.className = 'chat-msg ' + role;
+          let optionsBlock = null;
+          let body = String(text == null ? '' : text);
+          if (role === 'assistant') {
+            const optsRe = /<options>([\s\S]*?)<\/options>/i;
+            const m = body.match(optsRe);
+            if (m) { optionsBlock = m[1]; body = body.replace(optsRe, '').trim(); }
+          }
+          div.innerHTML = body.replace(/\n/g, '<br>');
+          if (optionsBlock) {
+            const wrap = document.createElement('div');
+            wrap.className = 'chat-options';
+            const optRe = /<option\s+label=(?:"([^"]*)"|'([^']*)')\s+value=(?:"([^"]*)"|'([^']*)')\s*\/?>/g;
+            let om;
+            while ((om = optRe.exec(optionsBlock)) !== null) {
+              const label = om[1] || om[2] || '';
+              const value = om[3] || om[4] || '';
+              if (!label) continue;
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'chat-option-btn';
+              btn.textContent = label;
+              btn.setAttribute('data-value', value);
+              btn.addEventListener('click', function(){ chooseChatOption(this); });
+              wrap.appendChild(btn);
+            }
+            if (wrap.children.length) div.appendChild(wrap);
+          }
+          msgs.appendChild(div);
+          msgs.scrollTop = msgs.scrollHeight;
+          return div;
+        }
+    
+        function chooseChatOption(btn) {
+          if (!btn) return;
+          const val = btn.getAttribute('data-value') || btn.textContent || '';
+          const input = document.getElementById('chat-input');
+          if (input) {
+            input.value = val;
+            input.focus();
+          }
+          const wrap = btn.parentElement;
+          if (wrap && wrap.classList.contains('chat-options')) {
+            [].slice.call(wrap.querySelectorAll('button')).forEach(function(b){
+              b.disabled = true;
+              if (b === btn) b.classList.add('selected');
+            });
+          }
+          if (typeof sendChat === 'function') { try { sendChat(); } catch(e){} }
+        }
 
 let typingCounter = 0;
 function appendTyping() {
@@ -1430,15 +1486,35 @@ async function confirmModify() {
   setStep(3);
   document.getElementById('modify-status-3').textContent = 'Pushing to GitHub...';
   try {
-    const r3 = await fetch('/api/self-modify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update', content: newHtml })
-    });
-    const d3 = await r3.json();
-    if (!d3.success) throw new Error(d3.error || 'Push failed');
-    document.getElementById('modify-status-3').textContent = '✓ Pushed to GitHub — waiting for Vercel to rebuild...';
-  } catch(e) {
+        // Phase 1: preview
+        const r3 = await fetch('/api/self-modify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'preview', content: newHtml })
+        });
+        const d3 = await r3.json();
+        if (!r3.ok || d3.error) throw new Error(d3.error || ('guardrails failed: ' + JSON.stringify(d3.guardrailErrors || [])));
+        if (d3.noop) {
+          document.getElementById('modify-status-3').textContent = '— No changes to commit (content identical)';
+          return;
+        }
+        // Phase 2: ask user to confirm
+        const summary = 'Diff preview:\n  +' + d3.diff.addedCount + ' lines added\n  -' + d3.diff.removedCount + ' lines removed\n  net: ' + d3.diff.netDelta + '\n  starts at line: ' + d3.diff.hunkStartLine + '\n\nCommit this change to main?';
+        if (!confirm(summary)) {
+          document.getElementById('modify-status-3').textContent = 'Canceled — no commit';
+          return;
+        }
+        // Phase 3: apply
+        document.getElementById('modify-status-3').textContent = 'Committing to GitHub...';
+        const r4 = await fetch('/api/self-modify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'apply', content: newHtml, proposalToken: d3.proposalToken, confirmed: true, commitMessage: 'AI edit: ' + prompt.slice(0, 100) })
+        });
+        const d4 = await r4.json();
+        if (!d4.success) throw new Error(d4.error || 'apply failed');
+        document.getElementById('modify-status-3').textContent = 'Committed: ' + (d4.commit ? d4.commit.slice(0,7) : 'ok');
+      } catch(e) {
     document.getElementById('modify-status-3').textContent = '✗ Push failed: ' + e.message;
     return;
   }
