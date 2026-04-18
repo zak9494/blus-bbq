@@ -1575,25 +1575,7 @@ function updateGmailStatus(connected) {
 }
 
 async function connectGmail() {
-  try {
-    const res = await fetch('/api/auth/gmail');
-    const data = await res.json();
-    if (data.url) { window.location.href = data.url; }
-    else { showToast('Gmail connect error: ' + (data.error || 'No redirect URL')); }
-  } catch(e) { showToast('Could not reach Gmail auth endpoint.'); }
-}
-
-async function sendEmailViaAPI(to, name, subject, body) {
-  if (!gmailConnected) {
-    const connect = confirm('Gmail not connected yet. Connect now to send emails directly from the app?');
-    if (connect) connectGmail();
-    return false;
-  }
-  try {
-    const res = await fetch('/api/gmail/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, name, subject, body })
+      window.location.href = '/api/auth/init';
     });
     const data = await res.json();
     if (data.needsAuth) {
