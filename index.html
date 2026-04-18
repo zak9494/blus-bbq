@@ -1515,17 +1515,33 @@ async function confirmModify() {
   document.getElementById('modify-status-2').textContent = 'Sending to AI — this may take 20-30 seconds...';
   let newHtml = '';
   try {
-    const r2 = await fetch('/api/chat', {
+    const r2 = await fetch('/api/chat-stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 30000,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 16000,
         system: 'You are a code editor. The user will give you an HTML file and a change request. Output ONLY the complete modified HTML file with no explanation, no markdown code fences — just raw HTML starting with <!DOCTYPE html>.',
         messages: [{ role: 'user', content: `Here is the current HTML:\n\n${currentHtml}\n\nChange request: ${prompt}\n\nOutput the complete modified HTML file:` }]
       })
     });
-    const d2 = await r2.json();
+    // Read SSE stream from Anthropic streaming edge function
+    const reader = r2.body.getReader();
+    const decoder = new TextDecoder();
+    let sseBuffer = '', newHtml = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      sseBuffer += decoder.decode(value, { stream: true });
+      const sseLines = sseBuffer.split('\n');
+      sseBuffer = sseLines.pop();
+      for (const sseLine of sseLines) {
+        if (!sseLine.startsWith('data: ')) continue;
+        const sseData = sseLine.slice(6).trim();
+        if (sseData === '[DONE]') continue;
+        try { const sseEvt = JSON.parse(sseData); if (sseEvt.type === 'content_block_delta' && sseEvt.delta && sseEvt.delta.type === 'text_delta') newHtml += sseEvt.delta.text; } catch(x) {}
+      }
+    }
     newHtml = d2.content?.find(c => c.type === 'text')?.text || '';
     // Strip markdown fences if AI added them anyway
     newHtml = newHtml.replace(/^```html\s*/i, '').replace(/\s*```$/, '').trim();
