@@ -313,7 +313,8 @@ tr:hover td { background: var(--surface2); }
   .modify-phase-error.visible{display:block;}
   #page-history{padding:0;}
   .hist-controls{display:flex;gap:8px;margin-bottom:16px;}
-  .hist-select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:6px 10px;font-size:13px;cursor:pointer;}
+  #page-history.active{display:flex!important;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
+.hist-select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:6px 10px;font-size:13px;cursor:pointer;}
   .hist-list-wrap{padding:0 24px 24px;overflow-y:auto;flex:1;}
   .modify-history-section{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
   .modify-history-heading{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;}
@@ -758,7 +759,26 @@ tr:hover td { background: var(--surface2); }
       <div class="content"><div class="coming-soon"><div class="coming-soon-badge">Coming Soon</div><div class="coming-soon-title">Outbound Prospecting</div><div class="coming-soon-sub">Find and contact schools, businesses, and event planners around DFW.</div></div></div>
     </div>
 
-  </div>
+  
+
+<!-- MODIFICATION HISTORY PAGE -->
+    <div id="page-history" class="page">
+      <div class="page-header" style="padding:20px 24px 12px;">
+        <div class="page-title">MODIFICATION HISTORY</div>
+        <div class="page-sub">All AI-driven dashboard changes, newest first</div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <select class="hist-select" id="hist-filter-status" onchange="loadModHistory()">
+            <option value="">All Status</option>
+            <option value="done">Completed</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+      </div>
+      <div style="padding:0 24px 24px;overflow-y:auto;flex:1;">
+        <div id="hist-list"><div class="history-empty-msg">Loading…</div></div>
+      </div>
+    </div>
+</div>
 </div>
 
 <!-- MODAL: New Lead / Edit Lead -->
@@ -836,23 +856,7 @@ tr:hover td { background: var(--surface2); }
     </div>
   </div>
 
-    <!-- MODIFICATION HISTORY PAGE -->
-    <div id="page-history" class="page" style="display:none;flex-direction:column;">
-      <div class="page-header" style="padding:20px 24px 12px;">
-        <div class="page-title">MODIFICATION HISTORY</div>
-        <div class="page-sub">All AI-driven dashboard changes, newest first</div>
-        <div style="display:flex;gap:8px;margin-top:12px;">
-          <select class="hist-select" id="hist-filter-status" onchange="loadModHistory()">
-            <option value="">All Status</option>
-            <option value="done">Completed</option>
-            <option value="failed">Failed</option>
-          </select>
-        </div>
-      </div>
-      <div style="padding:0 24px 24px;overflow-y:auto;flex:1;">
-        <div id="hist-list"><div class="history-empty-msg">Loading…</div></div>
-      </div>
-    </div>
+    
 </div>
 
 <!-- SELF-MODIFY OVERLAY -->
