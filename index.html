@@ -303,6 +303,18 @@ tr:hover td { background: var(--surface2); }
     .chat-option-btn:hover:not(:disabled) { background: #2a2a2a; border-color: #ff8800; color: #ff8800; }
     .chat-option-btn:disabled { opacity: 0.5; cursor: default; }
     .chat-option-btn.selected { background: #ff8800; color: #000; border-color: #ff8800; }
+  /* MODIFY HISTORY */
+  .modify-history-section{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+  .modify-history-heading{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;}
+  .history-empty-msg{color:var(--text3);font-size:12px;padding:4px 0;}
+  .history-card{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:6px;display:flex;gap:8px;align-items:flex-start;}
+  .history-card.done{border-left:3px solid #22c55e;}
+  .history-card.failed{border-left:3px solid #ef4444;}
+  .history-card-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+  .history-card-body{flex:1;min-width:0;}
+  .history-card-title{font-size:12px;color:var(--text);font-weight:500;word-break:break-word;line-height:1.4;}
+  .history-card-meta{font-size:10px;color:var(--text3);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .history-sha-badge{font-family:monospace;background:var(--surface2);padding:1px 4px;border-radius:3px;font-size:9px;}
   </style>
 </head>
 <body>
@@ -857,6 +869,10 @@ tr:hover td { background: var(--surface2); }
       <div class="modal-sub">Changes pushed to GitHub — waiting for Vercel to rebuild</div>
       <div class="modify-countdown" id="modify-countdown">35</div>
       <div class="modify-status" id="modify-status-3">Dashboard will reload automatically when ready.</div>
+    </div>
+    <div class="modify-history-section" id="modify-history-section">
+      <div class="modify-history-heading">Recent Changes</div>
+      <div id="modify-history-list"><div class="history-empty-msg">No changes yet.</div></div>
     </div>
   </div>
 </div>
@@ -1455,6 +1471,7 @@ function showToast(msg) {
 // SELF-MODIFY ENGINE
 // ============================================================
 function openModify() {
+  renderModifyHistory();
   document.getElementById('modify-prompt').value = '';
   setStep(0);
   document.getElementById('modify-overlay').classList.add('open');
@@ -1551,6 +1568,10 @@ async function confirmModify() {
         const d4 = await r4.json();
         if (!d4.success) throw new Error(d4.error || 'apply failed');
         document.getElementById('modify-status-3').textContent = 'Committed: ' + (d4.commit ? d4.commit.slice(0,7) : 'ok');
+        // Record modification in history
+        try { await fetch('/api/modify-history', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:prompt,status:'done',sha:d4.commit})}); } catch(e) {}
+        showToast('\u2705 Change deployed \u2014 ' + (prompt.length > 60 ? prompt.slice(0,60)+'...' : prompt));
+        renderModifyHistory();
       } catch(e) {
     document.getElementById('modify-status-3').textContent = '✗ Push failed: ' + e.message;
     return;
@@ -1572,6 +1593,26 @@ async function confirmModify() {
 // ============================================================
 // INIT
 // ============================================================
+async function renderModifyHistory() {
+  const el = document.getElementById('modify-history-list');
+  if (!el) return;
+  try {
+    el.innerHTML = '<div class="history-empty-msg">Loading...</div>';
+    const r = await fetch('/api/modify-history');
+    const d = await r.json();
+    const hist = d.history || [];
+    if (!hist.length) { el.innerHTML = '<div class="history-empty-msg">No changes yet.</div>'; return; }
+    el.innerHTML = hist.slice(0,10).map(function(e){
+      const icon = e.status==='done' ? '\u2705' : '\u274c';
+      const dt = new Date(e.timestamp).toLocaleString();
+      const sha = e.sha ? '<span class="history-sha-badge">' + e.sha.slice(0,7) + '</span>' : '';
+      return '<div class="history-card ' + e.status + '"><div class="history-card-icon">' + icon + '</div><div class="history-card-body"><div class="history-card-title">' + (e.title||'Update').replace(/</g,'&lt;') + '</div><div class="history-card-meta">' + dt + ' ' + sha + '</div></div></div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="history-empty-msg">Could not load history.</div>';
+  }
+}
+
 function init() {
   buildMenuPicker('meats', 'menu-meats');
   buildMenuPicker('packages', 'menu-packages');
