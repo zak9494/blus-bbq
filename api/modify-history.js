@@ -1,4 +1,26 @@
-const { kv } = require('@vercel/kv');
+const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const HISTORY_KEY = 'modify-history';
+
+async function kvGet(key) {
+  if (!KV_URL || !KV_TOKEN) return null;
+  const r = await fetch(KV_URL + '/get/' + encodeURIComponent(key), {
+    headers: { Authorization: 'Bearer ' + KV_TOKEN }
+  });
+  const d = await r.json();
+  if (d.result === null || d.result === undefined) return null;
+  try { return JSON.parse(d.result); } catch(e) { return d.result; }
+}
+
+async function kvSet(key, value) {
+  if (!KV_URL || !KV_TOKEN) return false;
+  const r = await fetch(KV_URL + '/set/' + encodeURIComponent(key), {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + KV_TOKEN, 'Content-Type': 'application/json' },
+    body: JSON.stringify(JSON.stringify(value))
+  });
+  return r.ok;
+}
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,7 +30,7 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === 'GET') {
-      const history = (await kv.get('modify-history')) || [];
+      const history = (await kvGet(HISTORY_KEY)) || [];
       return res.status(200).json({ ok: true, history });
     }
 
@@ -23,9 +45,9 @@ module.exports = async (req, res) => {
         error: body.error || null,
         timestamp: new Date().toISOString(),
       };
-      const existing = (await kv.get('modify-history')) || [];
+      const existing = (await kvGet(HISTORY_KEY)) || [];
       const updated = [entry, ...existing].slice(0, 30);
-      await kv.set('modify-history', updated);
+      await kvSet(HISTORY_KEY, updated);
       return res.status(200).json({ ok: true, entry });
     }
 
