@@ -1,3 +1,4 @@
+  if (window.innerWidth <= 768) closeMobileSidebar();
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -228,9 +229,19 @@ tr:hover td { background: var(--surface2); }
 @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
 
 /* RESPONSIVE */
+/* MOBILE HAMBURGER + DRAWER */
+.mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 199; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+.mobile-hamburger { display: none; position: fixed; top: 14px; left: 14px; z-index: 201; width: 38px; height: 38px; align-items: center; justify-content: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; color: var(--text); font-size: 20px; line-height: 1; }
+.sidebar-close-btn { position: absolute; top: 12px; right: 12px; background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; display: none; }
+@media (max-width: 768px) { .sidebar-close-btn { display: block; } }
+
 @media (max-width: 768px) {
   .app { grid-template-columns: 1fr; }
-  .sidebar { display: none; }
+  .sidebar { display: flex !important; position: fixed; top: 0; left: 0; bottom: 0; width: 260px; z-index: 200; transform: translateX(-100%); transition: transform 0.25s ease; box-shadow: 4px 0 24px rgba(0,0,0,0.4); }
+  .sidebar-open .sidebar { transform: translateX(0); }
+  .mobile-overlay { display: block !important; }
+  .sidebar-open .mobile-overlay { opacity: 1; pointer-events: auto; }
+  .mobile-hamburger { display: flex !important; }
   .stats-row { grid-template-columns: repeat(2,1fr); }
   .kanban { grid-template-columns: 1fr 1fr; }
   .quote-layout { grid-template-columns: 1fr; }
@@ -309,6 +320,7 @@ tr:hover td { background: var(--surface2); }
     <div class="nav-section-label">Catering</div>
     <div class="nav-item active" onclick="showPage('pipeline')"><span class="nav-dot dot-red"></span>Pipeline <span class="notif-badge" id="notif-badge">2</span></div>
     <div class="nav-item" onclick="showPage('quotes')"><span class="nav-dot dot-amber"></span>Quote Builder</div>
+    <button class="sidebar-close-btn" onclick="closeMobileSidebar()">✕</button>
     <div class="nav-item disabled"><span class="nav-dot dot-green"></span>Invoices</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Outbound Leads</div>
 
@@ -342,6 +354,10 @@ tr:hover td { background: var(--surface2); }
       </div>
     </div>
   </aside>
+  <!-- MOBILE OVERLAY -->
+  <div class="mobile-overlay" onclick="closeMobileSidebar()"></div>
+  <!-- MOBILE HAMBURGER -->
+  <button class="mobile-hamburger" onclick="toggleMobileSidebar()" aria-label="Open navigation">☰</button>
 
   <!-- MAIN -->
   <div class="main">
@@ -1797,6 +1813,13 @@ loadScheduled();
 checkGmailStatus();
 init();
 renderScheduled();
+
+function toggleMobileSidebar() {
+  document.querySelector('.app').classList.toggle('sidebar-open');
+}
+function closeMobileSidebar() {
+  document.querySelector('.app').classList.remove('sidebar-open');
+}
 </script>
 </body>
 </html>
