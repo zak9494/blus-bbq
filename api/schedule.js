@@ -1,14 +1,9 @@
-/**
- * POST /api/schedule
- * Body: { leadId?, channel, sendAt (ISO), payload: { to, name, subject, body } }
- * Stores task in Upstash KV + enqueues QStash callback to /api/dispatch/<channel>
- */
+/** * POST /api/schedule * Body: { leadId?, channel, sendAt (ISO), payload: { to, name, subject, body } } * Stores task in Upstash KV + enqueues QStash callback to /api/dispatch/<channel> */
 const https = require('https');
-
 const APP_URL = process.env.APP_URL || 'https://blus-bbq.vercel.app';
 
-function kvUrl()    { return process.env.KV_REST_API_URL    || process.env.UPSTASH_REDIS_REST_URL; }
-function kvToken()  { return process.env.KV_REST_API_TOKEN  || process.env.UPSTASH_REDIS_REST_TOKEN; }
+function kvUrl() { return process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL; }
+function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
 function qstashHost() {
   const u = process.env.QSTASH_URL;
   if (u) { try { return new URL(u).hostname; } catch {} }
@@ -22,15 +17,16 @@ async function kvExec(commands) {
     const body = JSON.stringify(commands);
     const u = new URL(`${url}/pipeline`);
     const opts = {
-      hostname: u.hostname, path: u.pathname, method: 'POST',
+      hostname: u.hostname,
+      path: u.pathname,
+      method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
     };
     const req = https.request(opts, r => {
       let d = ''; r.on('data', c => d += c);
       r.on('end', () => { try { resolve(JSON.parse(d)); } catch (e) { reject(e); } });
     });
-    req.on('error', reject);
-    req.write(body); req.end();
+    req.on('error', reject); req.write(body); req.end();
   });
 }
 
@@ -40,9 +36,11 @@ async function qstashPublish(destUrl, body, delaySeconds) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
     const host = qstashHost();
-    const path = `/v2/publish/${encodeURIComponent(destUrl)}`;
+    const path = `/v2/publish/${destUrl}`;
     const opts = {
-      hostname: host, path, method: 'POST',
+      hostname: host,
+      path,
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -55,8 +53,7 @@ async function qstashPublish(destUrl, body, delaySeconds) {
       let d = ''; r.on('data', c => d += c);
       r.on('end', () => { try { resolve({ status: r.statusCode, body: JSON.parse(d) }); } catch (e) { resolve({ status: r.statusCode, body: d }); } });
     });
-    req.on('error', reject);
-    req.write(data); req.end();
+    req.on('error', reject); req.write(data); req.end();
   });
 }
 
@@ -84,7 +81,6 @@ module.exports = async (req, res) => {
       return res.status(502).json({ error: 'QStash enqueue failed', detail: qr.body });
     }
     const qstashMessageId = qr.body && qr.body.messageId;
-
     const task = {
       taskId, leadId: leadId || null, channel, sendAt, payload,
       status: 'scheduled', createdAt: new Date().toISOString(),
@@ -98,7 +94,6 @@ module.exports = async (req, res) => {
     ];
     if (leadId) cmds.push(['ZADD', `tasks:lead:${leadId}`, score, taskId]);
     await kvExec(cmds);
-
     return res.status(200).json({ ok: true, taskId, qstashMessageId, sendAt, delaySeconds });
   } catch (err) {
     return res.status(500).json({ error: err.message || String(err) });
