@@ -42,7 +42,9 @@ module.exports = async (req, res) => {
         title: (body.title || 'Dashboard update').toString().slice(0, 200),
         status: body.status || 'done',
         sha: body.sha || null,
-        error: body.error || null,
+        error: body.error ? body.error.toString().slice(0, 500) : null,
+        phase: body.phase ? body.phase.toString().slice(0, 40) : null,
+        duration: (typeof body.duration === 'number' && isFinite(body.duration)) ? Math.round(body.duration) : null,
         timestamp: new Date().toISOString(),
       };
       const rawExisting = (await kvGet(HISTORY_KEY)) || [];

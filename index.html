@@ -880,6 +880,7 @@ tr:hover td { background: var(--surface2); }
     <div class="modify-progress-wrap" id="modify-progress-wrap">
       <div class="modify-progress-track"><div class="modify-progress-fill" id="modify-progress-fill"></div></div>
       <div class="modify-progress-pct" id="modify-progress-pct">0%</div>
+      <div class="modify-eta" id="modify-eta" style="font-size:11px;color:var(--text3);margin-top:4px;text-align:center;"></div>
     </div>
 
     <!-- Step 0: Input -->
@@ -1530,6 +1531,7 @@ function openModify() {
 
 function cancelModify() {
   document.getElementById('modify-overlay').classList.remove('open');
+  stopEtaCountdown();
 }
 
 function setStep(n) {
@@ -1561,6 +1563,49 @@ function showPhaseError(step, msg) {
   el.classList.add('visible');
 }
 
+// ── ETA countdown for the self-modify modal ─────────────────────────
+// Fetches median phase durations from /api/modify-phases and shows
+// "~X min remaining" that ticks down in real time. Backend stores the
+// rolling medians at KV key `modify:phases`.
+function _fmtEta(ms) {
+  if (ms < 0) ms = 0;
+  const s = Math.round(ms / 1000);
+  if (s < 90) return 'Est. ~' + s + 's remaining';
+  return 'Est. ~' + Math.round(s / 60) + ' min remaining';
+}
+function startEtaCountdown() {
+  stopEtaCountdown();
+  const el = document.getElementById('modify-eta');
+  if (!el) return;
+  el.textContent = '';
+  const start = Date.now();
+  fetch('/api/modify-phases')
+    .then(r => (r && r.ok) ? r.json() : null)
+    .then(d => {
+      if (!d || !d.totalMs) return;
+      const totalMs = d.totalMs;
+      const etaEl = document.getElementById('modify-eta');
+      if (etaEl) etaEl.textContent = _fmtEta(totalMs);
+      window.__etaTimer = setInterval(() => {
+        const remaining = totalMs - (Date.now() - start);
+        const el2 = document.getElementById('modify-eta');
+        if (!el2) return;
+        if (remaining < -60000) {
+          el2.textContent = 'Taking longer than usual…';
+          clearInterval(window.__etaTimer); window.__etaTimer = null;
+          return;
+        }
+        el2.textContent = _fmtEta(remaining);
+      }, 1000);
+    })
+    .catch(() => {});
+}
+function stopEtaCountdown() {
+  if (window.__etaTimer) { clearInterval(window.__etaTimer); window.__etaTimer = null; }
+  const el = document.getElementById('modify-eta');
+  if (el) el.textContent = '';
+}
+
 async function confirmModify() {
   const prompt = document.getElementById('modify-prompt').value.trim();
   if (!prompt) return;
@@ -1572,8 +1617,8 @@ async function confirmModify() {
   setStep(1);
   setProgress(5);
   document.getElementById('modify-status-1').textContent = 'Reading current dashboard source...';
-    // ETA
-  try { const _etaR = await fetch('/api/modify-phases'); if (_etaR.ok) { const _etaD = await _etaR.json(); if (_etaD.totalMs) { setProgress(2, 'Est. ~' + Math.round(_etaD.totalMs/1000) + 's'); } } } catch(e) {}
+    // ETA — render "~X min remaining" under the progress bar, based on stored phase medians.
+  startEtaCountdown();
   const _t0 = Date.now();
 let sourceHtml = '';
   try {
@@ -1585,6 +1630,7 @@ let sourceHtml = '';
   } catch (e) {
     showPhaseError(1, 'Failed to read source: ' + e.message);
     document.getElementById('modify-status-1').textContent = 'Source read failed';
+    stopEtaCountdown();
     return;
   }
 
@@ -1641,8 +1687,31 @@ let newHtml = '';
     document.getElementById('modify-status-2').textContent = 'AI generated ' + newHtml.length.toLocaleString() + ' chars';
     setProgress(78);
   } catch (e) {
-    showPhaseError(2, e.message);
-    document.getElementById('modify-status-2').textContent = 'AI generation failed';
+    // Surface the real reason (Safari's native "Load failed" gets translated to
+    // something meaningful, HTTP errors keep their payload, empty responses are
+    // named explicitly). Also log a ❌ history entry so it shows in Recent Changes.
+    const rawMsg = (e && e.message) ? e.message : String(e);
+    const humanMsg = /^(load failed|failed to fetch|networkerror.*)$/i.test(rawMsg)
+      ? 'Network error reaching AI endpoint (' + rawMsg + ')'
+      : rawMsg;
+    const labeled = 'AI generation failed: ' + humanMsg;
+    showPhaseError(2, labeled);
+    document.getElementById('modify-status-2').textContent = labeled;
+    const durSec = Math.max(0, Math.round((Date.now() - _t1) / 1000));
+    try {
+      fetch('/api/modify-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'AI gen failed: ' + prompt.slice(0, 120),
+          status: 'failed',
+          phase: 'ai-generation',
+          error: humanMsg,
+          duration: durSec
+        })
+      }).catch(() => {}).finally(() => { try { renderModifyHistory(); } catch(_) {} });
+    } catch (_) { try { renderModifyHistory(); } catch(__) {} }
+    stopEtaCountdown();
     return;
   }
 
@@ -1670,6 +1739,7 @@ let proposalToken;
   } catch (e) {
     showPhaseError(3, 'Guardrails check failed: ' + e.message);
     document.getElementById('modify-status-3').textContent = 'Preview check failed';
+    stopEtaCountdown();
     return;
   }
   fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'preview',durationMs:Date.now()-_t2})}).catch(()=>{});
@@ -1692,9 +1762,11 @@ renderModifyHistory();
   } catch (e) {
     showPhaseError(3, 'Commit failed: ' + e.message);
     document.getElementById('modify-status-3').textContent = 'Commit failed';
+    stopEtaCountdown();
     return;
   }
 
+  stopEtaCountdown();
   setProgress(95);
   let secs = 35;
   document.getElementById('modify-countdown').textContent = secs;
@@ -1747,11 +1819,17 @@ async function renderModifyHistory() {
     const d = await r.json();
     const hist = d.history || [];
     if (!hist.length) { el.innerHTML = '<div class="history-empty-msg">No changes yet.</div>'; return; }
+    const esc = (s) => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     el.innerHTML = hist.slice(0,10).map(function(e){
-      const icon = e.status==='done' ? '\u2705' : '\u274c';
+      const icon = e.status==='done' ? '\u2705' : (e.status==='failed' || e.status==='error') ? '\u274c' : '\u23f3';
       const dt = new Date(e.timestamp).toLocaleString();
-      const sha = e.sha ? '<span class="history-sha-badge">' + e.sha.slice(0,7) + '</span>' : '';
-      return '<div class="history-card ' + e.status + '"><div class="history-card-icon">' + icon + '</div><div class="history-card-body"><div class="history-card-title">' + (e.title||'Update').replace(/</g,'&lt;') + '</div><div class="history-card-meta">' + dt + ' ' + sha + '</div></div></div>';
+      const sha = e.sha ? '<span class="history-sha-badge">' + esc(e.sha.slice(0,7)) + '</span>' : '';
+      const dur = (e.duration != null) ? ' &middot; ' + e.duration + 's' : '';
+      const phaseTag = e.phase ? '<span style="opacity:0.7">[' + esc(e.phase) + ']</span> ' : '';
+      const errHtml = e.error
+        ? '<div style="color:#ef4444;font-size:11px;margin-top:4px;word-break:break-word;">' + phaseTag + esc(e.error) + '</div>'
+        : '';
+      return '<div class="history-card ' + esc(e.status) + '"><div class="history-card-icon">' + icon + '</div><div class="history-card-body"><div class="history-card-title">' + esc(e.title || 'Update') + '</div><div class="history-card-meta">' + esc(dt) + dur + ' ' + sha + '</div>' + errHtml + '</div></div>';
     }).join('');
   } catch(e) {
     el.innerHTML = '<div class="history-empty-msg">Could not load history.</div>';
@@ -2011,6 +2089,12 @@ setInterval(() => { loadScheduled(); renderScheduled(); }, 60000);
 loadLeads();
 loadScheduled();
 checkGmailStatus();
+// Re-check Gmail connection when the tab regains focus or becomes visible
+// so the sidebar indicator recovers after OAuth redirects / reconnects.
+window.addEventListener('focus', checkGmailStatus);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) checkGmailStatus();
+});
 init();
 renderScheduled();
 
