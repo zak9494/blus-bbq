@@ -376,15 +376,40 @@ setTimeout(() => URL.revokeObjectURL(url), 1000);
 ---
 
 ### R3-2 — Mod History vertical scroll locked on mobile
-**Status: DONE ✓** · Commits `21cd01fb1a` + `0cce208e32` · 2026-04-19
+**Status: DONE ✓** · Commits `21cd01fb1a`, `0cce208e32`, `e958ce2364` · 2026-04-19
 
-**Root cause (two-part):**
-1. History page inner div had inline style `overflow-y:auto;flex:1` — with a non-flex parent, the `flex:1` was ignored and `overflow-y:auto` captured iOS touch events without actually scrolling, killing document scroll.
-2. Initial CSS fix added `overflow-y:auto` to `.main` — which could create a new scroll container on mobile, potentially breaking `position:sticky` on topbars.
+**Root cause — three layers, each fixed separately:**
 
-**Fixes:**
-- Removed `overflow-y:auto;flex:1` from history inner div's inline style → `padding:0 24px 24px` only
-- Replaced bad `.main { overflow-y: auto }` CSS with a clean mobile block that only sets `.page { height: auto; min-height: 0 }` and `.modify-history-list { max-height: none; height: auto }` — keeps document as the scroll container
+**Layer 1 (commit `21cd01fb1a`):** History inner div had inline `overflow-y:auto;flex:1`. Removed.
+
+**Layer 2 (commit `0cce208e32`):** Bad CSS added `overflow-y:auto` to `.main`. Replaced with clean mobile block.
+
+**Layer 3 — the actual iOS blocker (commit `e958ce2364`):**  
+CSS spec rule: when one overflow axis is `hidden` and the other is `visible`, the `visible` value is **forced to `auto`**. So:
+```css
+body { overflow-x: hidden }
+/* computes as: */
+body { overflow-x: hidden; overflow-y: auto }
+```
+On iOS Safari, any element with `overflow-y: auto` becomes the **scroll target for touch events**. Since `body` has no fixed height, `body.clientHeight` expands to match content → `body.scrollHeight === body.clientHeight` → the body sees nothing to scroll → iOS touch scroll does nothing.
+
+Additionally, `position: sticky` elements work relative to their nearest scroll container. With body as the (non-scrolling) "scroll container", sticky headers don't stick on iOS.
+
+**Fix:** Moved `overflow-x: hidden` from `body` → `html`:
+```css
+/* Before: */
+body { ...; overflow-x: hidden; }
+
+/* After: */
+html { overflow-x: hidden; }  /* html IS the scroll container, this is correct */
+body { ...; }                 /* body stays overflow:visible — not a scroll target */
+```
+
+**Verified in Chrome MCP after fix:**
+- `body.overflowY: visible` ✅ (not auto — body no longer a scroll container)
+- `html.overflowX: hidden` ✅ (horizontal scroll still blocked)  
+- `window.scrollTo(0, 400)` → `windowScrollY: 138` ✅ (138px = 951-813 available scroll, document scrolls)
+- History page header: `rectTop: 0, isSticky: true` ✅ after scrolling
 
 ---
 
@@ -448,24 +473,24 @@ setTimeout(() => { toast.remove(); URL.revokeObjectURL(iosUrl); }, 15000);
 ---
 
 ### R3-7 — Page header not sticky on history/scheduled pages
-**Status: DONE ✓** · Commits `0cce208e32` + `24ff323498` · 2026-04-19
+**Status: DONE ✓** · Commits `0cce208e32`, `24ff323498`, `e958ce2364` · 2026-04-19
 
-**Root cause (two-part):**
-1. History and Scheduled pages had `.page-header` divs with no `position: sticky` — added in `0cce208e32` with `.page-header { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 2px solid #ff8800 }`.
-2. After that fix, Scheduled became sticky (✅ `rectTop: 0`), but History still failed (`rectTop: -400`). Programmatic DOM inspection revealed: `#page-history.active { overflow: hidden }` — a targeted minified CSS rule. Per CSS spec, `position: sticky` cannot escape an ancestor with `overflow: hidden` (element is confined to that scroll context, but the context doesn't scroll).
+**Root cause — three layers fixed:**
 
-**Fix (commit `24ff323498`):** Removed `overflow:hidden` from `#page-history.active`:
-```css
-/* Before */
-#page-history.active{display:flex!important;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
-/* After */
-#page-history.active{display:flex!important;flex-direction:column;flex:1;min-height:0;}
-```
+1. **No sticky CSS on `.page-header` divs** (commit `0cce208e32`): Added `.page-header { position: sticky; top: 0; z-index: 10 }`. Fixed Scheduled page; History page still broken.
 
-**Verified live:**
-- `#page-history.active` computed overflow: `visible` ✅
-- `rectTop: 0` after 400px scroll on history page ✅ (`isSticky: true`)
-- Scheduled page: `rectTop: 0` ✅ (unchanged)
+2. **`#page-history.active { overflow: hidden }`** (commit `24ff323498`): A targeted minified CSS rule set `overflow: hidden` on the history page container. Per CSS spec, `position: sticky` cannot escape an `overflow: hidden` ancestor. Removed `overflow: hidden` from that rule. Fixed History in programmatic test but not on real iOS device.
+
+3. **`body { overflow-x: hidden }` forced `overflow-y: auto`** (commit `e958ce2364`): The same root cause as R3-2 — body becoming the scroll container with no scrollable height. `position: sticky` needs a real scrolling ancestor. Once body's `overflow-y` returned to `visible` (by moving `overflow-x: hidden` to `html`), sticky works correctly on all pages.
+
+**Final verified state (Chrome MCP, all pages with filler content):**
+| Page | scrolled | rectTop | isSticky |
+|------|----------|---------|----------|
+| pipeline | 300px | 0 | ✅ |
+| quotes | 300px | 0 | ✅ |
+| ai | 300px | 0 | ✅ |
+| scheduled | 300px | 0 | ✅ |
+| history | 138px | 0 | ✅ |
 
 ---
 
@@ -480,6 +505,7 @@ setTimeout(() => { toast.remove(); URL.revokeObjectURL(iosUrl); }, 15000);
 | `0cce208e32` | fix: R3-2 history scroll (remove bad overflow-y), R3-7 .page-header sticky |
 | `03131ce1ea` | fix: R3-6 iOS PDF — gesture-timeout fallback with Save to Files toast instruction |
 | `24ff323498` | fix: R3-7 history page-header sticky — remove overflow:hidden from #page-history.active |
+| `e958ce2364` | fix: R3-2/R3-7 root cause — move overflow-x:hidden body→html, restores iOS scroll + sticky |
 
 ---
 
