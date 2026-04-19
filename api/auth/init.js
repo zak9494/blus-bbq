@@ -2,7 +2,8 @@
  * GET /api/auth/init
  * Builds Google OAuth URL with offline access and redirects the user.
  * Forces account picker and hints to the canonical sender address.
- * Tokens land in /api/auth/callback -> stored in Upstash KV.
+ * Requests gmail.send + email scopes so id_token contains email for validation.
+ * Tokens land in /api/auth/callback → stored in Upstash KV.
  */
 
 const REQUIRED_EMAIL = 'info@blusbarbeque.com';
@@ -18,7 +19,8 @@ module.exports = (req, res) => {
   url.searchParams.set('client_id', clientId);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', 'https://www.googleapis.com/auth/gmail.send');
+  // gmail.send for sending emails; openid + email so id_token carries the user email
+  url.searchParams.set('scope', 'https://www.googleapis.com/auth/gmail.send openid email');
   url.searchParams.set('access_type', 'offline');
   // Force the account picker and pre-select the required sender
   url.searchParams.set('prompt', 'consent select_account');
