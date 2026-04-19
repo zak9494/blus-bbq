@@ -982,6 +982,16 @@ if (typeof marked !== 'undefined') {
             </div>
             <div id="inq-quote-lines"></div>
             <div class="inq-quote-summary" id="inq-quote-summary"></div>
+            <div id="inq-tax-exempt-row" style="display:none;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text2);font-size:12px">
+                <input type="checkbox" id="inq-tax-exempt-chk" onchange="toggleTaxExempt(this.checked)">
+                <span>Tax Exempt</span>
+              </label>
+              <div id="inq-tax-exempt-cert-row" style="display:none;margin-top:6px">
+                <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">Exemption Certificate Number</label>
+                <input class="form-input" id="inq-tax-exempt-cert" placeholder="e.g. 1-74-1234567-8" style="font-size:12px;padding:6px 10px" oninput="if(currentInquiry&&currentInquiry.quote)currentInquiry.quote.tax_exempt_number=this.value||null">
+              </div>
+            </div>
           </div>
 
           <!-- Activity log -->
@@ -2977,8 +2987,21 @@ function renderInquiryDetail(inq) {
       '</div>'
     ).join('');
     renderQuoteSummary(q);
+    // Init tax-exempt UI
+    var texRow = document.getElementById('inq-tax-exempt-row');
+    var texChk = document.getElementById('inq-tax-exempt-chk');
+    var texCert = document.getElementById('inq-tax-exempt-cert');
+    var texCertRow = document.getElementById('inq-tax-exempt-cert-row');
+    if (texRow) {
+      texRow.style.display = 'block';
+      texChk.checked = !!q.tax_exempt;
+      texCert.value = q.tax_exempt_number || '';
+      texCertRow.style.display = q.tax_exempt ? 'block' : 'none';
+    }
   } else {
     qSec.style.display = 'none';
+    var texRow2 = document.getElementById('inq-tax-exempt-row');
+    if (texRow2) texRow2.style.display = 'none';
   }
 
   // Activity log section
@@ -3032,16 +3055,29 @@ function recalcQuoteLine(idx) {
 }
 
 function renderQuoteSummary(q) {
-  var displayTax   = q.sales_tax !== undefined ? q.sales_tax : Math.round(q.food_subtotal * 0.0825 * 100) / 100;
+  var baseTax    = q.sales_tax !== undefined ? q.sales_tax : Math.round(q.food_subtotal * 0.0825 * 100) / 100;
+  var displayTax = q.tax_exempt ? 0 : baseTax;
   var displayTotal = Math.round((q.food_subtotal + q.service_charge + displayTax + (q.delivery_fee || 0)) * 100) / 100;
+  var taxLine = q.tax_exempt
+    ? '<div class="quote-line" style="color:var(--text3)"><span>TX Sales Tax</span><span>Exempt</span></div>'
+    : '<div class="quote-line"><span>TX Sales Tax (8.25%)</span><span>$' + baseTax.toFixed(2) + '</span></div>';
   document.getElementById('inq-quote-summary').innerHTML =
     '<div class="quote-line"><span>Food subtotal</span><span>$' + q.food_subtotal.toFixed(2) + '</span></div>' +
     (q.service_charge_pct ? '<div class="quote-line"><span>Service charge (' + q.service_charge_pct + '%)</span><span>$' + q.service_charge.toFixed(2) + '</span></div>' : '') +
     (q.delivery_fee ? '<div class="quote-line"><span>Delivery fee</span><span>$' + q.delivery_fee.toFixed(2) + '</span></div>' : '') +
-    '<div class="quote-line"><span>TX Sales Tax (8.25%)</span><span>$' + displayTax.toFixed(2) + '</span></div>' +
+    taxLine +
     '<div class="quote-line" style="font-weight:700;font-size:15px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)">' +
       '<span>TOTAL</span><span>$' + displayTotal.toFixed(2) + '</span>' +
     '</div>';
+}
+
+function toggleTaxExempt(checked) {
+  if (!currentInquiry || !currentInquiry.quote) return;
+  var q = currentInquiry.quote;
+  q.tax_exempt = checked;
+  if (!checked) { q.tax_exempt_number = null; document.getElementById('inq-tax-exempt-cert').value = ''; }
+  document.getElementById('inq-tax-exempt-cert-row').style.display = checked ? 'block' : 'none';
+  renderQuoteSummary(q);
 }
 
 async function saveInquiryDraft() {
@@ -3062,6 +3098,13 @@ async function saveInquiryDraft() {
     }
     ef[key] = val;
   });
+  // Sync total with tax-exempt flag before saving
+  const q = currentInquiry.quote;
+  if (q) {
+    const taxAmt = (!q.tax_exempt) ? (q.sales_tax !== undefined ? q.sales_tax : Math.round(q.food_subtotal * 0.0825 * 100) / 100) : 0;
+    q.sales_tax = q.tax_exempt ? 0 : (q.sales_tax !== undefined ? q.sales_tax : Math.round(q.food_subtotal * 0.0825 * 100) / 100);
+    q.total = Math.round((q.food_subtotal + q.service_charge + taxAmt + (q.delivery_fee || 0)) * 100) / 100;
+  }
   try {
     const r = await fetch('/api/inquiries/save?secret=' + INQ_SECRET, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
