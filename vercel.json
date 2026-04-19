@@ -83,6 +83,10 @@
     {
       "source": "/api/inquiries/acknowledge",
       "destination": "/api/inquiries/acknowledge.js"
+    },
+    {
+      "source": "/api/quotes/render-pdf",
+      "destination": "/api/quotes/render-pdf.js"
     }
   ],
   "functions": {
@@ -126,6 +130,9 @@
       "maxDuration": 30
     },
     "api/inquiries/acknowledge.js": {
+      "maxDuration": 10
+    },
+    "api/quotes/render-pdf.js": {
       "maxDuration": 10
     }
   },
