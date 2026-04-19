@@ -2682,46 +2682,70 @@ function requestMoreInfo() {
   openInqComposeModal('request_info');
 }
 
-// ── Compose modal (skeleton — AI body wired in Phases 7 & 8) ─────────────────
-function openInqComposeModal(mode) {
+// ── Compose modal — AI-drafted body (Phases 7 & 8) ──────────────────────────
+async function openInqComposeModal(mode) {
   const inq = currentInquiry;
   if (!inq) return;
-  const ef  = inq.extracted_fields || {};
-  const to  = ef.customer_email || '';
-  const name = ef.customer_name || '';
+  const ef   = inq.extracted_fields || {};
+  const to   = ef.customer_email || '';
+  const name = ef.customer_name  || '';
 
-  let subject = '', body = '';
+  // Default subject (will be replaced by AI draft subject if successful)
+  const defaultSubject = mode === 'quote'
+    ? "Re: Blu's BBQ — Catering Quote for " + (name || 'Your Event')
+    : "Re: Blu's BBQ — Quick Follow-up on Your Catering Request";
+
+  document.getElementById('inq-compose-to').value      = to;
+  document.getElementById('inq-compose-subject').value  = defaultSubject;
+  document.getElementById('inq-compose-body').value     = '✍️ Drafting with AI…';
+  document.getElementById('inq-compose-mode').value     = mode;
+  document.getElementById('inq-compose-schedule-row').style.display = 'none';
+  const sendBtn = document.getElementById('inq-send-now-btn');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Drafting…'; }
+  openModal('inq-compose-modal');
+
+  try {
+    const r = await fetch('/api/inquiries/draft-email?secret=' + INQ_SECRET, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, inquiry: inq })
+    });
+    const d = await r.json();
+    if (d.ok && d.body) {
+      document.getElementById('inq-compose-subject').value = d.subject || defaultSubject;
+      document.getElementById('inq-compose-body').value    = d.body;
+    } else {
+      // Fallback to static template
+      document.getElementById('inq-compose-body').value = buildFallbackEmailBody(mode, inq);
+    }
+  } catch (err) {
+    document.getElementById('inq-compose-body').value = buildFallbackEmailBody(mode, inq);
+  } finally {
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send Now →'; }
+  }
+}
+
+function buildFallbackEmailBody(mode, inq) {
+  const ef   = inq.extracted_fields || {};
+  const name = ef.customer_name || '';
+  const first = name.split(' ')[0] || 'there';
   if (mode === 'quote') {
-    const q = inq.quote;
-    subject = "Re: Blu's BBQ — Catering Quote for " + (name || 'Your Event');
+    const q     = inq.quote;
     const lines = (q && q.line_items || []).map(li =>
-      '  ' + li.name + ' (' + li.qty + ' ' + li.unit + ') — $' + li.subtotal.toFixed(2)
+      li.name + ' (' + li.qty + ' ' + li.unit + ') — $' + (li.subtotal||0).toFixed(2)
     ).join('\n');
     const total = q ? '$' + q.total.toFixed(2) : '(pending)';
-    body = 'Hi ' + (name.split(' ')[0] || 'there') + ',\n\n' +
-      'Thank you for reaching out to Blu\'s Barbeque! Here\'s your catering quote:\n\n' +
-      lines + '\n\n' +
-      'Total: ' + total + '\n\n' +
-      'Please let me know if you have any questions or would like any adjustments. ' +
-      'You\'re also welcome to stop by any Wednesday–Sunday after 1 PM to try some samples — just ask for Raul!\n\n' +
+    return 'Hi ' + first + ',\n\nThank you for reaching out to Blu\'s Barbeque! ' +
+      'Here\'s your catering quote:\n\n' + lines + '\n\nTotal: ' + total + '\n\n' +
+      'Please let me know if you have any questions or would like adjustments. ' +
+      'You\'re welcome to stop by Wed–Sun after 1 PM to try samples — just ask for Raul!\n\n' +
       'Thanks,\nZach\nBlu\'s Barbeque\n214-514-8684';
   } else {
-    const missing = (inq.quote && inq.quote.missing_fields) || (ef.missing_fields) || [];
-    subject = "Re: Blu's BBQ — Quick Follow-up on Your Catering Request";
-    body = 'Hi ' + (name.split(' ')[0] || 'there') + ',\n\n' +
-      'Thank you for your interest in Blu\'s Barbeque! To put together an accurate quote for you, ' +
-      'I just need a few more details:\n\n' +
-      missing.map(f => '  • ' + f.replace(/_/g,' ')).join('\n') + '\n\n' +
-      'Once I have these, I\'ll get a full quote over to you right away.\n\n' +
-      'Thanks,\nZach\nBlu\'s Barbeque\n214-514-8684';
+    const missing = (inq.quote && inq.quote.unresolved_preferences) || ef.missing_fields || [];
+    return 'Hi ' + first + ',\n\nThank you for your interest in Blu\'s Barbeque! ' +
+      'To put together an accurate quote, I just need a few more details:\n\n' +
+      (missing.length ? missing.map(f => '• ' + f.replace(/_/g,' ')).join('\n') : '• event date\n• guest count\n• menu preferences') +
+      '\n\nOnce I have these, I\'ll get a quote to you right away.\n\nThanks,\nZach\nBlu\'s Barbeque\n214-514-8684';
   }
-
-  document.getElementById('inq-compose-to').value = to;
-  document.getElementById('inq-compose-subject').value = subject;
-  document.getElementById('inq-compose-body').value = body;
-  document.getElementById('inq-compose-mode').value = mode;
-  document.getElementById('inq-compose-schedule-row').style.display = 'none';
-  openModal('inq-compose-modal');
 }
 
 async function sendInqEmailNow() {
@@ -2730,18 +2754,19 @@ async function sendInqEmailNow() {
   const body    = document.getElementById('inq-compose-body').value.trim();
   const mode    = document.getElementById('inq-compose-mode').value;
   if (!to || !subject || !body) { showToast('Please fill in all fields'); return; }
+  if (body === '✍️ Drafting with AI…') { showToast('Still drafting — please wait'); return; }
 
   const btn = document.getElementById('inq-send-now-btn');
   btn.disabled = true; btn.textContent = 'Sending…';
   try {
-    // sendEmailViaAPI is wired properly in Phase 7 (uses KV token path)
-    // Fallback: use existing /api/gmail/send endpoint
-    const r = await fetch('/api/gmail/send', {
+    const name = (currentInquiry && currentInquiry.extracted_fields && currentInquiry.extracted_fields.customer_name) || '';
+    // KV-token-based direct send (sender locked to info@blusbarbeque.com)
+    const r = await fetch('/api/inquiries/send-now?secret=' + INQ_SECRET, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, subject, body, name: currentInquiry?.extracted_fields?.customer_name || '' })
+      body: JSON.stringify({ to, subject, body, name })
     });
     const d = await r.json();
-    if (d.success || d.ok || d.messageId) {
+    if (d.ok && d.messageId) {
       const newStatus = mode === 'quote' ? 'quote_sent' : 'needs_info';
       await fetch('/api/inquiries/save?secret=' + INQ_SECRET, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2752,13 +2777,29 @@ async function sendInqEmailNow() {
         })
       });
       closeModal('inq-compose-modal');
-      showToast('Email sent via Gmail ✓');
+      showToast('Email sent from info@blusbarbeque.com ✓');
       if (currentInquiry) { currentInquiry.status = newStatus; renderInquiryDetail(currentInquiry); }
     } else {
-      showToast('Send failed: ' + (d.error || 'Gmail not connected — re-auth at Settings'));
+      showToast('Send failed: ' + (d.error || 'Unknown error — check Gmail auth'));
     }
   } catch(e) { showToast('Error: ' + e.message); }
   finally { btn.disabled = false; btn.textContent = 'Send Now →'; }
+}
+
+// sendEmailViaAPI — used by legacy quote-builder flow (wired to same KV-token path)
+async function sendEmailViaAPI(to, name, subject, body) {
+  try {
+    const r = await fetch('/api/inquiries/send-now?secret=' + INQ_SECRET, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, name, subject, body })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showToast('Email sent from info@blusbarbeque.com ✓');
+    } else {
+      showToast('Email send failed: ' + (d.error || 'Unknown'));
+    }
+  } catch(e) { showToast('Email error: ' + e.message); }
 }
 
 function toggleInqSchedule() {
