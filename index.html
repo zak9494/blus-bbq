@@ -1334,11 +1334,11 @@ function renderKanban() {
     const g    = inq.guest_count ? inq.guest_count + ' guests · ' : '';
     const opts = PIPELINE_STATUSES.map(ps =>
       '<option value="' + ps + '"' + (inq.status === ps ? ' selected' : '') + '>' + (INQ_STATUS_LABELS[ps] || ps) + '</option>').join('');
-    return '<div class="pip-card" onclick="showPage('inquiries');openInquiry('' + inq.threadId + '')" style="position:relative">'
+    return '<div class="pip-card" onclick="showPage(\'inquiries\');openInquiry(\'' + inq.threadId + '\')" style="position:relative">'
       + '<div class="pip-card-name">' + name + (inq.has_unreviewed_update ? ' <span class="inq-update-dot"></span>' : '') + '</div>'
       + '<div class="pip-card-meta">' + g + ev + '</div>'
       + '<div class="pip-card-footer">'
-        + '<select class="pip-status-sel" onclick="event.stopPropagation()" onchange="updateInquiryStatus('' + inq.threadId + '',this.value).then(()=>loadPipelineInquiries())">' + opts + '</select>'
+        + '<select class="pip-status-sel" onclick="event.stopPropagation()" onchange="updateInquiryStatus(\'' + inq.threadId + '\',this.value).then(()=>loadPipelineInquiries())">' + opts + '</select>'
       + '</div>'
     + '</div>';
   };
@@ -1352,7 +1352,6 @@ function renderKanban() {
       }).join('')
     + '</div>';
 }
-
 function renderTable() {
   const body = document.getElementById('leads-table-body');
   if (!pipelineInqCache) { body.innerHTML = ''; return; }
@@ -1369,11 +1368,10 @@ function renderTable() {
       + '<td>' + (inq.guest_count || '—') + '</td>'
       + '<td><span class="k-badge ' + badge + '">' + label + '</span></td>'
       + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text3)">' + (inq.subject || '—') + '</td>'
-      + '<td><div class="td-actions"><button class="btn btn-sm" onclick="showPage('inquiries');openInquiry('' + inq.threadId + '')">View</button></div></td>'
+      + '<td><div class="td-actions"><button class="btn btn-sm" onclick="showPage(\'inquiries\');openInquiry(\'' + inq.threadId + '\')">View</button></div></td>'
     + '</tr>';
   }).join('');
 }
-
 function updateStats() {
   const data = pipelineInqCache || [];
   document.getElementById('stat-active').textContent = data.filter(i => i.status !== 'declined').length;
