@@ -39,6 +39,10 @@
     {
       "source": "/api/gmail/extract-inquiry",
       "destination": "/api/gmail/extract-inquiry.js"
+    },
+    {
+      "source": "/api/quotes/ai-generate",
+      "destination": "/api/quotes/ai-generate.js"
     }
   ],
   "functions": {
@@ -49,6 +53,9 @@
       "maxDuration": 60
     },
     "api/gmail/extract-inquiry.js": {
+      "maxDuration": 60
+    },
+    "api/quotes/ai-generate.js": {
       "maxDuration": 60
     }
   }
