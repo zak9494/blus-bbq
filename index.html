@@ -325,12 +325,19 @@ tr:hover td { background: var(--surface2); }
   /* R3-2: Keep document as scroll container — no overflow-y:auto on .main/.app */
   .page { height: auto; min-height: 0; }
   .modify-history-list { max-height: none; height: auto; }
-  /* R3-3: Self-modify modal — compact on mobile, capped height, textarea bounded */
+  /* R3-9: Push overlay box below hamburger zone (hamburger: y=14–52px).
+     Long history list makes box ~800px → centering puts top at y≈20 → overlaps hamburger.
+     padding-top:60px + flex-start guarantees box.top = 60px, clear of hamburger.
+     Removed -webkit-overflow-scrolling:touch (deprecated iOS 13+; caused native
+     touch layer to swallow hamburger taps and break position:sticky). */
+  #modify-overlay {
+    padding-top: 60px;
+    align-items: flex-start;
+  }
   .modify-box {
     padding: 16px;
-    max-height: calc(100vh - 40px);
+    max-height: calc(100vh - 60px);
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
   }
   #modify-prompt {
     min-height: 60px;
