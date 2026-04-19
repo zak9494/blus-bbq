@@ -61,7 +61,7 @@ function secretGate(req, res) {
   return true;
 }
 
-const VALID_STATUSES = ['new','needs_info','quote_drafted','quote_approved','quote_sent','booked','declined'];
+const VALID_STATUSES = ['new','needs_info','quote_drafted','quote_approved','quote_sent','booked','declined','archived'];
 
 const INDEX_KEY = 'inquiries:index';
 const MAX_INDEX = 500;
@@ -107,6 +107,8 @@ module.exports = async (req, res) => {
     extracted_fields: body.extracted_fields ?? existing?.extracted_fields ?? null,
     quote:            body.quote            ?? existing?.quote            ?? null,
     status:           body.status           ?? existing?.status           ?? 'new',
+    source:           body.source           ?? existing?.source           ?? 'direct',
+    approved:         body.approved         ?? existing?.approved         ?? false,
     created_at:       existing?.created_at  ?? now,
     updated_at:       now,
     history:          Array.isArray(existing?.history) ? [...existing.history] : [],
@@ -134,8 +136,7 @@ module.exports = async (req, res) => {
     let index = idxRaw ? (typeof idxRaw === 'string' ? JSON.parse(idxRaw) : idxRaw) : [];
     if (!Array.isArray(index)) index = [];
 
-    // Remove existing entry for this threadId, then prepend updated summary
-    index = index.filter(e => e.threadId !== threadId);
+    // Remove existing entry for this threadId, insert updated summary
     index = index.filter(e => e.threadId !== threadId);
     const ef = record.extracted_fields || {};
     index.push({
@@ -146,6 +147,8 @@ module.exports = async (req, res) => {
       event_date:    ef.event_date    || null,
       guest_count:   ef.guest_count   || null,
       status:        record.status,
+      source:        record.source   || 'direct',
+      approved:      record.approved || false,
       email_date:    record.date || null,
       updated_at:    now,
     });
