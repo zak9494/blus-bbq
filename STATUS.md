@@ -186,3 +186,99 @@ Replaced the stub alert with a full `async generatePDF()` using jsPDF 2.5.1 load
 
 ## Sender Lockdown Status
 **UNTOUCHED.** No changes to `api/dispatch/email.js`, `api/auth/callback.js`, or `api/auth/init.js`. `CANONICAL_SENDER = 'info@blusbarbeque.com'` remains in place.
+
+---
+
+## Round 2 — Zach's Regression Findings
+**Date:** 2026-04-19 ~03:45 CDT  
+**Trigger:** Zach tested live on his iPhone and found 4 real issues.  
+**Commit:** 15fa62e129
+
+---
+
+### R2-1 — Hamburger broken on some pages
+**Root cause:** `.topbar` is `position: sticky; z-index: 10`. On iOS Safari, sticky-positioned elements intercept touch events even when a `position: fixed` element with higher z-index (`z-index: 201`) overlaps them — a known iOS Safari bug. The hamburger button tap was silently absorbed by the topbar.
+
+**Fix:** Added `pointer-events: none` to `.topbar` on mobile, with `pointer-events: auto` on all `.topbar > *` children. This makes the topbar background transparent to touches (hamburger gets the tap) while preserving all topbar button functionality.
+
+```css
+@media (max-width: 768px) {
+  .topbar { pointer-events: none; }
+  .topbar > * { pointer-events: auto; }
+}
+```
+
+**Verified:** `toggleMobileSidebar()` tested on all 7 pages programmatically — open/close works on every page. CSS rule confirmed live.
+
+---
+
+### R2-2 — PDF button shows "I'm connected to Gmail" instead of downloading
+**Root causes (multiple):**
+1. `window.addEventListener('focus', checkGmailStatus)` fired whenever focus returned to the page after a PDF download dialog or iOS new-tab dismissal, and `updateGmailStatus()` was updating `#gmail-status` to "● Connected: info@blusbarbeque.com"
+2. `.pdf-btn` height was 36px — below 44px minimum — causing mis-taps onto nearby buttons
+3. `sendEmailViaAPI()` was called by `sendPrompt()` but never defined → silent `ReferenceError` every time a quote email was attempted
+
+**Fixes:**
+- Removed `focus → checkGmailStatus` listener (visibilitychange is sufficient)
+- Added `min-height: 44px; margin-top: 12px` to `.pdf-btn` and `.toast-send-btn` on mobile
+- Defined `sendEmailViaAPI(to, name, subject, body)` using `fetch('/api/dispatch/email', ...)`
+
+**Verified:** PDF button confirmed calling `generatePDF()` (not emailQuote). marked.js CDN, `sendEmailViaAPI` defined, focus listener removed — all confirmed live.
+
+---
+
+### R2-3 — Self-modify failure icon shows ⏳ instead of ❌
+**Root cause:** The Mod History API stores failed entries with `status: 'error'` (not `'failed'`). The icon function only mapped `'failed' → ❌`, leaving `'error'` to fall through to `'⏳'`.
+
+**Fix:**
+```javascript
+// Before:
+const icon = s => s === 'done' ? '✅' : s === 'failed' ? '❌' : '⏳';
+// After:
+const icon = s => s === 'done' ? '✅' : (s === 'failed' || s === 'error') ? '❌' : '⏳';
+```
+
+**Verified:** Live Mod History loaded — 11 items, 1 with `status=error` → shows ❌ correctly. Screenshot taken.
+
+---
+
+### R2-4 — AI Chat responses look unorganized (raw markdown text)
+**Root cause:** `appendChatMsg()` used `bubble.textContent = text` which rendered markdown syntax as literal characters (asterisks, hashes, etc.).
+
+**Fix:**
+1. Added `marked.js 9.1.6` from cdnjs in `<head>` with `gfm: true, breaks: true` configured
+2. Changed `appendChatMsg()` to use `bubble.innerHTML = marked.parse(text)` for AI/assistant role
+3. User messages still use `textContent` (prevents HTML injection, plain text is fine for user input)
+4. Added full markdown CSS inside `.chat-msg.ai .chat-bubble`: styled `p`, `h1-h3`, `ul/ol/li`, `strong/em`, `code/pre`, `blockquote`, `hr`, `a`, `table/th/td`
+
+**Visual improvements:**
+- Headings render with proper weight and size hierarchy
+- Bullet/numbered lists indent correctly with 5px gap between items  
+- Inline code has orange-tinted background matching the brand
+- Code blocks: dark `#0d0d0d` background with border, monospace
+- Blockquotes: red left border, italic text (matches Blu's BBQ orange/red theme)
+- Tables: orange header row, alternating row borders
+- Chips stack cleanly below message text (no collision)
+
+**Verified:** Injected markdown test response with all elements. Screenshot confirms rendered output matches Claude/ChatGPT quality.
+
+---
+
+### R2-5 — Horizontal scroll verification
+**Status:** VERIFIED — no horizontal scroll possible on any page except leads table (Zach's approved exception)
+
+**Evidence:**
+- `body { overflow-x: hidden }` is hardcoded in CSS — page-level horizontal scroll is structurally impossible
+- All major layout elements go single-column on mobile via `@media (max-width: 768px)`: `quote-layout`, `chat-layout`, `form-row-2/3`, `menu-items-grid`, `kanban` (at 420px)
+- `.leads-table-wrap { overflow-x: auto }` + `table { min-width: 480px }` gives leads table proper horizontal scroll within its container (Zach explicitly approved this)
+- Topbar: `padding-left: 64px \!important` on mobile clears hamburger zone; `pointer-events: none` fix doesn't affect width
+
+---
+
+## Round 2 Commit
+| SHA | Description |
+|-----|-------------|
+| `15fa62e129` | fix: hamburger iOS pointer-events, PDF 44px tap target, icon error→❌, AI chat markdown rendering |
+
+## Sender Lockdown Status (unchanged)
+**UNTOUCHED.** No changes to `api/dispatch/email.js`, `api/auth/callback.js`, or `api/auth/init.js`.
