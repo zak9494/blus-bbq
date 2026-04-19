@@ -84,7 +84,8 @@ module.exports = async (req, res) => {
   }
 
   // Determine pipeline status
-  const newStatus = quote ? 'quote_drafted' : (inq.status === 'needs_info' ? 'needs_info' : inq.status);
+  const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_sent','booked','declined'];
+  const newStatus = quote ? 'quote_drafted' : (PIPELINE_STATUSES.includes(inq.status) ? inq.status : 'needs_info');
 
   // Save: set approved:true + new status + quote if generated
   const saveResp = await callInternal('/api/inquiries/save', 'POST', {
