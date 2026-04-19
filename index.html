@@ -1677,7 +1677,7 @@ function stopEtaCountdown() {
 /**
  * Build a compact section map from raw HTML so the AI knows where
  * things are before editing. Extracts:
- *   - UPPERCASE HTML comments (section headers like <\!-- QUOTE BUILDER -->)
+ *   - UPPERCASE HTML comments (section headers like <!-- QUOTE BUILDER -->)
  *   - id="page-*" page containers
  *   - top-level function declarations
  * Returns a string of "L<line>: [type] name" lines (capped at 5000 chars).
@@ -1688,7 +1688,7 @@ function buildSectionMap(htmlStr) {
   lines.forEach(function(line, i) {
     const ln = i + 1;
     // Section-style HTML comments (all-caps content ≥ 4 chars)
-    const cmm = line.match(/<\!--\s*([A-Z][A-Z0-9\s\/\-_]{3,})\s*-->/);
+    const cmm = line.match(/<!--\s*([A-Z][A-Z0-9\s\/\-_]{3,})\s*-->/);
     if (cmm) entries.push('L' + ln + ': [section] ' + cmm[1].trim());
     // Page container IDs
     const pg = line.match(/id="(page-[^"]+)"/);
@@ -1723,7 +1723,7 @@ async function runAiGeneration(sourceHtml, prompt, systemPrompt, statusEl, setPr
       messages: [{ role: 'user', content: 'Current HTML:\n' + sourceHtml + '\n\nChange request: ' + prompt }]
     })
   });
-  if (\!r2.ok) {
+  if (!r2.ok) {
     const errText = await r2.text();
     throw new Error('AI API error HTTP ' + r2.status + ': ' + errText.slice(0, 200));
   }
@@ -1739,7 +1739,7 @@ async function runAiGeneration(sourceHtml, prompt, systemPrompt, statusEl, setPr
     const lines = sseBuffer.split('\n');
     sseBuffer = lines.pop();
     for (const line of lines) {
-      if (\!line.startsWith('data: ')) continue;
+      if (!line.startsWith('data: ')) continue;
       const raw = line.slice(6).trim();
       if (raw === '[DONE]') continue;
       try {
@@ -1755,7 +1755,7 @@ async function runAiGeneration(sourceHtml, prompt, systemPrompt, statusEl, setPr
       } catch {}
     }
   }
-  if (\!result) throw new Error('AI returned empty response');
+  if (!result) throw new Error('AI returned empty response');
   return result;
 }
 
@@ -1798,7 +1798,7 @@ let sourceHtml = '';
   const systemPrompt = [
     'You are a code editor for a single-page HTML dashboard (index.html).',
     'Output ONLY the complete modified HTML file — no explanation, no markdown fences, no truncation.',
-    'Start your response with <\!DOCTYPE html> and output the ENTIRE file.',
+    'Start your response with <!DOCTYPE html> and output the ENTIRE file.',
     '',
     'SECTION MAP (line numbers → sections, pages, functions):',
     sectionMap,
