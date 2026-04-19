@@ -67,10 +67,6 @@
     {
       "source": "/api/inquiries/send-now",
       "destination": "/api/inquiries/send-now.js"
-    },
-    {
-      "source": "/api/inquiries/cleanup",
-      "destination": "/api/inquiries/cleanup.js"
     }
   ],
   "functions": {
@@ -103,9 +99,6 @@
     },
     "api/inquiries/send-now.js": {
       "maxDuration": 20
-    },
-    "api/inquiries/cleanup.js": {
-      "maxDuration": 30
     }
   },
   "crons": [
