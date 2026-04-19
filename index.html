@@ -209,8 +209,8 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .uploaded-file { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--surface2); border: 1px solid var(--green-border); border-radius: var(--radius-sm); margin-top: 6px; font-size: 12px; color: #80c898; }
 
 /* LEADS TABLE */
-.leads-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.leads-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 480px; }
 th { text-align: left; padding: 10px 14px; color: var(--text3); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); background: var(--surface2); }
 td { padding: 11px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
@@ -259,9 +259,36 @@ tr:hover td { background: var(--surface2); }
   /* Mobile: ensure page headers clear the 38px hamburger button */
   .page-header { padding-left: 58px !important; }
   .page-header-title, .page-title, h1.page-title { padding-left: 0 !important; }
-  /* Chips wrap to full-width rows on narrow screens */
+  /* AI chat and pipeline use .topbar — clear the hamburger */
+  .topbar { padding-left: 64px !important; }
+  /* Form rows: single column on mobile (no 2-col or 3-col grids) */
+  .form-row-2 { grid-template-columns: 1fr; }
+  .form-row-3 { grid-template-columns: 1fr; }
+  /* Menu item grid: single column */
+  .menu-items-grid { grid-template-columns: 1fr; }
+  /* Import preview row: 2-col instead of 4-col */
+  .import-preview-row { grid-template-columns: 1fr 1fr; }
+  /* Quantity controls: stack on tiny screens */
+  .menu-item-qty-controls { margin-left: 0; margin-top: 4px; }
+  /* Content area: tighter padding on mobile */
+  .content { padding: 12px 14px !important; }
+  /* Chips: full-width column */
   .chat-options { flex-direction: column; align-items: flex-start; }
-  .chat-option-btn { width: 100%; max-width: 320px; }
+  .chat-option-btn { width: 100%; max-width: 340px; }
+  /* Stats row: 2-col already set; ensure no overflow */
+  .stat-value { font-size: 28px; }
+  /* Modals: full-width with margin */
+  .modal { margin: 0 8px; max-width: calc(100vw - 16px); }
+  .modify-box { margin: 0 8px; max-width: calc(100vw - 16px); }
+}
+
+/* Extra breakpoint: very narrow (375px iPhone SE) */
+@media (max-width: 420px) {
+  .kanban { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .topbar-title { font-size: 18px; }
+  .btn { padding: 7px 10px; font-size: 12px; }
+  .chat-layout { min-height: calc(100vh - 65px); }
 }
 
 /* SCROLLBAR */
