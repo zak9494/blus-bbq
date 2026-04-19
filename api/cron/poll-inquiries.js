@@ -181,7 +181,7 @@ module.exports = async (req, res) => {
   let listResp;
   try {
     listResp = await callInternal('/api/gmail/list-inquiries', 'GET', null);
-    if (listResp.status >= 300 || !listResp.body.ok) {
+    if (listResp.status >= 300 || !listResp.body.inquiries) {
       return res.status(502).json({ error: 'list-inquiries failed', detail: listResp.body });
     }
   } catch(e) {
