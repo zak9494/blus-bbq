@@ -18,6 +18,10 @@ const https = require('https');
 const CANONICAL_SENDER = 'info@blusbarbeque.com';
 const KV_TOKENS_KEY = `gmail:${CANONICAL_SENDER}`;
 
+// Same fallback chain as self-modify.js so this works even when
+// SELF_MODIFY_SECRET hasn't been added to Vercel env vars yet.
+const EFFECTIVE_SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || null;
+
 function kvUrl() { return process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL; }
 function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
 
@@ -93,8 +97,8 @@ async function refreshToken(refreshTok) {
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
 
-  const expected = process.env.SELF_MODIFY_SECRET;
-  if (!expected) return res.status(500).json({ error: 'SELF_MODIFY_SECRET env var not set' });
+  const expected = EFFECTIVE_SECRET;
+  if (!expected) return res.status(500).json({ error: 'No secret configured (set SELF_MODIFY_SECRET or GITHUB_TOKEN env var)' });
   const provided = (req.query && req.query.secret) || req.headers['x-secret'];
   if (provided !== expected) return res.status(401).json({ error: 'Invalid or missing secret' });
 
