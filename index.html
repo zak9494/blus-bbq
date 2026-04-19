@@ -1776,24 +1776,38 @@ let gmailConnected = false;
 
 async function checkGmailStatus() {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('gmail_connected') === 'true') {
-    gmailConnected = true;
-    updateGmailStatus(true);
-    window.history.replaceState({}, '', '/');
-  } else if (params.get('gmail_error')) {
-    updateGmailStatus(false);
-    showToast('Gmail connection failed: ' + params.get('gmail_error'));
+  if (params.get('gmailError')) {
+    showToast('Gmail connection failed: ' + params.get('gmailError'));
+    return;
   }
-  // Try a test to see if we have a token
-  const res = await fetch('/api/gmail/send', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({to:'test@test.com', subject:'test', body:'test', _check:true}) }).catch(() => null);
-  if (res && res.status !== 401) { gmailConnected = true; updateGmailStatus(true); }
+  try {
+    const res = await fetch('/api/auth/status');
+    const data = await res.json();
+    gmailConnected = data.connected;
+    updateGmailStatus(data.connected, data.email, data.error, data.message);
+    if (params.get('gmailConnected') === '1' && data.connected) {
+      showToast('Gmail connected as ' + data.email + '!');
+    }
+  } catch(e) {
+    console.error('Failed to check Gmail status:', e);
+  }
 }
 
-function updateGmailStatus(connected) {
+function updateGmailStatus(connected, email, error, message) {
   const el = document.getElementById('gmail-status');
-  if (el) {
-    el.textContent = connected ? '● Gmail connected' : '○ Gmail not connected';
-    el.style.color = connected ? 'var(--green)' : 'var(--text3)';
+  if (!el) return;
+  if (connected && email) {
+    el.textContent = '● Connected: ' + email;
+    el.style.color = 'var(--green)';
+  } else if (error === 'wrong_account' && email) {
+    el.textContent = '⚠ Wrong account: ' + email;
+    el.style.color = '#f59e0b';
+  } else if (error === 'legacy_token') {
+    el.textContent = '⚠ Re-auth required';
+    el.style.color = '#f59e0b';
+  } else {
+    el.textContent = '○ Gmail not connected';
+    el.style.color = 'var(--text3)';
   }
 }
 
