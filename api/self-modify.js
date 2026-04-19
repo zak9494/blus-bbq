@@ -156,13 +156,13 @@ module.exports = async (req, res) => {
     try {
       const _sha = update.body.commit && update.body.commit.sha;
       const _entry = { id: Date.now().toString(), title: (commitMessage || 'Dashboard update').slice(0, 200), status: 'done', sha: _sha || null, error: null, timestamp: new Date().toISOString() };
-      const _kvG = (k) => new Promise((res) => { const u = new URL(`${KV_URL}/get/${encodeURIComponent(k)}`); const r = https.request({ hostname: u.hostname, path: u.pathname, method: 'GET', headers: { Authorization: `Bearer ${KV_TOKEN}` } }, (rr) => { let d=''; rr.on('data',c=>d+=c); rr.on('end',()=>{ try{res(JSON.parse(d));}catch{res({});} }); }); r.on('error',()=>res({})); r.end(); });
-      const _kvS = (k,v) => new Promise((res) => { const b=JSON.stringify([['SET',k,v]]); const u=new URL(`${KV_URL}/pipeline`); const r=https.request({ hostname:u.hostname, path:u.pathname, method:'POST', headers:{ Authorization:`Bearer ${KV_TOKEN}`, 'Content-Type':'application/json', 'Content-Length':Buffer.byteLength(b) } },(rr)=>{ rr.resume(); rr.on('end',()=>res()); }); r.on('error',()=>res()); r.write(b); r.end(); });
-      const _hd = await _kvG('modify:history');
+      const _kvG = async (k) => { try { const r = await fetch(`${KV_URL}/get/${encodeURIComponent(k)}`, { headers: { Authorization: `Bearer ${KV_TOKEN}` } }); return await r.json(); } catch(e) { return {}; } };
+          const _kvS = async (k,v) => { try { await fetch(`${KV_URL}/set/${encodeURIComponent(k)}`, { method: 'POST', headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' }, body: v }); } catch(e) {} };
+          const _hd = await _kvG('modify-history');
       const _hist = _hd.result ? JSON.parse(_hd.result) : [];
       _hist.unshift(_entry);
       if (_hist.length > 50) _hist.splice(50);
-      await _kvS('modify:history', JSON.stringify(_hist));
+      await _kvS('modify-history', JSON.stringify(_hist));
     } catch(_e) {}
 return res.status(200).json({ ok: true, success: true, mode: 'apply', commit: update.body.commit && update.body.commit.sha, diff });
   } catch (err) {
