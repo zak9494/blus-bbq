@@ -3,17 +3,19 @@
  * R4-1 Phases 7 & 8 — Direct KV-token Gmail send. Secret-gated.
  * Sender locked to info@blusbarbeque.com.
  *
- * Body: { to, subject, body, name? }
+ * Body: { to, subject, body, name?, quote? }
+ *   If quote is provided (quote mode), attaches a PDF and sends a cover-note body.
  * Returns: { ok, messageId, sentFrom }
  */
 
 module.exports.config = { maxDuration: 20 };
 
-
 const https = require('https');
+const { generateQuotePDF } = require('../_lib/pdf-gen');
 
 const CANONICAL_SENDER = 'info@blusbarbeque.com';
 const KV_TOKENS_KEY = 'gmail:' + CANONICAL_SENDER;
+const BOUNDARY = 'BLUS_BBQ_MIME_BOUNDARY_42';
 
 function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
 function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
@@ -75,7 +77,6 @@ async function getKVTokens() {
   let tokens = typeof raw === 'string' ? JSON.parse(raw) : raw;
   if (tokens.email && tokens.email !== CANONICAL_SENDER)
     throw new Error('Sender locked to ' + CANONICAL_SENDER + '. Tokens are for ' + tokens.email + '. Re-auth required.');
-  // Refresh if expired
   let { access_token: atk, expiry_date } = tokens;
   if (!atk || (expiry_date && expiry_date < Date.now() + 60000)) {
     if (!tokens.refresh_token) throw new Error('No refresh token — re-auth at /api/auth/init');
@@ -97,6 +98,59 @@ async function getKVTokens() {
   return atk;
 }
 
+/**
+ * Wrap base64 string at 76 chars per line (MIME requirement).
+ */
+function wrapBase64(b64) {
+  return b64.match(/.{1,76}/g).join('\r\n');
+}
+
+/**
+ * Build a plain-text MIME message (no attachment).
+ */
+function buildPlainMIME(toHeader, subject, textBody) {
+  const lines = [
+    'From: Blu\'s Barbeque <' + CANONICAL_SENDER + '>',
+    'To: ' + toHeader,
+    'Subject: ' + subject,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset=utf-8',
+    '',
+    textBody
+  ];
+  return Buffer.from(lines.join('\r\n')).toString('base64url');
+}
+
+/**
+ * Build a multipart/mixed MIME message with a plain-text body and PDF attachment.
+ */
+function buildMultipartMIME(toHeader, subject, textBody, pdfBuf, filename) {
+  const b64pdf = wrapBase64(pdfBuf.toString('base64'));
+  const lines = [
+    'From: Blu\'s Barbeque <' + CANONICAL_SENDER + '>',
+    'To: ' + toHeader,
+    'Subject: ' + subject,
+    'MIME-Version: 1.0',
+    'Content-Type: multipart/mixed; boundary="' + BOUNDARY + '"',
+    '',
+    '--' + BOUNDARY,
+    'Content-Type: text/plain; charset=utf-8',
+    'Content-Transfer-Encoding: 7bit',
+    '',
+    textBody,
+    '',
+    '--' + BOUNDARY,
+    'Content-Type: application/pdf',
+    'Content-Transfer-Encoding: base64',
+    'Content-Disposition: attachment; filename="' + filename + '"',
+    '',
+    b64pdf,
+    '',
+    '--' + BOUNDARY + '--'
+  ];
+  return Buffer.from(lines.join('\r\n')).toString('base64url');
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!secretGate(req, res)) return;
@@ -105,34 +159,38 @@ module.exports = async (req, res) => {
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid JSON' }); } }
   body = body || {};
 
-  const { to, subject, body: emailBody, name } = body;
+  const { to, subject, body: emailBody, name, quote } = body;
   if (!to || !subject || !emailBody) return res.status(400).json({ error: 'to, subject, and body are required' });
 
   let atk;
-  try {
-    atk = await getKVTokens();
-  } catch (e) {
-    return res.status(401).json({ error: e.message, needsAuth: true });
-  }
+  try { atk = await getKVTokens(); }
+  catch (e) { return res.status(401).json({ error: e.message, needsAuth: true }); }
 
   const toHeader = (name && name.trim()) ? name.trim() + ' <' + to + '>' : to;
-  const mime = [
-    'From: Blu\'s Barbeque <' + CANONICAL_SENDER + '>',
-    'To: ' + toHeader,
-    'Subject: ' + subject,
-    'Content-Type: text/plain; charset=utf-8',
-    'MIME-Version: 1.0',
-    '',
-    emailBody
-  ].join('\r\n');
-  const encoded = Buffer.from(mime).toString('base64url');
+
+  let raw;
+  if (quote && quote.line_items && quote.line_items.length) {
+    // Generate PDF and send as attachment
+    try {
+      const pdfBuf = generateQuotePDF(quote, name || '');
+      const firstName = (name || '').split(' ')[0] || '';
+      const filename = 'Blus-BBQ-Quote' + (firstName ? '-' + firstName : '') + '.pdf';
+      raw = buildMultipartMIME(toHeader, subject, emailBody, pdfBuf, filename);
+    } catch (pdfErr) {
+      // Fallback: send plain text if PDF generation fails
+      console.error('PDF gen failed, falling back to plain text:', pdfErr.message);
+      raw = buildPlainMIME(toHeader, subject, emailBody);
+    }
+  } else {
+    raw = buildPlainMIME(toHeader, subject, emailBody);
+  }
 
   try {
     const result = await httpsPost(
       'gmail.googleapis.com',
       '/gmail/v1/users/me/messages/send',
       { Authorization: 'Bearer ' + atk, 'Content-Type': 'application/json' },
-      JSON.stringify({ raw: encoded })
+      JSON.stringify({ raw })
     );
     if (result.status >= 300) {
       return res.status(500).json({ error: 'Gmail API error ' + result.status, detail: JSON.stringify(result.body).slice(0, 300) });
