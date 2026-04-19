@@ -3032,13 +3032,15 @@ function recalcQuoteLine(idx) {
 }
 
 function renderQuoteSummary(q) {
+  var displayTax   = q.sales_tax !== undefined ? q.sales_tax : Math.round(q.food_subtotal * 0.0825 * 100) / 100;
+  var displayTotal = Math.round((q.food_subtotal + q.service_charge + displayTax + (q.delivery_fee || 0)) * 100) / 100;
   document.getElementById('inq-quote-summary').innerHTML =
     '<div class="quote-line"><span>Food subtotal</span><span>$' + q.food_subtotal.toFixed(2) + '</span></div>' +
     (q.service_charge_pct ? '<div class="quote-line"><span>Service charge (' + q.service_charge_pct + '%)</span><span>$' + q.service_charge.toFixed(2) + '</span></div>' : '') +
     (q.delivery_fee ? '<div class="quote-line"><span>Delivery fee</span><span>$' + q.delivery_fee.toFixed(2) + '</span></div>' : '') +
-    '<div class="quote-line"><span>TX Sales Tax (8.25%)</span><span>$' + (q.sales_tax !== undefined ? q.sales_tax : Math.round(q.food_subtotal * 0.0825 * 100) / 100).toFixed(2) + '</span></div>' +
+    '<div class="quote-line"><span>TX Sales Tax (8.25%)</span><span>$' + displayTax.toFixed(2) + '</span></div>' +
     '<div class="quote-line" style="font-weight:700;font-size:15px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)">' +
-      '<span>TOTAL</span><span>$' + q.total.toFixed(2) + '</span>' +
+      '<span>TOTAL</span><span>$' + displayTotal.toFixed(2) + '</span>' +
     '</div>';
 }
 
