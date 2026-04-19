@@ -10,7 +10,7 @@
  *
  * Output:
  *   { ok, quote: { line_items, food_subtotal, service_charge_pct, service_charge,
- *                  delivery_fee, total, notes, unresolved_preferences,
+ *                  delivery_fee, sales_tax, total, notes, unresolved_preferences,
  *                  needs_customer_input }, model, input_tokens, output_tokens, generatedAt }
  *
  * Secret gate: ?secret=GMAIL_READ_SECRET or X-Secret header.
@@ -20,7 +20,7 @@
 module.exports.config = { maxDuration: 60 };
 
 const https = require('https');
-const { MENU, DELIVERY_FEE, suggestServiceCharge } = require('../_lib/menu');
+const { MENU, DELIVERY_FEE, SALES_TAX_RATE, suggestServiceCharge } = require('../_lib/menu');
 
 // Build a flat, searchable menu string for the system prompt
 function menuToPromptString() {
@@ -84,7 +84,8 @@ MATH RULES
 - subtotal per line = round(qty * unit_price, 2)
 - food_subtotal = sum of all line item subtotals
 - service_charge = round(food_subtotal * service_charge_pct / 100, 2)
-- total = food_subtotal + service_charge + delivery_fee
+- sales_tax = round(food_subtotal * 0.0825, 2)  (TX sales tax on food only)
+- total = food_subtotal + service_charge + sales_tax + delivery_fee
 - All numbers must be plain numbers (not strings). Round to 2 decimal places.
 
 ══════════════════════════════════════════════
@@ -108,6 +109,7 @@ Schema:
   "service_charge_pct": number,
   "service_charge": number,
   "delivery_fee": number,
+  "sales_tax": number,
   "total": number,
   "notes": "string or null",
   "unresolved_preferences": ["strings"],
@@ -231,11 +233,13 @@ module.exports = async (req, res) => {
     const computedChargePct   = typeof quote.service_charge_pct === 'number' ? quote.service_charge_pct : 0;
     const computedCharge      = Math.round(computedFoodSubtotal * computedChargePct / 100 * 100) / 100;
     const computedDelivery    = typeof quote.delivery_fee === 'number' ? quote.delivery_fee : 0;
-    const computedTotal       = Math.round((computedFoodSubtotal + computedCharge + computedDelivery) * 100) / 100;
+    const computedTax         = Math.round(computedFoodSubtotal * SALES_TAX_RATE * 100) / 100;
+    const computedTotal       = Math.round((computedFoodSubtotal + computedCharge + computedDelivery + computedTax) * 100) / 100;
 
     // Patch any discrepancies
     quote.food_subtotal  = computedFoodSubtotal;
     quote.service_charge = computedCharge;
+    quote.sales_tax      = computedTax;
     quote.total          = computedTotal;
 
     // Also patch individual line subtotals
