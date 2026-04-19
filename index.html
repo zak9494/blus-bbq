@@ -981,6 +981,20 @@ if (typeof marked !== 'undefined') {
               <span style="width:80px;text-align:right">Subtotal</span>
             </div>
             <div id="inq-quote-lines"></div>
+            <div id="inq-charge-controls" style="display:none;margin-top:8px;padding:10px 12px;background:var(--surface2);border-radius:6px">
+              <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+                <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
+                  <label style="white-space:nowrap">Service charge</label>
+                  <input type="number" min="0" max="100" step="0.5" class="form-input" id="inq-sc-pct" style="width:60px;text-align:right;padding:4px 6px;font-size:12px" onchange="recalcServiceCharge(this.value)">
+                  <span>%</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
+                  <label style="white-space:nowrap">Delivery fee</label>
+                  <span>$</span>
+                  <input type="number" min="0" step="0.01" class="form-input" id="inq-delivery-fee" style="width:70px;text-align:right;padding:4px 6px;font-size:12px" onchange="recalcDeliveryFee(this.value)">
+                </div>
+              </div>
+            </div>
             <div class="inq-quote-summary" id="inq-quote-summary"></div>
             <div id="inq-tax-exempt-row" style="display:none;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text2);font-size:12px">
@@ -2987,6 +3001,13 @@ function renderInquiryDetail(inq) {
       '</div>'
     ).join('');
     renderQuoteSummary(q);
+    // Init charge controls
+    var ccDiv = document.getElementById('inq-charge-controls');
+    if (ccDiv) {
+      ccDiv.style.display = 'block';
+      document.getElementById('inq-sc-pct').value = q.service_charge_pct || 0;
+      document.getElementById('inq-delivery-fee').value = q.delivery_fee || 0;
+    }
     // Init tax-exempt UI
     var texRow = document.getElementById('inq-tax-exempt-row');
     var texChk = document.getElementById('inq-tax-exempt-chk');
@@ -3000,6 +3021,8 @@ function renderInquiryDetail(inq) {
     }
   } else {
     qSec.style.display = 'none';
+    var ccDiv2 = document.getElementById('inq-charge-controls');
+    if (ccDiv2) ccDiv2.style.display = 'none';
     var texRow2 = document.getElementById('inq-tax-exempt-row');
     if (texRow2) texRow2.style.display = 'none';
   }
@@ -3080,6 +3103,25 @@ function toggleTaxExempt(checked) {
   renderQuoteSummary(q);
 }
 
+function recalcServiceCharge(val) {
+  if (!currentInquiry || !currentInquiry.quote) return;
+  var q = currentInquiry.quote;
+  q.service_charge_pct = parseFloat(val) || 0;
+  q.service_charge = Math.round(q.food_subtotal * q.service_charge_pct / 100 * 100) / 100;
+  q.sales_tax = Math.round(q.food_subtotal * 0.0825 * 100) / 100;
+  q.total = Math.round((q.food_subtotal + q.service_charge + q.sales_tax + (q.delivery_fee || 0)) * 100) / 100;
+  renderQuoteSummary(q);
+}
+
+function recalcDeliveryFee(val) {
+  if (!currentInquiry || !currentInquiry.quote) return;
+  var q = currentInquiry.quote;
+  q.delivery_fee = parseFloat(val) || 0;
+  q.sales_tax = Math.round(q.food_subtotal * 0.0825 * 100) / 100;
+  q.total = Math.round((q.food_subtotal + q.service_charge + q.sales_tax + q.delivery_fee) * 100) / 100;
+  renderQuoteSummary(q);
+}
+
 async function saveInquiryDraft() {
   if (!currentInquiry) return;
   const ef = {};
@@ -3098,9 +3140,13 @@ async function saveInquiryDraft() {
     }
     ef[key] = val;
   });
-  // Sync total with tax-exempt flag before saving
+  // Sync charge controls + total before saving
   const q = currentInquiry.quote;
   if (q) {
+    var scEl = document.getElementById('inq-sc-pct');
+    var dfEl = document.getElementById('inq-delivery-fee');
+    if (scEl) { q.service_charge_pct = parseFloat(scEl.value) || 0; q.service_charge = Math.round(q.food_subtotal * q.service_charge_pct / 100 * 100) / 100; }
+    if (dfEl) { q.delivery_fee = parseFloat(dfEl.value) || 0; }
     const taxAmt = (!q.tax_exempt) ? (q.sales_tax !== undefined ? q.sales_tax : Math.round(q.food_subtotal * 0.0825 * 100) / 100) : 0;
     q.sales_tax = q.tax_exempt ? 0 : (q.sales_tax !== undefined ? q.sales_tax : Math.round(q.food_subtotal * 0.0825 * 100) / 100);
     q.total = Math.round((q.food_subtotal + q.service_charge + taxAmt + (q.delivery_fee || 0)) * 100) / 100;
