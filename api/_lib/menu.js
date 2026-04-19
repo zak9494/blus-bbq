@@ -97,4 +97,7 @@ function suggestServiceCharge(serviceType, budget, guestCount) {
   return 0; // unknown service type
 }
 
-module.exports = { MENU, DELIVERY_FEE, suggestServiceCharge };
+/** Texas state sales tax rate applied to food subtotal */
+const SALES_TAX_RATE = 0.0825;
+
+module.exports = { MENU, DELIVERY_FEE, SALES_TAX_RATE, suggestServiceCharge };
