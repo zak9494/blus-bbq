@@ -256,6 +256,12 @@ tr:hover td { background: var(--surface2); }
   .kanban { grid-template-columns: 1fr 1fr; }
   .quote-layout { grid-template-columns: 1fr; }
   .chat-layout { grid-template-columns: 1fr; height: auto; }
+  /* Mobile: ensure page headers clear the 38px hamburger button */
+  .page-header { padding-left: 58px !important; }
+  .page-header-title, .page-title, h1.page-title { padding-left: 0 !important; }
+  /* Chips wrap to full-width rows on narrow screens */
+  .chat-options { flex-direction: column; align-items: flex-start; }
+  .chat-option-btn { width: 100%; max-width: 320px; }
 }
 
 /* SCROLLBAR */
@@ -309,8 +315,9 @@ tr:hover td { background: var(--surface2); }
 .modify-textarea:focus { outline: none; border-color: var(--amber); }
 .modify-countdown { font-family: 'Bebas Neue', sans-serif; font-size: 56px; color: var(--amber); letter-spacing: 0.05em; text-align: center; margin: 10px 0 6px; line-height: 1; }
 
-    .chat-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-    .chat-option-btn { background: #1a1a1a; color: #e8e8e8; border: 1px solid #3a3a3a; border-radius: 14px; padding: 5px 11px; font-size: 12px; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .chat-msg-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
+    .chat-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .chat-option-btn { background: #1a1a1a; color: #e8e8e8; border: 1px solid #3a3a3a; border-radius: 14px; padding: 10px 16px; font-size: 13px; cursor: pointer; transition: all 0.15s; font-family: inherit; min-height: 44px; display: inline-flex; align-items: center; -webkit-tap-highlight-color: transparent; }
     .chat-option-btn:hover:not(:disabled) { background: #2a2a2a; border-color: #ff8800; color: #ff8800; }
     .chat-option-btn:disabled { opacity: 0.5; cursor: default; }
     .chat-option-btn.selected { background: #ff8800; color: #000; border-color: #ff8800; }
@@ -1401,14 +1408,21 @@ IMPORTANT — Clarifying choices: When the user asks you to do something that re
 </options>
 Only include <options> when a clarifying choice would genuinely help the user move forward. Skip them for pure Q&A or explanations where you already have enough info to answer.`;
 
-async function sendChat() {
+async function sendChat(textOverride) {
   const input = document.getElementById('chat-input');
-  const text = input.value.trim();
+  // When called from a chip, textOverride carries the chip value directly.
+  // This bypasses the input field entirely, avoiding the iOS Safari bug where
+  // input.value assignments are reverted by the virtual keyboard on focus().
+  const text = (textOverride !== undefined && textOverride !== null)
+    ? String(textOverride).trim()
+    : input.value.trim();
   if (!text) return;
 
   appendChatMsg('user', text);
-  input.value = '';
-  input.style.height = 'auto';
+  if (!textOverride) {
+    input.value = '';
+    input.style.height = 'auto';
+  }
 
   chatHistory.push({ role: 'user', content: text });
 
@@ -1453,7 +1467,13 @@ function appendChatMsg(role, text) {
             optionsBlock = optMatch ? optMatch[1] : null;
             if (optMatch) text = text.replace(/<options>[\s\S]*?<\/options>/i, '').trim();
           }
-          div.textContent = text;
+          // Wrap in .chat-msg-body so text and chips stack vertically (not side-by-side)
+          const body = document.createElement('div');
+          body.className = 'chat-msg-body';
+          const bubble = document.createElement('div');
+          bubble.className = 'chat-bubble';
+          bubble.textContent = text;
+          body.appendChild(bubble);
           if (optionsBlock) {
             const wrap = document.createElement('div');
             wrap.className = 'chat-options';
@@ -1472,8 +1492,9 @@ function appendChatMsg(role, text) {
               btn.addEventListener('click', function(){ chooseChatOption(this); });
               wrap.appendChild(btn);
             }
-            if (wrap.children.length) div.appendChild(wrap);
+            if (wrap.children.length) body.appendChild(wrap);
           }
+          div.appendChild(body);
           msgs.appendChild(div);
           msgs.scrollTop = msgs.scrollHeight;
           return div;
@@ -1482,11 +1503,8 @@ function appendChatMsg(role, text) {
         function chooseChatOption(btn) {
           if (!btn) return;
           const val = btn.getAttribute('data-value') || btn.textContent || '';
-          const input = document.getElementById('chat-input');
-          if (input) {
-            input.value = val;
-            input.focus();
-          }
+          if (!val) return;
+          // Disable all chips in this set immediately (visual feedback)
           const wrap = btn.parentElement;
           if (wrap && wrap.classList.contains('chat-options')) {
             [].slice.call(wrap.querySelectorAll('button')).forEach(function(b){
@@ -1494,7 +1512,11 @@ function appendChatMsg(role, text) {
               if (b === btn) b.classList.add('selected');
             });
           }
-          if (typeof sendChat === 'function') { try { sendChat(); } catch(e){} }
+          // Send chip value DIRECTLY — do NOT write to the input field.
+          // On iOS Safari, calling input.focus() reverts a programmatic
+          // input.value assignment before sendChat() can read it, causing
+          // the stale input text ("Let") to be submitted instead of the chip value.
+          if (typeof sendChat === 'function') { try { sendChat(val); } catch(e){} }
         }
 
 let typingCounter = 0;
