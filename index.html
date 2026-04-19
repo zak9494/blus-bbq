@@ -184,9 +184,28 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
 .chat-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; color: var(--text2); }
 .chat-avatar.ai { background: var(--red-bg); border-color: var(--red-border); color: #e09090; }
-.chat-bubble { padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.6; }
-.chat-msg.ai .chat-bubble { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 2px 10px 10px 10px; }
-.chat-msg.user .chat-bubble { background: var(--red); color: #fff; border-radius: 10px 2px 10px 10px; }
+.chat-bubble { padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.65; max-width: min(600px, 86vw); word-break: break-word; }
+.chat-msg.ai .chat-bubble { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 2px 12px 12px 12px; }
+.chat-msg.user .chat-bubble { background: var(--red); color: #fff; border-radius: 12px 2px 12px 12px; }
+/* Markdown elements inside AI chat bubbles */
+.chat-msg.ai .chat-bubble p { margin: 0 0 10px; }
+.chat-msg.ai .chat-bubble p:last-child { margin-bottom: 0; }
+.chat-msg.ai .chat-bubble h1 { font-size: 17px; font-weight: 700; margin: 14px 0 6px; color: var(--text); }
+.chat-msg.ai .chat-bubble h2 { font-size: 15px; font-weight: 700; margin: 12px 0 5px; color: var(--text); }
+.chat-msg.ai .chat-bubble h3 { font-size: 14px; font-weight: 600; margin: 10px 0 4px; color: var(--text); }
+.chat-msg.ai .chat-bubble ul, .chat-msg.ai .chat-bubble ol { margin: 6px 0 10px 20px; }
+.chat-msg.ai .chat-bubble li { margin-bottom: 5px; line-height: 1.5; }
+.chat-msg.ai .chat-bubble strong { font-weight: 650; color: var(--text); }
+.chat-msg.ai .chat-bubble em { font-style: italic; color: var(--text2); }
+.chat-msg.ai .chat-bubble code { background: rgba(255,136,0,0.12); color: #ff9933; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+.chat-msg.ai .chat-bubble pre { background: #0d0d0d; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 10px 0; }
+.chat-msg.ai .chat-bubble pre code { background: none; padding: 0; color: #e8e8e8; font-size: 12px; }
+.chat-msg.ai .chat-bubble blockquote { border-left: 3px solid var(--red); padding: 4px 0 4px 12px; margin: 8px 0; color: var(--text2); font-style: italic; }
+.chat-msg.ai .chat-bubble hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+.chat-msg.ai .chat-bubble a { color: #ff9933; text-decoration: underline; }
+.chat-msg.ai .chat-bubble table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; }
+.chat-msg.ai .chat-bubble th { background: rgba(255,136,0,0.15); padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 600; }
+.chat-msg.ai .chat-bubble td { padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .chat-input-row { display: flex; gap: 8px; padding: 14px; border-top: 1px solid var(--border); align-items: flex-end; }
 .chat-textarea { flex: 1; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; resize: none; min-height: 38px; max-height: 120px; transition: border 0.15s; }
 .chat-textarea:focus { outline: none; border-color: var(--red); }
@@ -280,6 +299,14 @@ tr:hover td { background: var(--surface2); }
   /* Modals: full-width with margin */
   .modal { margin: 0 8px; max-width: calc(100vw - 16px); }
   .modify-box { margin: 0 8px; max-width: calc(100vw - 16px); }
+  /* HAMBURGER FIX: iOS Safari treats sticky-positioned elements as pointer-events
+     blockers even when z-index is lower than a fixed sibling (known iOS bug).
+     Making the topbar transparent to touches and re-enabling on children fixes it. */
+  .topbar { pointer-events: none; }
+  .topbar > * { pointer-events: auto; }
+  /* PDF/Quote buttons: 44px tap targets, more breathing room */
+  .pdf-btn { min-height: 44px; font-size: 13px; margin-top: 12px; }
+  .toast-send-btn { min-height: 44px; font-size: 13px; }
 }
 
 /* Extra breakpoint: very narrow (375px iPhone SE) */
@@ -372,6 +399,13 @@ tr:hover td { background: var(--surface2); }
   .history-card-meta{font-size:10px;color:var(--text3);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   .history-sha-badge{font-family:monospace;background:var(--surface2);padding:1px 4px;border-radius:3px;font-size:9px;}
   </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" crossorigin="anonymous"></script>
+<script>
+// Configure marked for clean rendering
+if (typeof marked !== 'undefined') {
+  marked.setOptions({ breaks: true, gfm: true });
+}
+</script>
 </head>
 <body>
 
@@ -1746,7 +1780,12 @@ function appendChatMsg(role, text) {
           body.className = 'chat-msg-body';
           const bubble = document.createElement('div');
           bubble.className = 'chat-bubble';
-          bubble.textContent = text;
+          // Render markdown for AI messages; plain text for user messages
+          if ((role === 'ai' || role === 'assistant') && typeof marked !== 'undefined') {
+            bubble.innerHTML = marked.parse(text);
+          } else {
+            bubble.textContent = text;
+          }
           body.appendChild(bubble);
           if (optionsBlock) {
             const wrap = document.createElement('div');
@@ -2236,7 +2275,7 @@ async function loadModHistory() {
     let items = data.items || data.history || [];
     if (filter) items = items.filter(i => i.status === filter);
     if (!items.length) { listEl.innerHTML = '<div class="history-empty-msg">No modifications yet.</div>'; return; }
-    const icon = s => s === 'done' ? '✅' : s === 'failed' ? '❌' : '⏳';
+    const icon = s => s === 'done' ? '✅' : (s === 'failed' || s === 'error') ? '❌' : '⏳';
     listEl.innerHTML = items.map(e => {
       const dt = new Date(e.timestamp || e.ts).toLocaleString();
       const sha = e.sha || e.commitSha || '';
@@ -2331,6 +2370,20 @@ function updateGmailStatus(connected, email, error, message) {
 
 async function connectGmail() {
   window.location.href = '/api/auth/init';
+}
+
+async function sendEmailViaAPI(to, name, subject, body) {
+  try {
+    const res = await fetch('/api/dispatch/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, name, subject, body })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    console.log('Email sent via API to', to);
+  } catch(e) {
+    console.error('sendEmailViaAPI failed:', e.message);
+  }
 }
 
 window.sendPrompt = function(msg) {
@@ -2526,7 +2579,8 @@ setInterval(() => { loadScheduled(); renderScheduled(); }, 60000);
 loadLeads();
 loadScheduled();
 checkGmailStatus();
-window.addEventListener('focus', checkGmailStatus);
+// focus listener removed — visibilitychange below is sufficient and avoids
+// spurious Gmail-status toasts appearing after PDF download dialogs
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) checkGmailStatus();
 });
