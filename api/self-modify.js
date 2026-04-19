@@ -1,6 +1,8 @@
 const https = require('https');
 const crypto = require('crypto');
 
+const KV_URL = process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPO = process.env.GITHUB_REPO;
 const TARGET_FILE = 'index.html';
@@ -150,7 +152,18 @@ module.exports = async (req, res) => {
     });
     if (update.status >= 300) return res.status(500).json({ error: 'GitHub commit failed', detail: update.body });
 
-    return res.status(200).json({ ok: true, success: true, mode: 'apply', commit: update.body.commit && update.body.commit.sha, diff });
+      // Write to mod history
+  try {
+    const _sha = update.body.commit && update.body.commit.sha;
+    const _entry = { id: Date.now().toString(), title: (commitMessage || 'Dashboard update').slice(0, 200), status: 'done', sha: _sha || null, error: null, timestamp: new Date().toISOString() };
+    const _hr = await fetch(`${KV_URL}/get/modify:history`, { headers: { Authorization: `Bearer ${KV_TOKEN}` } });
+    const _hd = await _hr.json();
+    const _hist = _hd.result ? JSON.parse(_hd.result) : [];
+    _hist.unshift(_entry);
+    if (_hist.length > 50) _hist.splice(50);
+    await fetch(`${KV_URL}/pipeline`, { method: 'POST', headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify([['SET', 'modify:history', JSON.stringify(_hist)]]) });
+  } catch(_e) {}
+return res.status(200).json({ ok: true, success: true, mode: 'apply', commit: update.body.commit && update.body.commit.sha, diff });
   } catch (err) {
     return res.status(500).json({ error: err && err.message || String(err) });
   }
