@@ -1676,10 +1676,39 @@ async function generatePDF() {
   doc.setTextColor(120, 120, 120);
   doc.text('This quote is valid for 30 days from the date prepared.', W / 2, PH - 12, { align: 'center' });
 
-  // ── Save ──────────────────────────────────────────────────────────────────
+  // ── Save / Share ───────────────────────────────────────────────────────────
   const slug     = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/, '');
   const dateSlug = dateVal || new Date().toISOString().slice(0, 10);
-  doc.save(`blus-bbq-quote-${slug}-${dateSlug}.pdf`);
+  const filename = `blus-bbq-quote-${slug}-${dateSlug}.pdf`;
+  const blob     = doc.output('blob');
+
+  // iOS Safari: doc.save() only opens a new tab (no download). Use Web Share
+  // API instead — opens the native share sheet with "Save to Files", AirDrop,
+  // Mail, etc. Requires iOS 15+ (navigator.canShare with files support).
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+                (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
+
+  if (isIOS && navigator.canShare &&
+      navigator.canShare({ files: [new File([blob], filename, { type: 'application/pdf' })] })) {
+    try {
+      const file = new File([blob], filename, { type: 'application/pdf' });
+      await navigator.share({ files: [file], title: "Blu\u2019s BBQ Quote" });
+      return; // share sheet handled it
+    } catch (e) {
+      if (e.name === 'AbortError') return; // user cancelled share sheet — that's fine
+      // Other error: fall through to blob download
+    }
+  }
+
+  // Desktop Chrome/Firefox, Android Chrome, iOS fallback
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function emailQuote() {
