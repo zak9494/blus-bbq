@@ -163,6 +163,12 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .menu-item-check input { accent-color: var(--red); }
 .menu-item-label { font-size: 12px; color: var(--text2); flex: 1; }
 .menu-item-price { font-size: 11px; color: var(--text3); }
+.menu-item-qty-controls { display: none; align-items: center; gap: 4px; margin-left: 4px; }
+.menu-item-qty-controls.show { display: flex; }
+.qty-btn { background: var(--surface3); border: 1px solid var(--border); border-radius: 3px; color: var(--text); width: 20px; height: 20px; padding: 0; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+.qty-btn:hover { background: var(--surface2); }
+.qty-input { width: 32px; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; color: var(--text); padding: 2px 4px; font-size: 11px; text-align: center; font-family: 'DM Sans', sans-serif; }
+.qty-input:focus { outline: none; border-color: var(--amber); }
 
 /* TOAST BUTTON */
 .toast-send-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: var(--green-bg); border: 1px solid var(--green-border); border-radius: var(--radius-sm); color: #80c898; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 14px; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
@@ -1189,17 +1195,71 @@ function buildMenuPicker(category, containerId) {
   const items = MENU[category];
   const el = document.getElementById(containerId);
   el.innerHTML = items.map(item => `
-    <label class="menu-item-check">
-      <input type="checkbox" data-id="${item.id}" data-price="${item.price}" data-name="${item.name}" data-unit="${item.unit}"
-        onchange="toggleItem('${item.id}', ${item.price}, '${item.name}', '${item.unit}')">
-      <span class="menu-item-label">${item.name}</span>
-      <span class="menu-item-price">$${item.price}</span>
-    </label>`).join('');
+    <div style="display:flex; align-items:center; gap:6px; padding:4px 0;">
+      <label class="menu-item-check" style="flex:1; margin:0;">
+        <input type="checkbox" data-id="${item.id}" data-price="${item.price}" data-name="${item.name}" data-unit="${item.unit}"
+          onchange="toggleItem('${item.id}', ${item.price}, '${item.name}', '${item.unit}'); updateQtyControls();">
+        <span class="menu-item-label">${item.name}</span>
+        <span class="menu-item-price">$${item.price}</span>
+      </label>
+      <div class="menu-item-qty-controls" data-item-id="${item.id}">
+        <button class="qty-btn" onclick="decrementQty('${item.id}')">−</button>
+        <input type="number" class="qty-input" data-item-id="${item.id}" min="1" value="1" onchange="updateQtyFromInput('${item.id}'); updatePreview()">
+        <button class="qty-btn" onclick="incrementQty('${item.id}')">+</button>
+      </div>
+    </div>`).join('');
+}
+
+function updateQtyControls() {
+  document.querySelectorAll('[data-item-id]').forEach(ctrl => {
+    const itemId = ctrl.getAttribute('data-item-id');
+    const checkbox = document.querySelector(`input[data-id="${itemId}"]`);
+    if (checkbox && checkbox.checked) {
+      ctrl.classList.add('show');
+    } else {
+      ctrl.classList.remove('show');
+    }
+  });
+}
+
+function getItemQty(itemId) {
+  const input = document.querySelector(`.qty-input[data-item-id="${itemId}"]`);
+  return input ? Math.max(1, parseInt(input.value) || 1) : 1;
+}
+
+function setItemQty(itemId, qty) {
+  const input = document.querySelector(`.qty-input[data-item-id="${itemId}"]`);
+  if (input) {
+    input.value = Math.max(1, parseInt(qty) || 1);
+  }
+}
+
+function incrementQty(itemId) {
+  const qty = getItemQty(itemId);
+  setItemQty(itemId, qty + 1);
+  updatePreview();
+}
+
+function decrementQty(itemId) {
+  const qty = getItemQty(itemId);
+  if (qty > 1) {
+    setItemQty(itemId, qty - 1);
+    updatePreview();
+  }
+}
+
+function updateQtyFromInput(itemId) {
+  const input = document.querySelector(`.qty-input[data-item-id="${itemId}"]`);
+  if (input) {
+    const val = parseInt(input.value) || 1;
+    input.value = Math.max(1, val);
+  }
+  updatePreview();
 }
 
 function toggleItem(id, price, name, unit) {
   if (selectedItems[id]) { delete selectedItems[id]; }
-  else { selectedItems[id] = { price, name, unit }; }
+  else { selectedItems[id] = { price, name, unit, qty: 1 }; setItemQty(id, 1); }
   updatePreview();
 }
 
@@ -1209,7 +1269,11 @@ function updatePreview() {
   document.getElementById('preview-date').textContent = dateVal ? new Date(dateVal + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : '—';
 
   const lines = document.getElementById('preview-lines');
-  const items = Object.values(selectedItems);
+  const items = Object.entries(selectedItems).map(([id, item]) => {
+    const qty = getItemQty(id);
+    return { ...item, id, qty, linePrice: item.price * qty };
+  });
+  
   if (!items.length) {
     lines.innerHTML = '<div style="color:var(--text3); font-size:12px; text-align:center; padding:20px 0;">Select items to build quote</div>';
     document.getElementById('preview-total').textContent = '$0.00';
@@ -1218,8 +1282,8 @@ function updatePreview() {
 
   let subtotal = 0;
   lines.innerHTML = items.map(item => {
-    subtotal += item.price;
-    return `<div class="quote-line"><span class="q-item-name">${item.name} <span style="color:var(--text3)">(${item.unit})</span></span><span class="q-item-price">$${item.price.toFixed(2)}</span></div>`;
+    subtotal += item.linePrice;
+    return `<div class="quote-line"><span class="q-item-name">${item.name} <span style="color:var(--text3);">(${item.qty}x ${item.unit})</span></span><span class="q-item-price">$${item.linePrice.toFixed(2)}</span></div>`;
   }).join('');
 
   const pct = parseFloat(document.getElementById('charge-pct').value) || 0;
@@ -1275,6 +1339,7 @@ function newQuote() {
   document.getElementById('q-budget').value = 'unknown';
   document.getElementById('charge-pct').value = '0';
   document.getElementById('ai-suggestion-box').classList.remove('show');
+  updateQtyControls();
   updatePreview();
 }
 
@@ -1306,7 +1371,10 @@ function emailQuote() {
   const email = document.getElementById('q-email').value;
   const name = document.getElementById('q-name').value;
   if (!email) { alert('Please enter a customer email first'); return; }
-  const items = Object.values(selectedItems).map(i => `• ${i.name}: $${i.price.toFixed(2)}`).join('\n');
+  const items = Object.entries(selectedItems).map(([id, item]) => {
+    const qty = getItemQty(id);
+    return `• ${item.name} (${qty}x): $${(item.price * qty).toFixed(2)}`;
+  }).join('\n');
   const total = document.getElementById('preview-total').textContent;
   const body = `Hi ${name.split(' ')[0] || 'there'},\n\nPlease see the attached quote for your review!\n\nOrder summary:\n${items}\n\nTotal: ${total}\n\nPlease let me know if you have any questions or would like any changes. You're also welcome to stop by anytime after 1PM, Wednesday through Sunday to try some samples — just ask for the manager, Raul!\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`;
   sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({to: email, name, subject: "Re: Blu's BBQ - Catering Quote", body})}`);
@@ -1563,10 +1631,6 @@ function showPhaseError(step, msg) {
   el.classList.add('visible');
 }
 
-// ── ETA countdown for the self-modify modal ─────────────────────────
-// Fetches median phase durations from /api/modify-phases and shows
-// "~X min remaining" that ticks down in real time. Backend stores the
-// rolling medians at KV key `modify:phases`.
 function _fmtEta(ms) {
   if (ms < 0) ms = 0;
   const s = Math.round(ms / 1000);
@@ -1617,7 +1681,6 @@ async function confirmModify() {
   setStep(1);
   setProgress(5);
   document.getElementById('modify-status-1').textContent = 'Reading current dashboard source...';
-    // ETA — render "~X min remaining" under the progress bar, based on stored phase medians.
   startEtaCountdown();
   const _t0 = Date.now();
 let sourceHtml = '';
@@ -1638,7 +1701,7 @@ let sourceHtml = '';
   setStep(2);
   setProgress(20);
   document.getElementById('modify-status-2').textContent = 'Sending to AI — this may take 20–30 seconds…';
-    fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'read_source',durationMs:Date.now()-_t0})}).catch(()=>{});
+  fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'read_source',durationMs:Date.now()-_t0})}).catch(()=>{});
   const _t1 = Date.now();
 let newHtml = '';
   try {
@@ -1687,9 +1750,6 @@ let newHtml = '';
     document.getElementById('modify-status-2').textContent = 'AI generated ' + newHtml.length.toLocaleString() + ' chars';
     setProgress(78);
   } catch (e) {
-    // Surface the real reason (Safari's native "Load failed" gets translated to
-    // something meaningful, HTTP errors keep their payload, empty responses are
-    // named explicitly). Also log a ❌ history entry so it shows in Recent Changes.
     const rawMsg = (e && e.message) ? e.message : String(e);
     const humanMsg = /^(load failed|failed to fetch|networkerror.*)$/i.test(rawMsg)
       ? 'Network error reaching AI endpoint (' + rawMsg + ')'
@@ -1720,7 +1780,7 @@ let newHtml = '';
   setProgress(80);
   document.getElementById('modify-status-3').textContent = 'Checking guardrails…';
 
-    fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'ai_generate',durationMs:Date.now()-_t1})}).catch(()=>{});
+  fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'ai_generate',durationMs:Date.now()-_t1})}).catch(()=>{});
   const _t2 = Date.now();
 let proposalToken;
   try {
@@ -1757,8 +1817,8 @@ let proposalToken;
     }
     document.getElementById('modify-status-3').textContent = 'Committed: ' + (d4.commit || '').slice(0, 7);
     setProgress(93);
-    await     fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'apply',durationMs:Date.now()-_t3})}).catch(()=>{});
-renderModifyHistory();
+    await fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'apply',durationMs:Date.now()-_t3})}).catch(()=>{});
+    renderModifyHistory();
   } catch (e) {
     showPhaseError(3, 'Commit failed: ' + e.message);
     document.getElementById('modify-status-3').textContent = 'Commit failed';
@@ -1893,7 +1953,6 @@ async function connectGmail() {
   window.location.href = '/api/auth/init';
 }
 
-// Intercept sendPrompt calls for email
 window.sendPrompt = function(msg) {
   if (msg && msg.startsWith('SEND_EMAIL_NOW::')) {
     try {
@@ -2011,13 +2070,11 @@ function handleCSVUpload(input) {
     const text = e.target.result;
     const rows = text.trim().split(/\r?\n/).map(r => parseCSVRow(r));
     if (!rows.length) return;
-    // Detect header row
     let start = 0;
     const firstLower = rows[0].map(c => c.toLowerCase());
     if (firstLower.some(c => c.includes('name') || c.includes('email'))) start = 1;
     importRows = rows.slice(start).filter(r => r.some(c => c.trim()));
     const headers = start === 1 ? rows[0] : ['Name','Email','Phone','Event Date','Guests','Notes'];
-    // Map columns
     const mapCol = (keywords) => {
       const idx = headers.findIndex(h => keywords.some(k => h.toLowerCase().includes(k)));
       return idx;
@@ -2089,8 +2146,6 @@ setInterval(() => { loadScheduled(); renderScheduled(); }, 60000);
 loadLeads();
 loadScheduled();
 checkGmailStatus();
-// Re-check Gmail connection when the tab regains focus or becomes visible
-// so the sidebar indicator recovers after OAuth redirects / reconnects.
 window.addEventListener('focus', checkGmailStatus);
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) checkGmailStatus();
