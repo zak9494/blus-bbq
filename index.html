@@ -1670,6 +1670,95 @@ function stopEtaCountdown() {
   if (el) el.textContent = '';
 }
 
+// ============================================================
+// SELF-MODIFY SECTION MAP + HARDENING HELPERS
+// ============================================================
+
+/**
+ * Build a compact section map from raw HTML so the AI knows where
+ * things are before editing. Extracts:
+ *   - UPPERCASE HTML comments (section headers like <\!-- QUOTE BUILDER -->)
+ *   - id="page-*" page containers
+ *   - top-level function declarations
+ * Returns a string of "L<line>: [type] name" lines (capped at 5000 chars).
+ */
+function buildSectionMap(htmlStr) {
+  const lines = htmlStr.split('\n');
+  const entries = [];
+  lines.forEach(function(line, i) {
+    const ln = i + 1;
+    // Section-style HTML comments (all-caps content ≥ 4 chars)
+    const cmm = line.match(/<\!--\s*([A-Z][A-Z0-9\s\/\-_]{3,})\s*-->/);
+    if (cmm) entries.push('L' + ln + ': [section] ' + cmm[1].trim());
+    // Page container IDs
+    const pg = line.match(/id="(page-[^"]+)"/);
+    if (pg) entries.push('L' + ln + ': [page] #' + pg[1]);
+    // Top-level function declarations
+    const fn = line.match(/^\s*(?:async\s+)?function\s+(\w+)\s*\(/);
+    if (fn) entries.push('L' + ln + ': [fn] ' + fn[1] + '()');
+  });
+  return entries.join('\n').slice(0, 5000);
+}
+
+/**
+ * Returns true if the error message looks like a transient network blip
+ * (not a hard API/quota error) — safe to retry once.
+ */
+function isTransientAiError(msg) {
+  return /load failed|failed to fetch|networkerror|etimedout|econnreset|socket hang|network request failed/i.test(msg || '');
+}
+
+/**
+ * Run one AI-generation attempt. Returns the full HTML string on success,
+ * throws on failure. statusEl is the DOM element to update with progress text.
+ */
+async function runAiGeneration(sourceHtml, prompt, systemPrompt, statusEl, setProgressFn) {
+  const r2 = await fetch('/api/chat-stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 16000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: 'Current HTML:\n' + sourceHtml + '\n\nChange request: ' + prompt }]
+    })
+  });
+  if (\!r2.ok) {
+    const errText = await r2.text();
+    throw new Error('AI API error HTTP ' + r2.status + ': ' + errText.slice(0, 200));
+  }
+  const reader = r2.body.getReader();
+  const decoder = new TextDecoder();
+  let sseBuffer = '';
+  let result = '';
+  let charCount = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    sseBuffer += decoder.decode(value, { stream: true });
+    const lines = sseBuffer.split('\n');
+    sseBuffer = lines.pop();
+    for (const line of lines) {
+      if (\!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (raw === '[DONE]') continue;
+      try {
+        const evt = JSON.parse(raw);
+        const delta = evt.delta?.text || '';
+        if (delta) {
+          result += delta;
+          charCount += delta.length;
+          const aiPct = Math.min(75, 20 + Math.round((charCount / 105000) * 55));
+          setProgressFn(aiPct);
+          statusEl.textContent = 'AI writing\u2026 ' + charCount.toLocaleString() + ' chars';
+        }
+      } catch {}
+    }
+  }
+  if (\!result) throw new Error('AI returned empty response');
+  return result;
+}
+
 async function confirmModify() {
   const prompt = document.getElementById('modify-prompt').value.trim();
   if (!prompt) return;
@@ -1697,59 +1786,54 @@ let sourceHtml = '';
     return;
   }
 
-  // Step 2: AI generates new HTML
+  // Step 2: AI generates new HTML (hardened: section map + auto-retry)
   setStep(2);
   setProgress(20);
-  document.getElementById('modify-status-2').textContent = 'Sending to AI — this may take 20–30 seconds…';
+  document.getElementById('modify-status-2').textContent = 'Building section map…';
   fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'read_source',durationMs:Date.now()-_t0})}).catch(()=>{});
   const _t1 = Date.now();
+
+  // Build a section map so the AI can locate code before editing
+  const sectionMap = buildSectionMap(sourceHtml);
+  const systemPrompt = [
+    'You are a code editor for a single-page HTML dashboard (index.html).',
+    'Output ONLY the complete modified HTML file — no explanation, no markdown fences, no truncation.',
+    'Start your response with <\!DOCTYPE html> and output the ENTIRE file.',
+    '',
+    'SECTION MAP (line numbers → sections, pages, functions):',
+    sectionMap,
+    '',
+    'Rules:',
+    '- Preserve ALL sections not mentioned in the change request.',
+    '- Output the COMPLETE file — never abbreviate or truncate.',
+    '- Do not rename functions, IDs, or CSS classes unless explicitly requested.',
+    '- Use the section map to find the exact location to modify.',
+  ].join('\n');
+
+  document.getElementById('modify-status-2').textContent = 'Sending to AI — this may take 20–30 seconds…';
+
 let newHtml = '';
-  try {
-    const r2 = await fetch('/api/chat-stream', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 16000,
-        system: 'You are a code editor. The user will give you an HTML file and a change request. Output ONLY the complete modified HTML file with no explanation, no markdown code fences — just raw HTML starting with <!DOCTYPE html>.',
-        messages: [{ role: 'user', content: 'Current HTML:\n' + sourceHtml + '\n\nChange request: ' + prompt }]
-      })
-    });
-    if (!r2.ok) {
-      const errText = await r2.text();
-      throw new Error('AI API error HTTP ' + r2.status + ': ' + errText.slice(0, 200));
-    }
-    const reader = r2.body.getReader();
-    const decoder = new TextDecoder();
-    let sseBuffer = '';
-    let charCount = 0;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      sseBuffer += decoder.decode(value, { stream: true });
-      const lines = sseBuffer.split('\n');
-      sseBuffer = lines.pop();
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const raw = line.slice(6).trim();
-        if (raw === '[DONE]') continue;
-        try {
-          const evt = JSON.parse(raw);
-          const delta = evt.delta?.text || '';
-          if (delta) {
-            newHtml += delta;
-            charCount += delta.length;
-            const aiPct = Math.min(75, 20 + Math.round((charCount / 105000) * 55));
-            setProgress(aiPct);
-            document.getElementById('modify-status-2').textContent = 'AI writing… ' + charCount.toLocaleString() + ' chars';
-          }
-        } catch {}
+  const _statusEl2 = document.getElementById('modify-status-2');
+  // Auto-retry once on transient network errors
+  let _aiAttempt = 0, _lastAiErr = null;
+  while (_aiAttempt < 2) {
+    try {
+      newHtml = await runAiGeneration(sourceHtml, prompt, systemPrompt, _statusEl2, setProgress);
+      _lastAiErr = null;
+      break;
+    } catch (_attemptErr) {
+      _lastAiErr = _attemptErr;
+      if (_aiAttempt === 0 && isTransientAiError(_attemptErr.message)) {
+        _aiAttempt++;
+        _statusEl2.textContent = 'Network blip — retrying in 3s…';
+        await new Promise(function(res) { setTimeout(res, 3000); });
+        continue;
       }
+      break;
     }
-    if (!newHtml) throw new Error('AI returned empty response');
-    document.getElementById('modify-status-2').textContent = 'AI generated ' + newHtml.length.toLocaleString() + ' chars';
-    setProgress(78);
-  } catch (e) {
+  }
+  const e = _lastAiErr;
+  if (e) {
     const rawMsg = (e && e.message) ? e.message : String(e);
     const humanMsg = /^(load failed|failed to fetch|networkerror.*)$/i.test(rawMsg)
       ? 'Network error reaching AI endpoint (' + rawMsg + ')'
