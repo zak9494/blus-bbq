@@ -190,9 +190,10 @@ module.exports = async (req, res) => {
   const authHeader = 'Bearer ' + atk;
 
   // ── List matching threads ───────────────────────────────────────────────────
-  const q = encodeURIComponent('in:inbox newer_than:30d (catering OR event OR party OR wedding OR BBQ OR quote)');
+  // Strict Wix-form-only filter: only 'Catering Request got a new submission' notifications
+  const q = encodeURIComponent('subject:"Catering Request got a new submission"');
   const listResp = await httpsGet('gmail.googleapis.com',
-    `/gmail/v1/users/me/messages?q=${q}&maxResults=50`,
+    `/gmail/v1/users/me/messages?q=${q}&maxResults=100`,
     { Authorization: authHeader });
 
   if (listResp.status === 401 || listResp.status === 403) {
@@ -208,9 +209,16 @@ module.exports = async (req, res) => {
 
   const messageRefs = listResp.body.messages || [];
 
+  // ── Deduplicate by threadId (one entry per thread, first message wins) ──────
+  const seenThreads = new Set();
+  const uniqueRefs  = messageRefs.filter(({ threadId }) => {
+    if (seenThreads.has(threadId)) return false;
+    seenThreads.add(threadId); return true;
+  });
+
   // ── Fetch full message for each ref ────────────────────────────────────────
   const inquiries = [];
-  for (const { id: messageId, threadId } of messageRefs) {
+  for (const { id: messageId, threadId } of uniqueRefs) {
     const msgResp = await httpsGet('gmail.googleapis.com',
       `/gmail/v1/users/me/messages/${messageId}?format=full`,
       { Authorization: authHeader });
@@ -234,7 +242,7 @@ module.exports = async (req, res) => {
   return res.status(200).json({
     count: inquiries.length,
     inquiries,
-    query: 'in:inbox newer_than:30d (catering OR event OR party OR wedding OR BBQ OR quote)',
+    query: 'subject:"Catering Request got a new submission"',
     fetchedAt: new Date().toISOString(),
   });
 };
