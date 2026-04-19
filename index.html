@@ -782,6 +782,10 @@ if (typeof marked !== 'undefined') {
               <span style="font-size:12px; color:var(--text2);">Delivery fee</span>
               <span style="font-size:12px; color:var(--text);" id="delivery-fee-display">$50.00</span>
             </div>
+            <div class="charge-row">
+              <span style="font-size:12px; color:var(--text2);">TX Sales Tax (8.25%)</span>
+              <span style="font-size:12px; color:var(--text);" id="preview-tax">$0.00</span>
+            </div>
 
             <div class="divider"></div>
 
@@ -1588,9 +1592,11 @@ function updatePreview() {
   const service = document.getElementById('q-service').value;
   const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? 50 : 0;
   const charge = subtotal * (pct / 100);
-  const total = subtotal + charge + deliveryFee;
+  const tax = Math.round(subtotal * 0.0825 * 100) / 100;
+  const total = subtotal + charge + tax + deliveryFee;
 
   document.getElementById('preview-total').textContent = '$' + total.toFixed(2);
+  document.getElementById('preview-tax').textContent = '$' + tax.toFixed(2);
   document.getElementById('delivery-row').style.display = deliveryFee ? 'flex' : 'none';
 
   const serviceLabels = { pickup:'Pickup order', delivery:'Delivery order (+$50)', delivery_setup:'Delivery & setup (+$50)' };
@@ -1685,7 +1691,8 @@ async function generatePDF() {
   const subtotal     = items.reduce((s, i) => s + i.linePrice, 0);
   const serviceCharge = subtotal * (pct / 100);
   const deliveryFee  = (service === 'delivery' || service === 'delivery_setup') ? 50 : 0;
-  const total        = subtotal + serviceCharge + deliveryFee;
+  const tax          = Math.round(subtotal * 0.0825 * 100) / 100;
+  const total        = subtotal + serviceCharge + tax + deliveryFee;
 
   // ── Load jsPDF from CDN (once) ─────────────────────────────────────────────
   if (!window.jspdf) {
@@ -1858,6 +1865,9 @@ async function generatePDF() {
     doc.text('$' + deliveryFee.toFixed(2), TV, y, { align: 'right' });
     y += 16;
   }
+  doc.text('TX Sales Tax (8.25%)', TL, y);
+  doc.text('$' + tax.toFixed(2), TV, y, { align: 'right' });
+  y += 16;
 
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.5);
@@ -3016,7 +3026,8 @@ function recalcQuoteLine(idx) {
   const q = currentInquiry.quote;
   q.food_subtotal  = Math.round(q.line_items.reduce((s, l) => s + l.subtotal, 0) * 100) / 100;
   q.service_charge = Math.round(q.food_subtotal * (q.service_charge_pct || 0) / 100 * 100) / 100;
-  q.total          = Math.round((q.food_subtotal + q.service_charge + (q.delivery_fee || 0)) * 100) / 100;
+  q.sales_tax      = Math.round(q.food_subtotal * 0.0825 * 100) / 100;
+  q.total          = Math.round((q.food_subtotal + q.service_charge + q.sales_tax + (q.delivery_fee || 0)) * 100) / 100;
   renderQuoteSummary(q);
 }
 
@@ -3025,6 +3036,7 @@ function renderQuoteSummary(q) {
     '<div class="quote-line"><span>Food subtotal</span><span>$' + q.food_subtotal.toFixed(2) + '</span></div>' +
     (q.service_charge_pct ? '<div class="quote-line"><span>Service charge (' + q.service_charge_pct + '%)</span><span>$' + q.service_charge.toFixed(2) + '</span></div>' : '') +
     (q.delivery_fee ? '<div class="quote-line"><span>Delivery fee</span><span>$' + q.delivery_fee.toFixed(2) + '</span></div>' : '') +
+    '<div class="quote-line"><span>TX Sales Tax (8.25%)</span><span>$' + (q.sales_tax !== undefined ? q.sales_tax : Math.round(q.food_subtotal * 0.0825 * 100) / 100).toFixed(2) + '</span></div>' +
     '<div class="quote-line" style="font-weight:700;font-size:15px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)">' +
       '<span>TOTAL</span><span>$' + q.total.toFixed(2) + '</span>' +
     '</div>';
@@ -3128,9 +3140,11 @@ function buildFallbackEmailBody(mode, inq) {
     const lines = (q && q.line_items || []).map(li =>
       li.name + ' (' + li.qty + ' ' + li.unit + ') — $' + (li.subtotal||0).toFixed(2)
     ).join('\n');
+    const taxAmt = q ? (q.sales_tax !== undefined ? q.sales_tax : Math.round((q.food_subtotal || 0) * 0.0825 * 100) / 100) : 0;
     const total = q ? '$' + q.total.toFixed(2) : '(pending)';
+    const taxLine = q ? '\nTX Sales Tax (8.25%): $' + taxAmt.toFixed(2) : '';
     return 'Hi ' + first + ',\n\nThank you for reaching out to Blu\'s Barbeque! ' +
-      'Here\'s your catering quote:\n\n' + lines + '\n\nTotal: ' + total + '\n\n' +
+      'Here\'s your catering quote:\n\n' + lines + taxLine + '\n\nTotal: ' + total + '\n\n' +
       'Please let me know if you have any questions or would like adjustments. ' +
       'You\'re welcome to stop by Wed–Sun after 1 PM to try samples — just ask for Raul!\n\n' +
       'Thanks,\nZach\nBlu\'s Barbeque\n214-514-8684';
