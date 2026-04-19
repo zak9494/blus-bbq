@@ -3,6 +3,7 @@
  * OAuth 2.0 callback from Google.
  * - Exchanges code for tokens
  * - Validates the authed account is REQUIRED_EMAIL (info@blusbarbeque.com)
+ *   using Gmail users.getProfile (works with gmail.send scope only)
  * - Rejects and redirects with error if wrong account
  * - Stores tokens at gmail:{email} key (account-specific)
  * - Deletes any legacy gmail:tokens key
@@ -94,20 +95,22 @@ module.exports = async (req, res) => {
     return res.redirect(`/?gmailError=${encodeURIComponent(tokenResp.error_description || tokenResp.error)}`);
   }
 
-  // ACCOUNT VALIDATION: fetch the authed user's email from Google userinfo
-  const userInfo = await httpsGet('www.googleapis.com', '/oauth2/v2/userinfo', {
+  // ── ACCOUNT VALIDATION via Gmail API (works with gmail.send scope only) ───────────────────────
+  // Use Gmail users.getProfile to confirm which account granted access
+  const profile = await httpsGet('gmail.googleapis.com', '/gmail/v1/users/me/profile', {
     Authorization: `Bearer ${tokenResp.access_token}`
   });
 
-  const authedEmail = (userInfo.email || '').toLowerCase().trim();
+  const authedEmail = (profile.emailAddress || '').toLowerCase().trim();
   if (authedEmail !== REQUIRED_EMAIL) {
     const errMsg = authedEmail
-      ? `Wrong account: signed in as ${authedEmail}. Only ${REQUIRED_EMAIL} is allowed.`
-      : `Could not verify account email. Please try again.`;
+      ? `Wrong account: signed in as ${authedEmail}. Only ${REQUIRED_EMAIL} is allowed. Please sign in with the correct account.`
+      : `Could not verify Gmail account. Please try again.`;
     return res.redirect(`/?gmailError=${encodeURIComponent(errMsg)}`);
   }
+  // ───────────────────────────────────────────────────────────────────────────
 
-  // Store at account-specific key AND delete legacy key atomically
+  // Store at account-specific key AND delete the legacy key atomically
   await kvPipeline([
     ['SET', KV_TOKENS_KEY, JSON.stringify({
       email: REQUIRED_EMAIL,
@@ -118,7 +121,7 @@ module.exports = async (req, res) => {
       token_type: tokenResp.token_type,
       storedAt: new Date().toISOString(),
     })],
-    ['DEL', KV_TOKENS_KEY_LEGACY],
+    ['DEL', KV_TOKENS_KEY_LEGACY], // remove any legacy blusoperations tokens
   ]);
 
   return res.redirect(`/?gmailConnected=1&hasRefreshToken=${tokenResp.refresh_token ? '1' : '0'}&account=${encodeURIComponent(REQUIRED_EMAIL)}`);
