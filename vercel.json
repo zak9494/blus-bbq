@@ -43,6 +43,18 @@
     {
       "source": "/api/quotes/ai-generate",
       "destination": "/api/quotes/ai-generate.js"
+    },
+    {
+      "source": "/api/inquiries/save",
+      "destination": "/api/inquiries/save.js"
+    },
+    {
+      "source": "/api/inquiries/list",
+      "destination": "/api/inquiries/list.js"
+    },
+    {
+      "source": "/api/inquiries/get",
+      "destination": "/api/inquiries/get.js"
     }
   ],
   "functions": {
@@ -57,6 +69,15 @@
     },
     "api/quotes/ai-generate.js": {
       "maxDuration": 60
+    },
+    "api/inquiries/save.js": {
+      "maxDuration": 30
+    },
+    "api/inquiries/list.js": {
+      "maxDuration": 15
+    },
+    "api/inquiries/get.js": {
+      "maxDuration": 15
     }
   }
 }
