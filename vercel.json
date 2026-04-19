@@ -55,6 +55,10 @@
     {
       "source": "/api/inquiries/get",
       "destination": "/api/inquiries/get.js"
+    },
+    {
+      "source": "/api/cron/poll-inquiries",
+      "destination": "/api/cron/poll-inquiries.js"
     }
   ],
   "functions": {
@@ -78,6 +82,15 @@
     },
     "api/inquiries/get.js": {
       "maxDuration": 15
+    },
+    "api/cron/poll-inquiries.js": {
+      "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/poll-inquiries",
+      "schedule": "*/30 * * * *"
+    }
+  ]
 }
