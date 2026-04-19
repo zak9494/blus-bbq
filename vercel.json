@@ -35,6 +35,10 @@
     {
       "source": "/api/gmail/list-inquiries",
       "destination": "/api/gmail/list-inquiries.js"
+    },
+    {
+      "source": "/api/gmail/extract-inquiry",
+      "destination": "/api/gmail/extract-inquiry.js"
     }
   ],
   "functions": {
@@ -42,6 +46,9 @@
       "maxDuration": 300
     },
     "api/gmail/list-inquiries.js": {
+      "maxDuration": 60
+    },
+    "api/gmail/extract-inquiry.js": {
       "maxDuration": 60
     }
   }
