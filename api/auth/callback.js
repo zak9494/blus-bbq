@@ -2,8 +2,7 @@
  * GET /api/auth/callback
  * OAuth 2.0 callback from Google.
  * - Exchanges code for tokens
- * - Validates the authed account is REQUIRED_EMAIL (info@blusbarbeque.com)
- *   using Gmail users.getProfile (works with gmail.send scope only)
+ * - Validates the authed account via id_token JWT (requires openid+email scope)
  * - Rejects and redirects with error if wrong account
  * - Stores tokens at gmail:{email} key (account-specific)
  * - Deletes any legacy gmail:tokens key
@@ -44,17 +43,16 @@ async function kvPipeline(commands) {
   });
 }
 
-async function httpsGet(hostname, path, headers) {
-  return new Promise((resolve, reject) => {
-    const opts = { hostname, path, method: 'GET', headers };
-    const req = https.request(opts, r => {
-      let d = '';
-      r.on('data', c => d += c);
-      r.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
-    });
-    req.on('error', () => resolve({}));
-    req.end();
-  });
+/**
+ * Extract email from Google id_token JWT payload.
+ * The id_token is a signed JWT; we only decode (not verify) the payload here
+ * since we received it directly from Google's token endpoint over HTTPS.
+ */
+function emailFromIdToken(idToken) {
+  try {
+    const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString('utf-8'));
+    return (payload.email || '').toLowerCase().trim();
+  } catch { return ''; }
 }
 
 module.exports = async (req, res) => {
@@ -95,20 +93,17 @@ module.exports = async (req, res) => {
     return res.redirect(`/?gmailError=${encodeURIComponent(tokenResp.error_description || tokenResp.error)}`);
   }
 
-  // ── ACCOUNT VALIDATION via Gmail API (works with gmail.send scope only) ───────────────────────
-  // Use Gmail users.getProfile to confirm which account granted access
-  const profile = await httpsGet('gmail.googleapis.com', '/gmail/v1/users/me/profile', {
-    Authorization: `Bearer ${tokenResp.access_token}`
-  });
-
-  const authedEmail = (profile.emailAddress || '').toLowerCase().trim();
+  // ── ACCOUNT VALIDATION via id_token JWT ────────────────────────────────────────
+  // Google includes id_token when openid+email scope is granted.
+  // We decode the JWT payload (no API call needed) to confirm the account.
+  const authedEmail = tokenResp.id_token ? emailFromIdToken(tokenResp.id_token) : '';
   if (authedEmail !== REQUIRED_EMAIL) {
     const errMsg = authedEmail
       ? `Wrong account: signed in as ${authedEmail}. Only ${REQUIRED_EMAIL} is allowed. Please sign in with the correct account.`
-      : `Could not verify Gmail account. Please try again.`;
+      : `Could not verify account email. Please try again.`;
     return res.redirect(`/?gmailError=${encodeURIComponent(errMsg)}`);
   }
-  // ───────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────────
 
   // Store at account-specific key AND delete the legacy key atomically
   await kvPipeline([
