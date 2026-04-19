@@ -527,3 +527,146 @@ setTimeout(() => { toast.remove(); URL.revokeObjectURL(iosUrl); }, 15000);
 
 ## Sender Lockdown Status (unchanged)
 **UNTOUCHED.** No changes to `api/dispatch/email.js`, `api/auth/callback.js`, or `api/auth/init.js`.
+
+---
+
+## R4-1 Roadmap — Auto-Inquiry → AI Quote → Approval Workflow
+**Status: QUEUED — not started. Begin after R3 fully verified on Zach's device.**  
+**Estimated build time: 2-3+ hours across 8 phases.**
+
+### Overview
+
+```
+Gmail inbox (info@blusbarbeque.com)
+    ↓  cron: every 30 min
+New catering inquiry detected
+    ↓
+Claude extracts: event date, guests, type, menu hints, budget, contact, location
+    ↓
+Claude drafts line-item quote using existing menu pricing
+    ↓
+"Inquiries" page: original email + extracted fields + editable draft quote
+    ↓
+Zach reviews, edits → "Approve & Send" OR "Request More Info"
+    ↓
+Email sent from info@blusbarbeque.com via existing api/dispatch/email.js
+```
+
+**Invariant:** All outbound email continues through `api/dispatch/email.js` with sender lockdown enforced. No auto-send — every email requires Zach's explicit click.
+
+---
+
+### Phase 1 — OAuth scope expansion + Gmail read endpoint
+**Prerequisite: Zach must re-OAuth after this lands.**
+
+- Add `https://www.googleapis.com/auth/gmail.readonly` and `https://www.googleapis.com/auth/gmail.modify` to scopes in `api/auth/init.js`
+- New endpoint `api/gmail/fetch-inquiries.js`:
+  - Gmail query: `subject:(catering OR bbq OR barbeque OR event OR quote) in:inbox is:unread newer_than:7d`
+  - Returns: `[{ messageId, threadId, from, subject, body, date }]`
+- **Zach action required:** visit `/api/auth/init` to re-consent after deployment
+- Verify: hit endpoint after re-OAuth → returns real inbox messages
+
+---
+
+### Phase 2 — Claude extraction endpoint
+New `api/inquiries/extract.js` — takes email body, returns structured JSON:
+```json
+{
+  "contactName": "Jane Doe",
+  "contactEmail": "jane@example.com",
+  "contactPhone": "555-1234",
+  "eventDate": "2026-06-15",
+  "eventType": "wedding",
+  "guestCount": 75,
+  "budgetHint": "$2000-3000",
+  "menuHints": ["brisket", "mac and cheese"],
+  "locationType": "delivery",
+  "location": "123 Main St",
+  "missingFields": ["eventDate"],
+  "specialRequests": "vegetarian options for 5 guests",
+  "rawEmailSummary": "2-sentence summary"
+}
+```
+Uses Claude with strict JSON-output system prompt. Missing fields → empty string + listed in `missingFields`. Verify with 3 sample emails.
+
+---
+
+### Phase 3 — AI quote generator
+New `api/inquiries/generate-quote.js` — takes extracted fields + menu pricing (read from existing Quote Builder array in `index.html`, DO NOT invent prices):
+```json
+{
+  "lineItems": [{"name":"Brisket","unit":"per person","quantity":75,"pricePerUnit":18,"total":1350}],
+  "subtotal": 2100,
+  "deliveryFee": 75,
+  "tax": 173.25,
+  "gratuity": 315,
+  "grandTotal": 2663.25,
+  "notes": "Includes paper goods. Delivery to 123 Main St at 5pm.",
+  "confidence": "high|medium|low|blank",
+  "missingInfoReason": ""
+}
+```
+If critical data missing (no guest count/date) → `confidence: "blank"` with reason.
+
+---
+
+### Phase 4 — KV storage schema
+- Per-inquiry key: `inquiries:{gmailThreadId}` → `{ status, email, extracted, quote, editedQuote, gmailThreadId, createdAt, updatedAt }`
+- Status values: `"new" | "reviewed" | "sent" | "archived"`
+- Index key: `inquiries:index` → sorted array of threadIds by `createdAt` desc
+
+---
+
+### Phase 5 — Inquiries page (UI)
+- Sidebar nav: add "Inquiries" between Leads and Scheduled
+- List view: contact name, event date, guest count, status badge (New / Needs Info / Ready / Sent)
+- Detail view per inquiry:
+  - Original email (collapsed/expandable)
+  - Extracted fields (editable inline)
+  - AI quote (editable: add/remove line items, adjust prices)
+  - Actions: **Approve & Send** | **Request More Info** | **Save Draft** | **Archive**
+- Mobile-first: single column, 44px tap targets, no horizontal scroll, tested at 375×812
+
+---
+
+### Phase 6 — Cron poller
+Add to `vercel.json`:
+```json
+"crons": [{"path": "/api/cron/poll-inquiries", "schedule": "*/30 * * * *"}]
+```
+New `api/cron/poll-inquiries.js`:
+- fetch-inquiries → for each new thread: extract → generate-quote → store in KV
+- Mark Gmail thread as read / apply "Processed" label (via `gmail.modify` scope)
+- Skip threads already in KV (deduplicate by threadId)
+- Verify: manually hit endpoint, confirm real email appears on Inquiries page
+
+---
+
+### Phase 7 — Quote email template ("Approve & Send")
+- HTML email with Blu's BBQ branding, customer name greeting
+- Quote table (line items, subtotal, fees, grand total)
+- Terms, contact info, cancellation policy
+- PDF quote as attachment (reuse R3-1 jsPDF generator where possible)
+- Sent via `api/dispatch/email.js` → sender lockdown preserved
+
+---
+
+### Phase 8 — "Request More Info" email template
+- When Zach clicks: Claude drafts a warm follow-up email listing missing fields politely
+- Zach can edit in a textarea before sending
+- Sent via same dispatch path
+
+---
+
+### Build order
+1. Phase 1 → deploy → Zach re-OAuths
+2. Phase 2 → verify extraction on 3 sample emails
+3. Phase 3 → verify quote generation matches existing menu pricing
+4. Phase 4 → verify KV read/write
+5. Phase 5 → verify UI at 375×812 (mobile) and desktop
+6. Phase 6 → verify cron via manual hit
+7. Phase 7 + 8 → verify email output before Zach clicks send
+
+### Current blockers before starting
+- **Zach's re-OAuth** is required for Phases 2-8 to work (Phase 1 deploys first)
+- R3 must be fully verified on Zach's device first
