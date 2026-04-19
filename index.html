@@ -92,6 +92,25 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .inq-chip.active { background:var(--amber); border-color:var(--amber); color:#000; }
 .inq-chip:hover:not(.active) { border-color:var(--amber); color:var(--amber); }
 .pipeline-inq-group-hdr { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); padding:14px 16px 6px; }
+.inq-src-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+.src-wix { background:#4f46e520; color:#818cf8; border:1px solid #4f46e540; }
+.src-ezcater { background:#d9770630; color:#fb923c; border:1px solid #d9770640; }
+.src-direct { background:#05966920; color:#34d399; border:1px solid #05966940; }
+.inq-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.inq-card-actions { display:flex; gap:6px; margin-top:10px; }
+.inq-card-actions .btn { font-size:11px; padding:4px 10px; flex:1; text-align:center; }
+.pipeline-kanban { display:flex; gap:12px; overflow-x:auto; padding:12px 16px 16px; -webkit-overflow-scrolling:touch; }
+.pipeline-kanban::-webkit-scrollbar { height:4px; }
+.pipeline-kanban::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.pip-col { min-width:220px; flex-shrink:0; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.pip-col-hdr { padding:10px 12px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; }
+.pip-col-body { padding:8px; display:flex; flex-direction:column; gap:6px; }
+.pip-card { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px 12px; cursor:pointer; transition:background 0.15s; }
+.pip-card:hover { background:var(--surface); }
+.pip-card-name { font-weight:600; font-size:13px; margin-bottom:3px; }
+.pip-card-meta { font-size:11px; color:var(--text3); margin-bottom:4px; }
+.pip-card-footer { display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
+.pip-status-sel { font-size:10px; background:var(--surface); color:var(--text2); border:1px solid var(--border); border-radius:4px; padding:2px 4px; cursor:pointer; }
 .inq-card:hover { background:var(--surface2); }
 .inq-card-name { font-weight:600; font-size:14px; }
 .inq-card-meta { font-size:12px; color:var(--text3); margin-top:3px; }
@@ -2524,6 +2543,9 @@ function setInqFilter(status) {
   });
 }
 
+const SRC_LABELS = { wix: 'Wix Form', ezcater: 'ezCater', direct: 'Direct Email' };
+const SRC_CLASS  = { wix: 'src-wix',  ezcater: 'src-ezcater', direct: 'src-direct' };
+
 function renderInqCardHTML(inq) {
   const name   = inq.customer_name || inq.from || 'Unknown';
   const date   = inq.event_date ? '📅 ' + inq.event_date : 'Date TBD';
@@ -2531,23 +2553,40 @@ function renderInqCardHTML(inq) {
   const badge  = INQ_STATUS_BADGE[inq.status] || 'badge-new';
   const label  = INQ_STATUS_LABELS[inq.status] || inq.status || 'new';
   const eDate  = inq.email_date ? new Date(inq.email_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-  return '<div class="inq-card" onclick="openInquiry(\'' + inq.threadId + '\')">'
-    + '<div class="inq-card-name">' + name + '</div>'
-    + '<div class="inq-card-meta">' + date + guests + '</div>'
-    + '<div class="inq-card-meta" style="margin-top:2px;color:var(--text2)">' + (inq.subject || '') + '</div>'
-    + '<div class="inq-card-bottom">'
+  const src    = inq.source || 'direct';
+  const srcLabel = SRC_LABELS[src] || src;
+  const srcCls   = SRC_CLASS[src] || 'src-direct';
+  const tid = inq.threadId;
+  const isArchived = inq.status === 'archived';
+  const isApproved = inq.approved === true;
+  const archiveBtn = isArchived
+    ? '<button class="btn" style="font-size:11px;padding:4px 10px;flex:1;color:var(--text2)" onclick="unarchiveInq(event,\'' + tid + '\')">↩ Unarchive</button>'
+    : '<button class="btn" style="font-size:11px;padding:4px 10px;flex:1" onclick="archiveInq(event,\'' + tid + '\')">🗄 Archive</button>';
+  const approveBtn = isApproved
+    ? '<button class="btn" style="font-size:11px;padding:4px 10px;flex:1;color:var(--text3)" disabled>✓ In Pipeline</button>'
+    : '<button class="btn btn-primary" style="font-size:11px;padding:4px 10px;flex:1" onclick="approveInq(event,\'' + tid + '\')">✓ Approve</button>';
+  return '<div class="inq-card">'
+    + '<div class="inq-card-top">'
+      + '<div onclick="openInquiry(\'' + tid + '\')" style="flex:1;min-width:0">'
+        + '<div class="inq-card-name">' + name + '</div>'
+        + '<div class="inq-card-meta">' + date + guests + '</div>'
+        + '<div class="inq-card-meta" style="color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (inq.subject || '') + '</div>'
+      + '</div>'
+      + '<span class="inq-src-badge ' + srcCls + '">' + srcLabel + '</span>'
+    + '</div>'
+    + '<div class="inq-card-bottom" style="margin-top:6px">'
       + '<span class="k-badge ' + badge + '">' + label + '</span>'
       + '<span style="font-size:11px;color:var(--text3)">' + eDate + '</span>'
-    + '</div></div>';
+    + '</div>'
+    + '<div class="inq-card-actions">' + archiveBtn + approveBtn + '</div>'
+    + '</div>';
 }
 
 function renderInqCards() {
   const cardsEl = document.getElementById('inq-cards');
   const emptyEl = document.getElementById('inq-empty');
   if (!cardsEl || !inquiriesCache) return;
-  const filtered = currentInqFilter === 'all'
-    ? inquiriesCache
-    : inquiriesCache.filter(i => i.status === currentInqFilter);
+  const filtered = getFilteredInquiries(currentInqFilter);
   if (!filtered.length) {
     emptyEl.style.display = 'block';
     cardsEl.innerHTML = '';
@@ -2557,28 +2596,119 @@ function renderInqCards() {
   cardsEl.innerHTML = filtered.map(renderInqCardHTML).join('');
 }
 
+function getFilteredInquiries(filter) {
+  if (!inquiriesCache) return [];
+  if (filter === 'all')      return inquiriesCache.filter(i => i.status !== 'archived');
+  if (filter === 'new')      return inquiriesCache.filter(i => i.status !== 'archived' && !i.approved);
+  if (filter === 'wix')      return inquiriesCache.filter(i => i.source === 'wix' && i.status !== 'archived');
+  if (filter === 'ezcater')  return inquiriesCache.filter(i => i.source === 'ezcater');
+  if (filter === 'direct')   return inquiriesCache.filter(i => i.source === 'direct' && i.status !== 'archived');
+  if (filter === 'archived') return inquiriesCache.filter(i => i.status === 'archived');
+  return inquiriesCache.filter(i => i.status !== 'archived');
+}
+
 function renderInqChips() {
   const chipsEl = document.getElementById('inq-chips');
   if (!chipsEl || !inquiriesCache) return;
-  const ALL_STATUSES = ['new','needs_info','quote_drafted','quote_approved','quote_sent','booked','declined'];
-  const counts = { all: inquiriesCache.length };
-  ALL_STATUSES.forEach(s => { counts[s] = inquiriesCache.filter(i => i.status === s).length; });
   const defs = [
-    { key:'all', label:'All' }, { key:'new', label:'New' }, { key:'needs_info', label:'Needs Info' },
-    { key:'quote_drafted', label:'Quote Drafted' }, { key:'quote_approved', label:'Approved' },
-    { key:'quote_sent', label:'Quote Sent' }, { key:'booked', label:'Booked' }, { key:'declined', label:'Declined' },
+    { key:'all',      label:'All' },
+    { key:'new',      label:'New' },
+    { key:'wix',      label:'Wix Form' },
+    { key:'ezcater',  label:'ezCater' },
+    { key:'direct',   label:'Direct Email' },
+    { key:'archived', label:'Archived' },
   ];
-  chipsEl.innerHTML = defs
-    .filter(c => c.key === 'all' || (counts[c.key] || 0) > 0)
-    .map(c => {
-      const active = currentInqFilter === c.key ? ' active' : '';
-      return '<button class="inq-chip' + active + '" data-filter="' + c.key + '" onclick="setInqFilter(\'' + c.key + '\')">' +
-        c.label + ' <span style="opacity:0.65">(' + (counts[c.key] || 0) + ')</span></button>';
-    }).join('');
+  chipsEl.innerHTML = defs.map(c => {
+    const count  = getFilteredInquiries(c.key).length;
+    const active = currentInqFilter === c.key ? ' active' : '';
+    return '<button class="inq-chip' + active + '" data-filter="' + c.key + '" onclick="setInqFilter(\'' + c.key + '\')">' +
+      c.label + ' <span style="opacity:0.65">(' + count + ')</span></button>';
+  }).join('');
 }
 
+async function archiveInq(event, threadId) {
+  event.stopPropagation();
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Archiving…';
+  try {
+    const r = await fetch('/api/inquiries/archive?secret=' + INQ_SECRET, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      // Update cache + re-render
+      if (inquiriesCache) {
+        const idx = inquiriesCache.findIndex(i => i.threadId === threadId);
+        if (idx >= 0) inquiriesCache[idx].status = 'archived';
+      }
+      renderInqChips(); renderInqCards();
+      showToast('Archived ✓');
+    } else { showToast('Archive failed: ' + (d.error || 'Unknown')); btn.disabled = false; btn.textContent = '🗄 Archive'; }
+  } catch(e) { showToast('Error: ' + e.message); btn.disabled = false; btn.textContent = '🗄 Archive'; }
+}
+
+async function unarchiveInq(event, threadId) {
+  event.stopPropagation();
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const r = await fetch('/api/inquiries/save?secret=' + INQ_SECRET, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId, status: 'needs_info', history_entry: { action: 'unarchived', actor: 'user' } })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      if (inquiriesCache) {
+        const idx = inquiriesCache.findIndex(i => i.threadId === threadId);
+        if (idx >= 0) inquiriesCache[idx].status = 'needs_info';
+      }
+      renderInqChips(); renderInqCards();
+      showToast('Unarchived ✓');
+    } else { showToast('Unarchive failed'); btn.disabled = false; btn.textContent = '↩ Unarchive'; }
+  } catch(e) { showToast('Error: ' + e.message); btn.disabled = false; btn.textContent = '↩ Unarchive'; }
+}
+
+async function approveInq(event, threadId) {
+  event.stopPropagation();
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Approving…';
+  try {
+    const r = await fetch('/api/inquiries/approve?secret=' + INQ_SECRET, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      if (inquiriesCache) {
+        const idx = inquiriesCache.findIndex(i => i.threadId === threadId);
+        if (idx >= 0) { inquiriesCache[idx].approved = true; if (d.status) inquiriesCache[idx].status = d.status; }
+      }
+      renderInqChips(); renderInqCards();
+      showToast(d.quote_generated ? '✓ Approved + quote generated' : '✓ Moved to Pipeline');
+    } else { showToast('Approve failed: ' + (d.error || 'Unknown')); btn.disabled = false; btn.textContent = '✓ Approve'; }
+  } catch(e) { showToast('Error: ' + e.message); btn.disabled = false; btn.textContent = '✓ Approve'; }
+}
+
+async function updateInquiryStatus(threadId, newStatus) {
+  try {
+    const r = await fetch('/api/inquiries/save?secret=' + INQ_SECRET, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId, status: newStatus, history_entry: { action: 'status_changed_to_' + newStatus, actor: 'user' } })
+    });
+    const d = await r.json();
+    if (d.ok) showToast('Status → ' + newStatus.replace(/_/g,' '));
+    else showToast('Status update failed');
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+let pipelineInqView = 'kanban'; // 'kanban' | 'list'
+let pipelineInqFilter = 'all';
+let pipelineInqCache = null;
+const PIPELINE_STATUSES = ['quote_drafted','quote_approved','quote_sent','booked','declined'];
+
 async function loadPipelineInquiries() {
-  const loadEl  = document.getElementById('pipeline-inq-loading');
+  const loadEl   = document.getElementById('pipeline-inq-loading');
   const groupsEl = document.getElementById('pipeline-inq-groups');
   if (!groupsEl) return;
   loadEl.style.display = 'block';
@@ -2587,37 +2717,87 @@ async function loadPipelineInquiries() {
     const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
     const d = await r.json();
     loadEl.style.display = 'none';
-    const items = (d.inquiries || []).filter(i => !i.threadId.startsWith('test-'));
-    if (!items.length) {
-      groupsEl.innerHTML = '<p style="padding:16px;color:var(--text3)">No catering inquiries yet.</p>';
-      return;
-    }
-    const ORDER = ['new','needs_info','quote_drafted','quote_approved','quote_sent','booked','declined'];
-    const groups = {};
-    items.forEach(inq => { const s = inq.status || 'new'; if (!groups[s]) groups[s] = []; groups[s].push(inq); });
-    groupsEl.innerHTML = ORDER
-      .filter(s => groups[s] && groups[s].length)
-      .map(s => {
-        const label = INQ_STATUS_LABELS[s] || s;
-        const badge = INQ_STATUS_BADGE[s] || 'badge-new';
-        const cards = groups[s].map(inq => {
-          const name   = inq.customer_name || inq.from || 'Unknown';
-          const evDate = inq.event_date ? '📅 ' + inq.event_date : 'Date TBD';
-          const guests = inq.guest_count ? ' · 👥 ' + inq.guest_count : '';
-          const eDate  = inq.email_date ? new Date(inq.email_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-          return '<div class="inq-card" onclick="showPage(\'inquiries\');openInquiry(\'' + inq.threadId + '\')" style="margin:0 16px 8px">'
-            + '<div class="inq-card-name">' + name + '</div>'
-            + '<div class="inq-card-meta">' + evDate + guests + '</div>'
-            + '<div class="inq-card-bottom"><span class="k-badge ' + badge + '">' + label + '</span>'
-            + '<span style="font-size:11px;color:var(--text3)">' + eDate + '</span></div></div>';
-        }).join('');
-        return '<div class="pipeline-inq-group-hdr">' + label + ' (' + groups[s].length + ')</div>' + cards;
-      }).join('');
+    // Stage 2: only approved, non-archived, non-test
+    pipelineInqCache = (d.inquiries || []).filter(i =>
+      i.approved === true && i.status !== 'archived' && !i.threadId.startsWith('test-'));
+    renderPipelineInquiries();
   } catch(e) {
     if (loadEl) loadEl.style.display = 'none';
     groupsEl.innerHTML = '<p style="color:var(--red);padding:16px">Failed: ' + e.message + '</p>';
   }
 }
+
+function renderPipelineInquiries() {
+  const groupsEl = document.getElementById('pipeline-inq-groups');
+  if (!groupsEl || !pipelineInqCache) return;
+
+  const items = pipelineInqFilter === 'all'
+    ? pipelineInqCache
+    : pipelineInqCache.filter(i => i.status === pipelineInqFilter);
+
+  // Build header with view toggle + filter chips
+  const viewToggle = '<div style="display:flex;gap:8px;padding:12px 16px 6px;align-items:center;flex-wrap:wrap">'
+    + '<div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden">'
+      + '<button onclick="setPipelineView(\'kanban\')" style="padding:5px 12px;font-size:12px;font-weight:600;border:0;cursor:pointer;background:' + (pipelineInqView==='kanban'?'var(--amber)':'var(--surface)') + ';color:' + (pipelineInqView==='kanban'?'#000':'var(--text2)') + '">Kanban</button>'
+      + '<button onclick="setPipelineView(\'list\')" style="padding:5px 12px;font-size:12px;font-weight:600;border:0;cursor:pointer;background:' + (pipelineInqView==='list'?'var(--amber)':'var(--surface)') + ';color:' + (pipelineInqView==='list'?'#000':'var(--text2)') + '">List</button>'
+    + '</div>'
+    + ['all',...PIPELINE_STATUSES].map(s => {
+        const cnt = s === 'all' ? pipelineInqCache.length : pipelineInqCache.filter(i => i.status === s).length;
+        const lbl = s === 'all' ? 'All' : (INQ_STATUS_LABELS[s] || s);
+        const act = pipelineInqFilter === s;
+        return '<button onclick="setPipelineFilter(\'' + s + '\')" class="inq-chip' + (act ? ' active' : '') + '">' + lbl + ' (' + cnt + ')</button>';
+      }).join('')
+    + '</div>';
+
+  if (!items.length) {
+    groupsEl.innerHTML = viewToggle + '<p style="padding:16px;color:var(--text3)">No approved inquiries' + (pipelineInqFilter !== 'all' ? ' in this stage' : ' yet — approve them from the Inquiries page') + '.</p>';
+    return;
+  }
+
+  function pipCard(inq) {
+    const name  = inq.customer_name || inq.from || 'Unknown';
+    const ev    = inq.event_date ? '📅 ' + inq.event_date : 'Date TBD';
+    const guests = inq.guest_count ? ' · 👥 ' + inq.guest_count : '';
+    const src   = inq.source || 'direct';
+    const sLabel = SRC_LABELS[src] || src;
+    const sCls   = SRC_CLASS[src] || 'src-direct';
+    const opts  = PIPELINE_STATUSES.map(s =>
+      '<option value="' + s + '"' + (inq.status === s ? ' selected' : '') + '>' + (INQ_STATUS_LABELS[s] || s) + '</option>').join('');
+    return '<div class="pip-card" onclick="showPage(\'inquiries\');openInquiry(\'' + inq.threadId + '\')" style="position:relative">'
+      + '<div class="pip-card-name">' + name + '</div>'
+      + '<div class="pip-card-meta">' + ev + guests + '</div>'
+      + '<div class="pip-card-footer">'
+        + '<span class="inq-src-badge ' + sCls + '">' + sLabel + '</span>'
+        + '<select class="pip-status-sel" onclick="event.stopPropagation()" onchange="updateInquiryStatus(\'' + inq.threadId + '\',this.value).then(()=>loadPipelineInquiries())">' + opts + '</select>'
+      + '</div>'
+    + '</div>';
+  }
+
+  let content = '';
+  if (pipelineInqView === 'kanban') {
+    const groups = {};
+    items.forEach(i => { const s = i.status || 'needs_info'; if (!groups[s]) groups[s] = []; groups[s].push(i); });
+    content = '<div class="pipeline-kanban">' +
+      PIPELINE_STATUSES.map(s => {
+        const cards = (groups[s] || []).map(pipCard).join('');
+        return '<div class="pip-col">'
+          + '<div class="pip-col-hdr"><span>' + (INQ_STATUS_LABELS[s] || s) + '</span><span>' + (groups[s] ? groups[s].length : 0) + '</span></div>'
+          + '<div class="pip-col-body">' + (cards || '<p style="font-size:11px;color:var(--text3);padding:8px">Empty</p>') + '</div>'
+        + '</div>';
+      }).join('') + '</div>';
+  } else {
+    const groups = {};
+    items.forEach(i => { const s = i.status || 'needs_info'; if (!groups[s]) groups[s] = []; groups[s].push(i); });
+    content = PIPELINE_STATUSES.filter(s => groups[s] && groups[s].length).map(s =>
+      '<div class="pipeline-inq-group-hdr">' + (INQ_STATUS_LABELS[s] || s) + ' (' + groups[s].length + ')</div>'
+      + '<div style="padding:0 16px 8px">' + groups[s].map(pipCard).join('') + '</div>'
+    ).join('');
+  }
+  groupsEl.innerHTML = viewToggle + content;
+}
+
+function setPipelineView(view) { pipelineInqView = view; renderPipelineInquiries(); }
+function setPipelineFilter(f) { pipelineInqFilter = f; renderPipelineInquiries(); }
 
 async function loadInquiries() {
   const loadEl  = document.getElementById('inq-loading');
