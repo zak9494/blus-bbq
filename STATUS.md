@@ -373,11 +373,113 @@ setTimeout(() => URL.revokeObjectURL(url), 1000);
 
 ---
 
+---
+
+### R3-2 — Mod History vertical scroll locked on mobile
+**Status: DONE ✓** · Commits `21cd01fb1a` + `0cce208e32` · 2026-04-19
+
+**Root cause (two-part):**
+1. History page inner div had inline style `overflow-y:auto;flex:1` — with a non-flex parent, the `flex:1` was ignored and `overflow-y:auto` captured iOS touch events without actually scrolling, killing document scroll.
+2. Initial CSS fix added `overflow-y:auto` to `.main` — which could create a new scroll container on mobile, potentially breaking `position:sticky` on topbars.
+
+**Fixes:**
+- Removed `overflow-y:auto;flex:1` from history inner div's inline style → `padding:0 24px 24px` only
+- Replaced bad `.main { overflow-y: auto }` CSS with a clean mobile block that only sets `.page { height: auto; min-height: 0 }` and `.modify-history-list { max-height: none; height: auto }` — keeps document as the scroll container
+
+---
+
+### R3-3 — Self-modify input box cropped on mobile
+**Status: DONE ✓** · Commit `21cd01fb1a` · 2026-04-19
+
+**Root cause:** `.modify-box` had no top margin — on mobile it sat directly behind the topbar. `#modify-prompt` had no minimum height so the textarea collapsed.
+
+**Fix:**
+```css
+@media (max-width: 768px) {
+  .modify-box { margin-top: 16px; padding-bottom: 24px; }
+  #modify-prompt { min-height: 80px; }
+}
+```
+
+---
+
+### R3-4 — Self-modify "Network error after 167s" (load failed)
+**Status: DONE ✓** · Commits `5c15b96679` + `fe6782865e` · 2026-04-19
+
+**Root cause (two-part):**
+1. `api/chat-stream.js` used `{ model: 'claude-haiku-4-5-20251001', ...body, max_tokens: 64000 }` — the spread `...body` is before `max_tokens: 64000`, so the server value (64000) overwrote client's (16000). At ~100 tok/s with 182KB HTML context + 64000 output limit = up to 640s generation. Vercel Edge 30s wall clock killed connection at 167s.
+2. Vercel Edge runtime has a hard 30s max duration — impossible to configure.
+
+**Fixes:**
+- Reordered: `{ max_tokens: 16000, ...body }` so client value wins
+- Switched runtime from `edge` to Node.js (removed `export const config = { runtime: 'edge' }`)
+- Added streaming pump (`getReader()` loop) since Node.js handler uses `res.write()`
+- Updated all `return new Response(...)` to `res.status().set().send()` Node.js pattern
+- Added `vercel.json` → `functions: { "api/chat-stream.js": { maxDuration: 300 } }`
+
+---
+
+### R3-5 — Remove "Scheduled emails" button from topbar
+**Status: DONE ✓** · Commit `21cd01fb1a` · 2026-04-19
+
+Removed `<button class="btn" onclick="showPage('scheduled')">📅 Scheduled</button>` from `.topbar-actions`.
+Scheduled page still accessible via sidebar nav. No sidebar nav changes.
+
+---
+
+### R3-6 — iOS PDF still opens in new tab (gesture token expiry)
+**Status: DONE ✓** · Commit `03131ce1ea` · 2026-04-19
+
+**Root cause:** `generatePDF()` is async — it loads jsPDF from CDN (~500ms+) then runs canvas ops. By the time `navigator.share()` is called, iOS Safari's user gesture token has expired → throws `NotAllowedError` → previous code fell through silently to `<a download>` → iOS opened blob in new tab with no user instructions.
+
+**Fix:** Accept that the gesture token will expire. When `navigator.share()` throws anything except `AbortError`:
+1. `window.open(iosUrl, '_blank')` — opens PDF in new tab
+2. Show a 15-second toast: "📄 PDF opened in new tab. **Tap ↑ Share → Save to Files**"
+
+```javascript
+// iOS fallback toast (shown when share sheet gesture has expired)
+toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);...';
+toast.innerHTML = '📄 PDF opened in new tab.<br><strong>Tap ↑ Share → Save to Files</strong>';
+setTimeout(() => { toast.remove(); URL.revokeObjectURL(iosUrl); }, 15000);
+```
+
+**iOS device verification:** Cannot be simulated via Chrome MCP. Expected on device: tap "Download PDF Quote" → PDF opens in new tab + orange-bordered instruction toast appears at bottom for 15 seconds.
+
+---
+
+### R3-7 — Page header not sticky on history/scheduled pages
+**Status: DONE ✓** · Commits `0cce208e32` + `24ff323498` · 2026-04-19
+
+**Root cause (two-part):**
+1. History and Scheduled pages had `.page-header` divs with no `position: sticky` — added in `0cce208e32` with `.page-header { position: sticky; top: 0; z-index: 10; background: var(--surface); border-bottom: 2px solid #ff8800 }`.
+2. After that fix, Scheduled became sticky (✅ `rectTop: 0`), but History still failed (`rectTop: -400`). Programmatic DOM inspection revealed: `#page-history.active { overflow: hidden }` — a targeted minified CSS rule. Per CSS spec, `position: sticky` cannot escape an ancestor with `overflow: hidden` (element is confined to that scroll context, but the context doesn't scroll).
+
+**Fix (commit `24ff323498`):** Removed `overflow:hidden` from `#page-history.active`:
+```css
+/* Before */
+#page-history.active{display:flex!important;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
+/* After */
+#page-history.active{display:flex!important;flex-direction:column;flex:1;min-height:0;}
+```
+
+**Verified live:**
+- `#page-history.active` computed overflow: `visible` ✅
+- `rectTop: 0` after 400px scroll on history page ✅ (`isSticky: true`)
+- Scheduled page: `rectTop: 0` ✅ (unchanged)
+
+---
+
 ## Round 3 Commit Log
 
 | SHA | Description |
 |-----|-------------|
 | `54a9b5232f` | fix: iOS PDF — Web Share API (save to Files/AirDrop), blob URL fallback for desktop |
+| `21cd01fb1a` | fix: remove Scheduled topbar btn (R3-5), mobile scroll unlock (R3-2), modify-box crop (R3-3) |
+| `5c15b96679` | fix: R3-4 chat-stream — Node.js runtime, max_tokens 16000 (not 64000), streaming pump |
+| `fe6782865e` | fix: vercel.json — maxDuration 300s for chat-stream (large HTML generation) |
+| `0cce208e32` | fix: R3-2 history scroll (remove bad overflow-y), R3-7 .page-header sticky |
+| `03131ce1ea` | fix: R3-6 iOS PDF — gesture-timeout fallback with Save to Files toast instruction |
+| `24ff323498` | fix: R3-7 history page-header sticky — remove overflow:hidden from #page-history.active |
 
 ---
 
