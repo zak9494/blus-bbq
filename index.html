@@ -84,6 +84,26 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .page { display: none; }
 .page.active { display: block; }
 
+/* ── INQUIRIES PAGE ─────────────────────────────────────── */
+.inq-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:8px; cursor:pointer; transition:background 0.15s; }
+.inq-card:hover { background:var(--surface2); }
+.inq-card-name { font-weight:600; font-size:14px; }
+.inq-card-meta { font-size:12px; color:var(--text3); margin-top:3px; }
+.inq-card-bottom { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
+.inq-section { margin-bottom:24px; }
+.inq-section-title { font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text3); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:6px; }
+.inq-fields-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.inq-quote-line { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
+.inq-quote-line input { padding:4px 6px; font-size:12px; }
+.inq-quote-summary { margin-top:12px; background:var(--surface2); border-radius:6px; padding:12px; }
+.inq-actions { display:flex; gap:10px; flex-wrap:wrap; padding-top:16px; border-top:1px solid var(--border); margin-top:8px; }
+.inq-detail-scroll { overflow-y:auto; }
+@media (max-width:768px) {
+  .inq-fields-grid { grid-template-columns:1fr; }
+  .inq-actions { flex-direction:column; }
+  .inq-actions .btn { width:100%; text-align:center; justify-content:center; }
+}
+
 /* STATS ROW */
 .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
 .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
@@ -461,6 +481,7 @@ if (typeof marked !== 'undefined') {
     <div class="nav-section-label">Catering</div>
     <div class="nav-item active" onclick="showPage('pipeline')"><span class="nav-dot dot-red"></span>Pipeline <span class="notif-badge" id="notif-badge">2</span></div>
     <div class="nav-item" onclick="showPage('quotes')"><span class="nav-dot dot-amber"></span>Quote Builder</div>
+    <div class="nav-item" onclick="showPage('inquiries')"><span class="nav-dot dot-blue"></span>Inquiries <span class="notif-badge" id="inq-badge" style="display:none">0</span></div>
     <button class="sidebar-close-btn" onclick="closeMobileSidebar()">✕</button>
     <div class="nav-item disabled"><span class="nav-dot dot-green"></span>Invoices</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Outbound Leads</div>
@@ -868,6 +889,81 @@ if (typeof marked !== 'undefined') {
         <div id="sched-list" class="sched-list-container"></div>
       </div>
 
+    <!-- ══ INQUIRIES PAGE ══════════════════════════════════════════════════════ -->
+    <div id="page-inquiries" class="page">
+
+      <!-- List view topbar -->
+      <div id="inq-list-topbar" class="topbar">
+        <div class="topbar-left">
+          <div>
+            <div class="topbar-title">Inquiries</div>
+            <div class="topbar-sub">Auto-fetched from info@blusbarbeque.com</div>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn" onclick="loadInquiries()" style="font-size:12px;padding:6px 12px">🔄 Refresh</button>
+        </div>
+      </div>
+
+      <!-- LIST VIEW -->
+      <div id="inq-list-view">
+        <div class="content">
+          <div id="inq-loading" style="text-align:center;padding:40px;color:var(--text3)">Loading inquiries…</div>
+          <div id="inq-empty" class="empty-state" style="display:none">
+            <p>📭 No inquiries yet.</p>
+            <p style="color:var(--text2);font-size:12px">The cron poller will auto-fetch from info@blusbarbeque.com every 30 min.<br>Or manually save an inquiry via the API.</p>
+          </div>
+          <div id="inq-cards"></div>
+        </div>
+      </div>
+
+      <!-- DETAIL VIEW (hidden until card clicked) -->
+      <div id="inq-detail-view" style="display:none">
+        <div class="topbar" style="padding-left:12px">
+          <div class="topbar-left" style="gap:8px">
+            <button class="btn" onclick="showInquiryList()" style="font-size:18px;padding:2px 10px;line-height:1;min-width:36px">←</button>
+            <div>
+              <div class="topbar-title" id="inq-detail-title">Inquiry</div>
+              <div class="topbar-sub" id="inq-detail-sub"></div>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <span id="inq-detail-badge" class="k-badge" style="font-size:11px"></span>
+          </div>
+        </div>
+        <div class="content inq-detail-scroll">
+
+          <!-- Customer info (editable) -->
+          <div class="inq-section">
+            <div class="inq-section-title">Customer Info <span style="font-weight:400;font-style:italic;font-size:10px;text-transform:none">(edit and Save Draft to update)</span></div>
+            <div class="inq-fields-grid" id="inq-fields-grid"></div>
+          </div>
+
+          <!-- AI Quote (editable line items) -->
+          <div class="inq-section" id="inq-quote-section" style="display:none">
+            <div class="inq-section-title">AI-Generated Quote</div>
+            <div style="display:flex;gap:8px;font-size:10px;font-weight:700;color:var(--text3);padding-bottom:4px;text-transform:uppercase;letter-spacing:.05em">
+              <span style="flex:2">Item</span><span style="width:60px;text-align:center">Qty</span>
+              <span style="width:16px"></span>
+              <span style="width:80px;text-align:right">Price</span>
+              <span style="width:80px;text-align:right">Subtotal</span>
+            </div>
+            <div id="inq-quote-lines"></div>
+            <div class="inq-quote-summary" id="inq-quote-summary"></div>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="inq-actions">
+            <button class="btn btn-primary" onclick="saveInquiryDraft()">💾 Save Draft</button>
+            <button class="btn" id="inq-approve-btn" onclick="approveInquiryQuote()" style="color:#6ee7b7;border-color:#6ee7b750">✅ Approve Quote</button>
+            <button class="btn" id="inq-rmi-btn" onclick="requestMoreInfo()" style="color:var(--amber);border-color:var(--amber-border)">❓ Request More Info</button>
+          </div>
+
+        </div><!-- /content -->
+      </div><!-- /inq-detail-view -->
+
+    </div><!-- /page-inquiries -->
+
     <!-- COMING SOON PAGES -->
     <div id="page-invoices" class="page">
       <div class="topbar"><div class="topbar-title">Invoices</div></div>
@@ -976,6 +1072,38 @@ if (typeof marked !== 'undefined') {
   </div>
 
     
+</div>
+
+<!-- MODAL: Inquiries compose (quote + request-more-info) -->
+<div class="modal-overlay" id="inq-compose-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-title" id="inq-compose-title">Compose Email</div>
+    <input type="hidden" id="inq-compose-mode" value="quote">
+    <div class="form-group">
+      <label class="form-label">To</label>
+      <input class="form-input" id="inq-compose-to" placeholder="customer@email.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Subject</label>
+      <input class="form-input" id="inq-compose-subject">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Message</label>
+      <textarea class="form-input" id="inq-compose-body" rows="12" style="font-family:inherit;font-size:13px;line-height:1.6"></textarea>
+    </div>
+    <div id="inq-compose-schedule-row" style="display:none" class="form-group">
+      <label class="form-label">Schedule for</label>
+      <input class="form-input" id="inq-compose-send-at" type="datetime-local">
+      <button class="btn btn-primary" id="inq-sched-btn" onclick="scheduleInqEmail()" style="margin-top:8px;width:100%">📅 Confirm Schedule</button>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn" onclick="toggleInqSchedule()" style="color:var(--amber);border-color:var(--amber-border)">📅 Schedule</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeModal('inq-compose-modal')">Cancel</button>
+        <button class="btn btn-primary" id="inq-send-now-btn" onclick="sendInqEmailNow()">Send Now →</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- SELF-MODIFY OVERLAY -->
@@ -1129,6 +1257,7 @@ function showPage(page) {
   if (pageEl) pageEl.classList.add('active');
   if (window.innerWidth <= 768) closeMobileSidebar();
   if (page === 'scheduled') renderScheduled();
+  if (page === 'inquiries') loadInquiries();
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
   });
@@ -2348,6 +2477,332 @@ let proposalToken;
       window.location.reload();
     }
   }, 1000);
+}
+
+// ============================================================
+// INQUIRIES PAGE
+// ============================================================
+const INQ_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
+let currentInquiry = null;
+
+const INQ_STATUS_LABELS = {
+  new: 'New', needs_info: 'Needs Info', quote_drafted: 'Quote Drafted',
+  quote_approved: 'Approved', quote_sent: 'Quote Sent',
+  booked: 'Booked', declined: 'Declined'
+};
+const INQ_STATUS_BADGE = {
+  new: 'badge-new', needs_info: 'badge-followup', quote_drafted: 'badge-quoted',
+  quote_approved: 'badge-quoted', quote_sent: 'badge-quoted',
+  booked: 'badge-booked', declined: 'badge-lost'
+};
+
+async function loadInquiries() {
+  const loadEl  = document.getElementById('inq-loading');
+  const emptyEl = document.getElementById('inq-empty');
+  const cardsEl = document.getElementById('inq-cards');
+  if (!loadEl) return;
+  loadEl.style.display = 'block';
+  emptyEl.style.display = 'none';
+  cardsEl.innerHTML = '';
+  try {
+    const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
+    const d = await r.json();
+    loadEl.style.display = 'none';
+    if (!d.ok || !d.inquiries || !d.inquiries.length) {
+      emptyEl.style.display = 'block'; return;
+    }
+    cardsEl.innerHTML = d.inquiries.map(inq => {
+      const name   = inq.customer_name || inq.from || 'Unknown';
+      const date   = inq.event_date ? '📅 ' + inq.event_date : 'Date TBD';
+      const guests = inq.guest_count ? ' · 👥 ' + inq.guest_count + ' guests' : '';
+      const badge  = INQ_STATUS_BADGE[inq.status] || 'badge-new';
+      const label  = INQ_STATUS_LABELS[inq.status] || inq.status || 'new';
+      const upd    = inq.updated_at ? new Date(inq.updated_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      return '<div class="inq-card" onclick="openInquiry(\'' + inq.threadId + '\')">' +
+        '<div class="inq-card-name">' + name + '</div>' +
+        '<div class="inq-card-meta">' + date + guests + '</div>' +
+        '<div class="inq-card-meta" style="margin-top:2px;color:var(--text2)">' + (inq.subject || '') + '</div>' +
+        '<div class="inq-card-bottom">' +
+          '<span class="k-badge ' + badge + '">' + label + '</span>' +
+          '<span style="font-size:11px;color:var(--text3)">' + upd + '</span>' +
+        '</div></div>';
+    }).join('');
+  } catch(e) {
+    loadEl.style.display = 'none';
+    cardsEl.innerHTML = '<p style="color:var(--red);padding:16px">Failed to load: ' + e.message + '</p>';
+  }
+}
+
+async function openInquiry(threadId) {
+  showToast('Loading…');
+  try {
+    const r = await fetch('/api/inquiries/get?secret=' + INQ_SECRET + '&threadId=' + encodeURIComponent(threadId));
+    const d = await r.json();
+    if (!d.ok) { showToast('Error: ' + (d.error||'unknown')); return; }
+    currentInquiry = d.inquiry;
+    renderInquiryDetail(d.inquiry);
+    document.getElementById('inq-list-view').style.display = 'none';
+    document.getElementById('inq-list-topbar').style.display = 'none';
+    document.getElementById('inq-detail-view').style.display = 'block';
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+function showInquiryList() {
+  currentInquiry = null;
+  document.getElementById('inq-list-view').style.display = 'block';
+  document.getElementById('inq-list-topbar').style.display = 'flex';
+  document.getElementById('inq-detail-view').style.display = 'none';
+  loadInquiries();
+}
+
+const INQ_FIELD_LABELS = {
+  customer_name:'Name', customer_email:'Email', customer_phone:'Phone',
+  event_date:'Event Date (YYYY-MM-DD)', event_time:'Event Time',
+  event_type:'Event Type', guest_count:'Guest Count',
+  venue_name:'Venue', venue_address:'Address',
+  menu_preferences:'Menu (comma-separated)', dietary_restrictions:'Dietary Restrictions',
+  budget:'Budget ($)', special_requests:'Special Requests'
+};
+
+function renderInquiryDetail(inq) {
+  const ef = inq.extracted_fields || {};
+  // Topbar
+  document.getElementById('inq-detail-title').textContent = ef.customer_name || inq.from || 'Inquiry';
+  document.getElementById('inq-detail-sub').textContent = inq.subject || '';
+  const status = inq.status || 'new';
+  const badge = document.getElementById('inq-detail-badge');
+  badge.textContent = INQ_STATUS_LABELS[status] || status;
+  badge.className = 'k-badge ' + (INQ_STATUS_BADGE[status] || 'badge-new');
+
+  // Editable fields
+  const grid = document.getElementById('inq-fields-grid');
+  grid.innerHTML = Object.entries(INQ_FIELD_LABELS).map(([key, label]) => {
+    const val = ef[key];
+    const displayVal = Array.isArray(val) ? val.join(', ') : (val !== null && val !== undefined ? String(val) : '');
+    return '<div class="form-group" style="margin-bottom:0">' +
+      '<label class="form-label">' + label + '</label>' +
+      '<input class="form-input" id="inq-field-' + key + '" value="' + displayVal.replace(/"/g,'&quot;') + '" placeholder="' + (val === null ? 'not provided' : '') + '">' +
+    '</div>';
+  }).join('');
+
+  // Quote section
+  const q = inq.quote;
+  const qSec = document.getElementById('inq-quote-section');
+  if (q && q.needs_customer_input) {
+    qSec.style.display = 'block';
+    document.getElementById('inq-quote-lines').innerHTML =
+      '<p style="color:var(--amber);font-size:13px;padding:12px 0">⚠️ ' + (q.notes || 'Cannot generate quote — missing guest count or menu.') + '</p>';
+    document.getElementById('inq-quote-summary').innerHTML = '';
+  } else if (q && q.line_items && q.line_items.length) {
+    qSec.style.display = 'block';
+    document.getElementById('inq-quote-lines').innerHTML = q.line_items.map((li, i) =>
+      '<div class="inq-quote-line">' +
+        '<span style="flex:2;font-size:13px">' + li.name + '</span>' +
+        '<input type="number" min="0" step="0.5" class="form-input" id="inq-li-qty-' + i + '" value="' + li.qty + '" style="width:60px;text-align:center" onchange="recalcQuoteLine(' + i + ')">' +
+        '<span style="color:var(--text3);font-size:12px">×</span>' +
+        '<input type="number" min="0" step="0.01" class="form-input" id="inq-li-price-' + i + '" value="' + li.unit_price + '" style="width:80px;text-align:right" onchange="recalcQuoteLine(' + i + ')">' +
+        '<span style="width:80px;text-align:right;font-size:13px;font-weight:600" id="inq-li-sub-' + i + '">$' + li.subtotal.toFixed(2) + '</span>' +
+      '</div>'
+    ).join('');
+    renderQuoteSummary(q);
+  } else {
+    qSec.style.display = 'none';
+  }
+}
+
+function recalcQuoteLine(idx) {
+  if (!currentInquiry || !currentInquiry.quote) return;
+  const li = currentInquiry.quote.line_items[idx];
+  const qty   = parseFloat(document.getElementById('inq-li-qty-' + idx).value)   || 0;
+  const price = parseFloat(document.getElementById('inq-li-price-' + idx).value) || 0;
+  li.qty = qty; li.unit_price = price;
+  li.subtotal = Math.round(qty * price * 100) / 100;
+  document.getElementById('inq-li-sub-' + idx).textContent = '$' + li.subtotal.toFixed(2);
+  const q = currentInquiry.quote;
+  q.food_subtotal  = Math.round(q.line_items.reduce((s, l) => s + l.subtotal, 0) * 100) / 100;
+  q.service_charge = Math.round(q.food_subtotal * (q.service_charge_pct || 0) / 100 * 100) / 100;
+  q.total          = Math.round((q.food_subtotal + q.service_charge + (q.delivery_fee || 0)) * 100) / 100;
+  renderQuoteSummary(q);
+}
+
+function renderQuoteSummary(q) {
+  document.getElementById('inq-quote-summary').innerHTML =
+    '<div class="quote-line"><span>Food subtotal</span><span>$' + q.food_subtotal.toFixed(2) + '</span></div>' +
+    (q.service_charge_pct ? '<div class="quote-line"><span>Service charge (' + q.service_charge_pct + '%)</span><span>$' + q.service_charge.toFixed(2) + '</span></div>' : '') +
+    (q.delivery_fee ? '<div class="quote-line"><span>Delivery fee</span><span>$' + q.delivery_fee.toFixed(2) + '</span></div>' : '') +
+    '<div class="quote-line" style="font-weight:700;font-size:15px;margin-top:6px;padding-top:8px;border-top:1px solid var(--border)">' +
+      '<span>TOTAL</span><span>$' + q.total.toFixed(2) + '</span>' +
+    '</div>';
+}
+
+async function saveInquiryDraft() {
+  if (!currentInquiry) return;
+  const ef = {};
+  Object.keys(INQ_FIELD_LABELS).forEach(key => {
+    const el = document.getElementById('inq-field-' + key);
+    if (!el) return;
+    let val = el.value.trim();
+    if (['menu_preferences','dietary_restrictions'].includes(key) && val) {
+      val = val.split(',').map(s => s.trim()).filter(Boolean);
+    } else if (key === 'guest_count') {
+      val = val ? (parseInt(val) || null) : null;
+    } else if (key === 'budget') {
+      val = val ? (parseFloat(val) || null) : null;
+    } else {
+      val = val || null;
+    }
+    ef[key] = val;
+  });
+  try {
+    const r = await fetch('/api/inquiries/save?secret=' + INQ_SECRET, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        threadId: currentInquiry.threadId,
+        extracted_fields: ef,
+        quote: currentInquiry.quote,
+        status: 'quote_drafted',
+        history_entry: { action: 'draft_saved', actor: 'user' }
+      })
+    });
+    const d = await r.json();
+    if (d.ok) { showToast('Draft saved ✓'); currentInquiry.extracted_fields = ef; }
+    else showToast('Save failed: ' + (d.error || 'unknown'));
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+function approveInquiryQuote() {
+  if (!currentInquiry) return;
+  // Phase 7: opens compose modal with AI-drafted quote email + Send Now / Schedule
+  openInqComposeModal('quote');
+}
+
+function requestMoreInfo() {
+  if (!currentInquiry) return;
+  // Phase 8: opens compose modal with AI-drafted request-more-info email + Send Now / Schedule
+  openInqComposeModal('request_info');
+}
+
+// ── Compose modal (skeleton — AI body wired in Phases 7 & 8) ─────────────────
+function openInqComposeModal(mode) {
+  const inq = currentInquiry;
+  if (!inq) return;
+  const ef  = inq.extracted_fields || {};
+  const to  = ef.customer_email || '';
+  const name = ef.customer_name || '';
+
+  let subject = '', body = '';
+  if (mode === 'quote') {
+    const q = inq.quote;
+    subject = "Re: Blu's BBQ — Catering Quote for " + (name || 'Your Event');
+    const lines = (q && q.line_items || []).map(li =>
+      '  ' + li.name + ' (' + li.qty + ' ' + li.unit + ') — $' + li.subtotal.toFixed(2)
+    ).join('\n');
+    const total = q ? '$' + q.total.toFixed(2) : '(pending)';
+    body = 'Hi ' + (name.split(' ')[0] || 'there') + ',\n\n' +
+      'Thank you for reaching out to Blu\'s Barbeque! Here\'s your catering quote:\n\n' +
+      lines + '\n\n' +
+      'Total: ' + total + '\n\n' +
+      'Please let me know if you have any questions or would like any adjustments. ' +
+      'You\'re also welcome to stop by any Wednesday–Sunday after 1 PM to try some samples — just ask for Raul!\n\n' +
+      'Thanks,\nZach\nBlu\'s Barbeque\n214-514-8684';
+  } else {
+    const missing = (inq.quote && inq.quote.missing_fields) || (ef.missing_fields) || [];
+    subject = "Re: Blu's BBQ — Quick Follow-up on Your Catering Request";
+    body = 'Hi ' + (name.split(' ')[0] || 'there') + ',\n\n' +
+      'Thank you for your interest in Blu\'s Barbeque! To put together an accurate quote for you, ' +
+      'I just need a few more details:\n\n' +
+      missing.map(f => '  • ' + f.replace(/_/g,' ')).join('\n') + '\n\n' +
+      'Once I have these, I\'ll get a full quote over to you right away.\n\n' +
+      'Thanks,\nZach\nBlu\'s Barbeque\n214-514-8684';
+  }
+
+  document.getElementById('inq-compose-to').value = to;
+  document.getElementById('inq-compose-subject').value = subject;
+  document.getElementById('inq-compose-body').value = body;
+  document.getElementById('inq-compose-mode').value = mode;
+  document.getElementById('inq-compose-schedule-row').style.display = 'none';
+  openModal('inq-compose-modal');
+}
+
+async function sendInqEmailNow() {
+  const to      = document.getElementById('inq-compose-to').value.trim();
+  const subject = document.getElementById('inq-compose-subject').value.trim();
+  const body    = document.getElementById('inq-compose-body').value.trim();
+  const mode    = document.getElementById('inq-compose-mode').value;
+  if (!to || !subject || !body) { showToast('Please fill in all fields'); return; }
+
+  const btn = document.getElementById('inq-send-now-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    // sendEmailViaAPI is wired properly in Phase 7 (uses KV token path)
+    // Fallback: use existing /api/gmail/send endpoint
+    const r = await fetch('/api/gmail/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, body, name: currentInquiry?.extracted_fields?.customer_name || '' })
+    });
+    const d = await r.json();
+    if (d.success || d.ok || d.messageId) {
+      const newStatus = mode === 'quote' ? 'quote_sent' : 'needs_info';
+      await fetch('/api/inquiries/save?secret=' + INQ_SECRET, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          threadId: currentInquiry.threadId,
+          status: newStatus,
+          history_entry: { action: mode === 'quote' ? 'quote_email_sent' : 'info_request_sent', actor: 'user' }
+        })
+      });
+      closeModal('inq-compose-modal');
+      showToast('Email sent via Gmail ✓');
+      if (currentInquiry) { currentInquiry.status = newStatus; renderInquiryDetail(currentInquiry); }
+    } else {
+      showToast('Send failed: ' + (d.error || 'Gmail not connected — re-auth at Settings'));
+    }
+  } catch(e) { showToast('Error: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Send Now →'; }
+}
+
+function toggleInqSchedule() {
+  const row = document.getElementById('inq-compose-schedule-row');
+  const isShowing = row.style.display !== 'none';
+  row.style.display = isShowing ? 'none' : 'block';
+}
+
+async function scheduleInqEmail() {
+  const to      = document.getElementById('inq-compose-to').value.trim();
+  const subject = document.getElementById('inq-compose-subject').value.trim();
+  const body    = document.getElementById('inq-compose-body').value.trim();
+  const mode    = document.getElementById('inq-compose-mode').value;
+  const sendAt  = document.getElementById('inq-compose-send-at').value;
+  const name    = currentInquiry?.extracted_fields?.customer_name || '';
+  if (!to || !subject || !body) { showToast('Please fill in all fields'); return; }
+  if (!sendAt) { showToast('Please pick a date/time to schedule'); return; }
+
+  const schedBtn = document.getElementById('inq-sched-btn');
+  schedBtn.disabled = true; schedBtn.textContent = 'Scheduling…';
+  try {
+    const r = await fetch('/api/schedule', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel: 'email', sendAt: new Date(sendAt).toISOString(),
+        payload: { to, name, subject, body } })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      const newStatus = mode === 'quote' ? 'quote_sent' : 'needs_info';
+      await fetch('/api/inquiries/save?secret=' + INQ_SECRET, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          threadId: currentInquiry.threadId, status: newStatus,
+          history_entry: { action: (mode === 'quote' ? 'quote_email_scheduled' : 'info_request_scheduled') + ' for ' + sendAt, actor: 'user' }
+        })
+      });
+      closeModal('inq-compose-modal');
+      showToast('Email scheduled for ' + new Date(sendAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' ✓');
+      if (currentInquiry) { currentInquiry.status = newStatus; renderInquiryDetail(currentInquiry); }
+    } else {
+      showToast('Schedule failed: ' + (d.error || 'unknown'));
+    }
+  } catch(e) { showToast('Error: ' + e.message); }
+  finally { schedBtn.disabled = false; schedBtn.textContent = '📅 Confirm Schedule'; }
 }
 
 // ============================================================
