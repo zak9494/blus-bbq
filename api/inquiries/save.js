@@ -109,6 +109,10 @@ module.exports = async (req, res) => {
     status:           body.status           ?? existing?.status           ?? 'new',
     source:           body.source           ?? existing?.source           ?? 'direct',
     approved:         body.approved         ?? existing?.approved         ?? false,
+    has_unreviewed_update:         body.has_unreviewed_update         ?? existing?.has_unreviewed_update         ?? false,
+    activity_log:                  body.activity_log                  ?? existing?.activity_log                  ?? [],
+    last_processed_message_id:     body.last_processed_message_id     ?? existing?.last_processed_message_id     ?? null,
+    message_count_at_last_process: body.message_count_at_last_process ?? existing?.message_count_at_last_process ?? 1,
     created_at:       existing?.created_at  ?? now,
     updated_at:       now,
     history:          Array.isArray(existing?.history) ? [...existing.history] : [],
@@ -149,6 +153,7 @@ module.exports = async (req, res) => {
       status:        record.status,
       source:        record.source   || 'direct',
       approved:      record.approved || false,
+      has_unreviewed_update: record.has_unreviewed_update || false,
       email_date:    record.date || null,
       updated_at:    now,
     });
