@@ -190,8 +190,8 @@ module.exports = async (req, res) => {
   const authHeader = 'Bearer ' + atk;
 
   // ── List matching threads ───────────────────────────────────────────────────
-  // Strict Wix-form-only filter: only 'Catering Request got a new submission' notifications
-  const q = encodeURIComponent('subject:"Catering Request got a new submission"');
+  // Broad catering keyword query — Stage 1 triage inbox catches all potential inquiries
+  const q = encodeURIComponent('in:inbox newer_than:60d (catering OR event OR party OR wedding OR BBQ OR quote)');
   const listResp = await httpsGet('gmail.googleapis.com',
     `/gmail/v1/users/me/messages?q=${q}&maxResults=100`,
     { Authorization: authHeader });
@@ -242,7 +242,7 @@ module.exports = async (req, res) => {
   return res.status(200).json({
     count: inquiries.length,
     inquiries,
-    query: 'subject:"Catering Request got a new submission"',
+    query: 'in:inbox newer_than:60d (catering OR event OR party OR wedding OR BBQ OR quote)',
     fetchedAt: new Date().toISOString(),
   });
 };
