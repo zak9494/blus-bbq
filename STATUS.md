@@ -413,18 +413,33 @@ body { ...; }                 /* body stays overflow:visible — not a scroll ta
 
 ---
 
-### R3-3 — Self-modify input box cropped on mobile
-**Status: DONE ✓** · Commit `21cd01fb1a` · 2026-04-19
+### R3-3 — Self-modify input box cropped / too tall on mobile
+**Status: DONE ✓** · Commits `21cd01fb1a`, `0026e6e5b1` · 2026-04-19
 
-**Root cause:** `.modify-box` had no top margin — on mobile it sat directly behind the topbar. `#modify-prompt` had no minimum height so the textarea collapsed.
+**Round 1 fix (commit `21cd01fb1a`):** Added `margin-top: 16px` to `.modify-box` and `min-height: 80px` to `#modify-prompt`. Prevented cropping but overcorrected — the modal felt too tall on mobile.
 
-**Fix:**
+**Round 2 fix (commit `0026e6e5b1`):** Replaced conflicting mobile rules with a single clean block:
 ```css
 @media (max-width: 768px) {
-  .modify-box { margin-top: 16px; padding-bottom: 24px; }
-  #modify-prompt { min-height: 80px; }
+  .modify-box {
+    padding: 16px;                      /* reduced from 28px default */
+    max-height: calc(100vh - 40px);     /* prevents exceeding viewport */
+    overflow-y: auto;                   /* internal scroll if modal is very tall */
+    -webkit-overflow-scrolling: touch;
+  }
+  #modify-prompt {
+    min-height: 60px;    /* visible, usable */
+    max-height: 130px;   /* capped — no more "huge textarea" */
+    overflow-y: auto;    /* user can scroll within textarea if typing a lot */
+  }
 }
 ```
+
+**Verified in Chrome MCP at 343px box width (375px mobile simulation):**
+- Textarea height: **107px = 13% of 812px viewport** ✅ (was ~40%)
+- Box height: 447px = 55% of viewport, fits in `max-height: 773px` constraint ✅
+- `minH: 60px, maxH: 130px` applied ✅
+- Recent Changes section visible below (box is scrollable internally if needed) ✅
 
 ---
 
@@ -506,6 +521,7 @@ setTimeout(() => { toast.remove(); URL.revokeObjectURL(iosUrl); }, 15000);
 | `03131ce1ea` | fix: R3-6 iOS PDF — gesture-timeout fallback with Save to Files toast instruction |
 | `24ff323498` | fix: R3-7 history page-header sticky — remove overflow:hidden from #page-history.active |
 | `e958ce2364` | fix: R3-2/R3-7 root cause — move overflow-x:hidden body→html, restores iOS scroll + sticky |
+| `0026e6e5b1` | fix: R3-3 re-fix — modify-box 16px padding + max-height cap, textarea 60-130px on mobile |
 
 ---
 
