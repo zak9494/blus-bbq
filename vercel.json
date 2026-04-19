@@ -31,11 +31,18 @@
     {
       "source": "/api/gmail/send",
       "destination": "/api/gmail/send.js"
+    },
+    {
+      "source": "/api/gmail/list-inquiries",
+      "destination": "/api/gmail/list-inquiries.js"
     }
   ],
   "functions": {
     "api/chat-stream.js": {
       "maxDuration": 300
+    },
+    "api/gmail/list-inquiries.js": {
+      "maxDuration": 60
     }
   }
 }
