@@ -297,6 +297,26 @@ module.exports = async (req, res) => {
     }
   }
 
+  // ── R4-2: Follow-up scan — check approved threads for new customer messages ──
+  try {
+    const idxRaw = await kvGet('inquiries:index');
+    if (idxRaw) {
+      const idx = typeof idxRaw === 'string' ? JSON.parse(idxRaw) : idxRaw;
+      const toCheck = idx
+        .filter(i => i.approved === true && i.status !== 'archived' && !i.threadId.startsWith('test-'))
+        .slice(0, 3); // max 3 per cron run to stay within time limit
+      for (const entry of toCheck) {
+        if (Date.now() - startTime > 55000) break; // guard time limit
+        try {
+          const fu = await callInternal('/api/inquiries/process-followup', 'POST', { threadId: entry.threadId });
+          if (fu.body && fu.body.has_new_messages) {
+            summary.errors.push('↩ Follow-up: ' + entry.threadId.slice(0, 12) + ' — ' + (fu.body.summary || 'new messages'));
+          }
+        } catch(e) { /* skip individual failures */ }
+      }
+    }
+  } catch(e) { summary.errors.push('Follow-up scan error: ' + e.message); }
+
   return res.status(200).json({
     ok: true,
     ...summary,
