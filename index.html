@@ -1702,25 +1702,44 @@ async function generatePDF() {
   const filename = `blus-bbq-quote-${slug}-${dateSlug}.pdf`;
   const blob     = doc.output('blob');
 
-  // iOS Safari: doc.save() only opens a new tab (no download). Use Web Share
-  // API instead — opens the native share sheet with "Save to Files", AirDrop,
-  // Mail, etc. Requires iOS 15+ (navigator.canShare with files support).
+  // iOS detection (includes iPadOS in desktop mode via ontouchend check)
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
                 (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
 
-  if (isIOS && navigator.canShare &&
-      navigator.canShare({ files: [new File([blob], filename, { type: 'application/pdf' })] })) {
-    try {
-      const file = new File([blob], filename, { type: 'application/pdf' });
-      await navigator.share({ files: [file], title: "Blu\u2019s BBQ Quote" });
-      return; // share sheet handled it
-    } catch (e) {
-      if (e.name === 'AbortError') return; // user cancelled share sheet — that's fine
-      // Other error: fall through to blob download
+  if (isIOS) {
+    // Try Web Share API (share sheet with Save to Files, AirDrop, Mail, etc.)
+    // NOTE: generatePDF() is async — jsPDF loading may exhaust the gesture token.
+    // If navigator.share throws NotAllowedError (gesture expired), we fall through
+    // to open-in-new-tab with a helpful instruction toast.
+    if (navigator.canShare &&
+        navigator.canShare({ files: [new File([blob], filename, { type: 'application/pdf' })] })) {
+      try {
+        const file = new File([blob], filename, { type: 'application/pdf' });
+        await navigator.share({ files: [file], title: "Blu\u2019s BBQ Quote" });
+        return; // share sheet handled it
+      } catch (e) {
+        if (e.name === 'AbortError') return; // user cancelled — fine
+        // NotAllowedError or other: fall through to new-tab + instruction
+      }
     }
+    // iOS fallback: open blob in new tab + show Save-to-Files instruction toast
+    const iosUrl = URL.createObjectURL(blob);
+    window.open(iosUrl, '_blank');
+    const toast = document.createElement('div');
+    toast.style.cssText = [
+      'position:fixed', 'bottom:24px', 'left:50%', 'transform:translateX(-50%)',
+      'background:#1a1a1a', 'color:#fff', 'padding:14px 20px', 'border-radius:12px',
+      'z-index:9999', 'font-size:13px', 'text-align:center',
+      'border:1px solid #ff8800', 'max-width:300px', 'line-height:1.5',
+      'box-shadow:0 4px 20px rgba(0,0,0,0.5)'
+    ].join(';');
+    toast.innerHTML = '\uD83D\uDCC4 PDF opened in new tab.<br><strong>Tap \u2191 Share \u2192 Save to Files</strong>';
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.remove(); URL.revokeObjectURL(iosUrl); }, 15000);
+    return;
   }
 
-  // Desktop Chrome/Firefox, Android Chrome, iOS fallback
+  // Desktop Chrome/Firefox, Android Chrome
   const url = URL.createObjectURL(blob);
   const a   = document.createElement('a');
   a.href     = url;
