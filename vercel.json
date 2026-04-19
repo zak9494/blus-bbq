@@ -75,6 +75,14 @@
     {
       "source": "/api/inquiries/approve",
       "destination": "/api/inquiries/approve.js"
+    },
+    {
+      "source": "/api/inquiries/process-followup",
+      "destination": "/api/inquiries/process-followup.js"
+    },
+    {
+      "source": "/api/inquiries/acknowledge",
+      "destination": "/api/inquiries/acknowledge.js"
     }
   ],
   "functions": {
@@ -113,6 +121,12 @@
     },
     "api/inquiries/approve.js": {
       "maxDuration": 30
+    },
+    "api/inquiries/process-followup.js": {
+      "maxDuration": 30
+    },
+    "api/inquiries/acknowledge.js": {
+      "maxDuration": 10
     }
   },
   "crons": [
