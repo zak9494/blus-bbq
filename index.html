@@ -2778,7 +2778,7 @@ async function loadPipelineInquiries() {
         rrSec.innerHTML = replies.map(inq =>
           '<div class="alert" style="background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.3)">' +
           '<span>🔴 ' + (inq.customer_name || inq.from || inq.threadId.slice(0,12)) + ' — customer replied</span>' +
-          '<span class="alert-action" onclick="showPage('inquiries');openInquiry('' + inq.threadId + '')">Review →</span>' +
+          '<span class="alert-action" onclick="showPage(\'inquiries\');openInquiry(\'' + inq.threadId + '\')">Review →</span>' +
           '</div>'
         ).join('');
       } else {
