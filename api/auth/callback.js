@@ -11,7 +11,7 @@ async function kvSet(key, value) {
   const url = kvUrl(), token = kvToken();
   if (!url) return;
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify(['SET', key, value]);
+    const body = JSON.stringify([['SET', key, value]]);
     const u = new URL(`${url}/pipeline`);
     const opts = { hostname: u.hostname, path: u.pathname, method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } };
