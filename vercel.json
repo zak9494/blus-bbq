@@ -59,6 +59,14 @@
     {
       "source": "/api/cron/poll-inquiries",
       "destination": "/api/cron/poll-inquiries.js"
+    },
+    {
+      "source": "/api/inquiries/draft-email",
+      "destination": "/api/inquiries/draft-email.js"
+    },
+    {
+      "source": "/api/inquiries/send-now",
+      "destination": "/api/inquiries/send-now.js"
     }
   ],
   "functions": {
@@ -85,6 +93,12 @@
     },
     "api/cron/poll-inquiries.js": {
       "maxDuration": 60
+    },
+    "api/inquiries/draft-email.js": {
+      "maxDuration": 30
+    },
+    "api/inquiries/send-now.js": {
+      "maxDuration": 20
     }
   },
   "crons": [
