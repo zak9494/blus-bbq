@@ -321,13 +321,21 @@ tr:hover td { background: var(--surface2); }
 
 /* R3-2: Mobile scroll fix + R3-3: self-modify input crop fix */
 @media (max-width: 768px) {
-  /* Keep document as scroll container — don't add overflow-y:auto to .main/.app */
-  /* Fix .page to not capture iOS touch via overflow:auto without fixed height */
+  /* R3-2: Keep document as scroll container — no overflow-y:auto on .main/.app */
   .page { height: auto; min-height: 0; }
   .modify-history-list { max-height: none; height: auto; }
-  /* R3-3: Self-modify input — ensure not hidden behind topbar */
-  .modify-box { margin-top: 16px; padding-bottom: 24px; }
-  #modify-prompt { min-height: 80px; }
+  /* R3-3: Self-modify modal — compact on mobile, capped height, textarea bounded */
+  .modify-box {
+    padding: 16px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #modify-prompt {
+    min-height: 60px;
+    max-height: 130px;
+    overflow-y: auto;
+  }
 }
 
 /* R3-7: Make .page-header sticky like .topbar for pages without a .topbar */
