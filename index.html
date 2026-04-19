@@ -166,6 +166,7 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .badge-followup { background: var(--red-bg); color: #e09090; border: 1px solid var(--red-border); }
 .badge-booked { background: var(--green-bg); color: #80c898; border: 1px solid var(--green-border); }
 .badge-lost { background: var(--surface3); color: var(--text3); border: 1px solid var(--border); }
+.badge-completed { background: #1a2a1a; color: #6ee7b7; border: 1px solid #2a4a2a; }
 
 /* SECTION HEADER */
 .section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
@@ -2581,12 +2582,12 @@ let currentInquiry = null;
 const INQ_STATUS_LABELS = {
   new: 'New', needs_info: 'Needs Info', quote_drafted: 'Quote Drafted',
   quote_approved: 'Approved', quote_sent: 'Quote Sent',
-  booked: 'Booked', declined: 'Declined'
+  booked: 'Booked', declined: 'Declined', completed: 'Completed'
 };
 const INQ_STATUS_BADGE = {
   new: 'badge-new', needs_info: 'badge-followup', quote_drafted: 'badge-quoted',
   quote_approved: 'badge-quoted', quote_sent: 'badge-quoted',
-  booked: 'badge-booked', declined: 'badge-lost'
+  booked: 'badge-booked', declined: 'badge-lost', completed: 'badge-completed'
 };
 
 let currentInqFilter = 'all';
@@ -2800,7 +2801,7 @@ async function updateInquiryStatus(threadId, newStatus) {
 let pipelineInqView = 'kanban'; // 'kanban' | 'list'
 let pipelineInqFilter = 'all';
 let pipelineInqCache = null;
-const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_sent','booked','declined'];
+const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_sent','booked','declined','completed'];
 
 async function loadPipelineInquiries() {
   try {
