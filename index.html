@@ -3227,17 +3227,15 @@ function buildFallbackEmailBody(mode, inq) {
   const name = ef.customer_name || '';
   const first = name.split(' ')[0] || 'there';
   if (mode === 'quote') {
-    const q     = inq.quote;
-    const lines = (q && q.line_items || []).map(li =>
-      li.name + ' (' + li.qty + ' ' + li.unit + ') — $' + (li.subtotal||0).toFixed(2)
-    ).join('\n');
-    const taxAmt = q ? (q.sales_tax !== undefined ? q.sales_tax : Math.round((q.food_subtotal || 0) * 0.0825 * 100) / 100) : 0;
+    const q = inq.quote;
     const total = q ? '$' + q.total.toFixed(2) : '(pending)';
-    const taxLine = q ? '\nTX Sales Tax (8.25%): $' + taxAmt.toFixed(2) : '';
-    return 'Hi ' + first + ',\n\nThank you for reaching out to Blu\'s Barbeque! ' +
-      'Here\'s your catering quote:\n\n' + lines + taxLine + '\n\nTotal: ' + total + '\n\n' +
-      'Please let me know if you have any questions or would like adjustments. ' +
-      'You\'re welcome to stop by Wed–Sun after 1 PM to try samples — just ask for Raul!\n\n' +
+    const guests = ef.guest_count ? ' for ' + ef.guest_count + ' guests' : '';
+    const date   = ef.event_date  ? ' on ' + ef.event_date  : '';
+    return 'Hi ' + first + ',\n\n' +
+      'Thank you for choosing Blu\'s Barbeque! Please find your catering quote attached as a PDF.\n\n' +
+      'Summary: ' + total + ' estimated total' + guests + date + '.\n\n' +
+      'Let us know if you\'d like any adjustments — we\'re happy to make changes. ' +
+      'You\'re also welcome to stop by Wed–Sun after 1 PM to try samples!\n\n' +
       'Thanks,\nZach\nBlu\'s Barbeque\n214-514-8684';
   } else {
     const missing = (inq.quote && inq.quote.unresolved_preferences) || ef.missing_fields || [];
@@ -3260,10 +3258,12 @@ async function sendInqEmailNow() {
   btn.disabled = true; btn.textContent = 'Sending…';
   try {
     const name = (currentInquiry && currentInquiry.extracted_fields && currentInquiry.extracted_fields.customer_name) || '';
+    // Attach PDF for quote emails
+    const quote = (mode === 'quote' && currentInquiry && currentInquiry.quote) ? currentInquiry.quote : null;
     // KV-token-based direct send (sender locked to info@blusbarbeque.com)
     const r = await fetch('/api/inquiries/send-now?secret=' + INQ_SECRET, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, subject, body, name })
+      body: JSON.stringify({ to, subject, body, name, quote })
     });
     const d = await r.json();
     if (d.ok && d.messageId) {
