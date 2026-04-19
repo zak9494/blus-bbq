@@ -318,15 +318,25 @@ tr:hover td { background: var(--surface2); }
   .chat-layout { min-height: calc(100vh - 65px); }
 }
 
-/* R3-2: Mobile scroll fix — ensure pages and history list scroll freely */
+/* R3-2: Mobile scroll fix + R3-3: self-modify input crop fix */
 @media (max-width: 768px) {
-  .app { overflow-y: auto; }
-  .main { overflow-y: auto; height: auto; }
-  .page { overflow-y: auto; height: auto; min-height: 0; }
-  .modify-history-list { overflow-y: auto; max-height: none; height: auto; }
+  /* Keep document as scroll container — don't add overflow-y:auto to .main/.app */
+  /* Fix .page to not capture iOS touch via overflow:auto without fixed height */
+  .page { height: auto; min-height: 0; }
+  .modify-history-list { max-height: none; height: auto; }
   /* R3-3: Self-modify input — ensure not hidden behind topbar */
   .modify-box { margin-top: 16px; padding-bottom: 24px; }
   #modify-prompt { min-height: 80px; }
+}
+
+/* R3-7: Make .page-header sticky like .topbar for pages without a .topbar */
+.page-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-bottom: 2px solid #ff8800;
+  padding: 14px 24px;
 }
 
 /* SCROLLBAR */
@@ -865,7 +875,7 @@ if (typeof marked !== 'undefined') {
           </select>
         </div>
       </div>
-      <div style="padding:0 24px 24px;overflow-y:auto;flex:1;">
+      <div style="padding:0 24px 24px;">
         <div id="hist-list"><div class="history-empty-msg">Loading…</div></div>
       </div>
     </div>
