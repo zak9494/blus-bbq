@@ -243,6 +243,7 @@ tr:hover td { background: var(--surface2); }
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
 .modal-overlay.open { display: flex; }
 .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
+.modal-sticky-hdr { position: sticky; top: 0; background: var(--surface); z-index: 1; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
 .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.05em; margin-bottom: 4px; }
 .modal-sub { font-size: 12px; color: var(--text3); margin-bottom: 20px; }
 .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
@@ -261,7 +262,7 @@ tr:hover td { background: var(--surface2); }
 /* RESPONSIVE */
 /* MOBILE HAMBURGER + DRAWER */
 .mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 199; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
-.mobile-hamburger { display: none; position: fixed; top: 14px; left: 14px; z-index: 201; width: 38px; height: 38px; align-items: center; justify-content: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; color: var(--text); font-size: 20px; line-height: 1; }
+.mobile-hamburger { display: none; position: fixed; top: 14px; left: 14px; z-index: 300; width: 38px; height: 38px; align-items: center; justify-content: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; color: var(--text); font-size: 20px; line-height: 1; }
 .sidebar-close-btn { position: absolute; top: 12px; right: 12px; background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; display: none; }
 @media (max-width: 768px) { .sidebar-close-btn { display: block; } }
 
@@ -386,7 +387,8 @@ tr:hover td { background: var(--surface2); }
 
 /* ── SELF-MODIFY ENGINE ── */
 #modify-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
-#modify-overlay.open { display: flex; }
+#modify-overlay.open { display: flex; pointer-events: none; }
+#modify-overlay.open .modify-box { pointer-events: auto; }
 .modify-box { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 28px; width: 100%; max-width: 560px; }
 .modify-step { display: none; }
 .modify-step.active { display: block; }
@@ -988,8 +990,10 @@ if (typeof marked !== 'undefined') {
 
     <!-- Step 0: Input -->
     <div class="modify-step" id="modify-step-0">
-      <div class="modal-title">Modify Dashboard</div>
-      <div class="modal-sub">Describe the change — AI will rewrite and redeploy the live app</div>
+      <div class="modal-sticky-hdr">
+        <div class="modal-title">Modify Dashboard</div>
+        <div class="modal-sub">Describe the change — AI will rewrite and redeploy the live app</div>
+      </div>
       <div class="form-group">
         <label class="form-label">What would you like to change?</label>
         <textarea class="modify-textarea" id="modify-prompt" rows="5" placeholder="e.g. Add a revenue tracker to the stats row, change the color scheme to blue, add an inventory section..."></textarea>
