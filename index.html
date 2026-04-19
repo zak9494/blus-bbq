@@ -614,7 +614,6 @@ if (typeof marked !== 'undefined') {
         <div class="tabs">
           <div class="tab active" onclick="switchTab('kanban',this)">Kanban</div>
           <div class="tab" onclick="switchTab('list',this)">List View</div>
-          <div class="tab" onclick="switchTab('inq-tab',this)">Inquiries</div>
         </div>
 
         <!-- Kanban -->
@@ -639,12 +638,6 @@ if (typeof marked !== 'undefined') {
               <tbody id="leads-table-body"></tbody>
             </table>
           </div>
-        </div>
-
-        <!-- Catering Inquiries (from KV) -->
-        <div id="view-inq-tab" style="display:none">
-          <div id="pipeline-inq-loading" style="text-align:center;padding:40px;color:var(--text3)">Loading inquiries…</div>
-          <div id="pipeline-inq-groups"></div>
         </div>
       </div>
     </div>
@@ -1302,6 +1295,7 @@ function showPage(page) {
   if (window.innerWidth <= 768) closeMobileSidebar();
   if (page === 'scheduled') renderScheduled();
   if (page === 'inquiries') loadInquiries();
+  if (page === 'pipeline') loadPipelineInquiries();
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
   });
@@ -1312,8 +1306,6 @@ function switchTab(tab, el) {
   el.classList.add('active');
   document.getElementById('view-kanban').style.display = tab === 'kanban' ? 'block' : 'none';
   document.getElementById('view-list').style.display = tab === 'list' ? 'block' : 'none';
-  document.getElementById('view-inq-tab').style.display = tab === 'inq-tab' ? 'block' : 'none';
-  if (tab === 'inq-tab') loadPipelineInquiries();
 }
 
 // ============================================================
@@ -1325,49 +1317,70 @@ const STATUS_BADGE = { new:'badge-new', quoted:'badge-quoted', followup:'badge-f
 
 function renderKanban() {
   const board = document.getElementById('kanban-board');
-  const cols = ['new','quoted','followup','booked'];
-  board.innerHTML = cols.map(status => {
-    const colLeads = leads.filter(l => l.status === status);
-    return `<div class="k-col">
-      <div class="k-col-header">
-        <span class="k-col-title">${STATUS_LABELS[status]}</span>
-        <span class="k-count">${colLeads.length}</span>
-      </div>
-      ${colLeads.map(l => `
-        <div class="k-card ${l.followup && status!=='booked' ? 'urgent':''}">
-          <div class="k-name" onclick="openEditLead(${l.id})" style="cursor:pointer">${l.name}</div>
-          <div class="k-meta">${l.guests ? l.guests+' guests · ':'' }${l.eventDate || 'Date TBD'}</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
-            <span class="k-badge ${STATUS_BADGE[l.status]}">${STATUS_LABELS[l.status]}</span>
-            <button onclick="openFollowup(${l.id})" style="font-size:10px;padding:3px 8px;border-radius:4px;border:0.5px solid #4a7fb550;background:#4a7fb518;color:#80b4e8;cursor:pointer;font-family:inherit;white-space:nowrap;">Follow-up</button>
-          </div>
-        </div>`).join('')}
-    </div>`;
-  }).join('');
+  if (!pipelineInqCache) {
+    board.innerHTML = '<p style="padding:24px;color:var(--text3)">Loading\u2026</p>';
+    return;
+  }
+  const groups = {};
+  pipelineInqCache.forEach(function(i) {
+    var s = i.status || 'needs_info';
+    if (!groups[s]) groups[s] = [];
+    groups[s].push(i);
+  });
+  board.innerHTML = '<div class="pipeline-kanban">' +
+    PIPELINE_STATUSES.map(function(s) {
+      var cards = (groups[s] || []).map(function(inq) {
+        var name = inq.customer_name || inq.from || 'Unknown';
+        var ev   = inq.event_date || 'Date TBD';
+        var g    = inq.guest_count ? inq.guest_count + ' guests \u00b7 ' : '';
+        var dot  = inq.has_unreviewed_update ? ' <span class="inq-update-dot"></span>' : '';
+        var opts = PIPELINE_STATUSES.map(function(ps) {
+          return '<option value="' + ps + '"' + (inq.status === ps ? ' selected' : '') + '>' + (INQ_STATUS_LABELS[ps] || ps) + '</option>';
+        }).join('');
+        return '<div class="pip-card" onclick="showPage(\'inquiries\');openInquiry(\'' + inq.threadId + '\')" style="position:relative">'
+          + '<div class="pip-card-name">' + name + dot + '</div>'
+          + '<div class="pip-card-meta">' + g + ev + '</div>'
+          + '<div class="pip-card-footer">'
+            + '<select class="pip-status-sel" onclick="event.stopPropagation()" onchange="updateInquiryStatus(\'' + inq.threadId + '\',this.value).then(function(){loadPipelineInquiries()})">' + opts + '</select>'
+          + '</div>'
+        + '</div>';
+      }).join('');
+      return '<div class="pip-col">'
+        + '<div class="pip-col-hdr"><span>' + (INQ_STATUS_LABELS[s] || s) + '</span><span>' + (groups[s] ? groups[s].length : 0) + '</span></div>'
+        + '<div class="pip-col-body">' + (cards || '<p style="font-size:11px;color:var(--text3);padding:8px">Empty</p>') + '</div>'
+      + '</div>';
+    }).join('')
+  + '</div>';
 }
 
 function renderTable() {
-  const body = document.getElementById('leads-table-body');
-  body.innerHTML = leads.map(l => `
-    <tr>
-      <td><div class="td-name">${l.name}</div><div class="td-email">${l.email}</div></td>
-      <td>${l.eventDate || '—'}</td>
-      <td>${l.guests || '—'}</td>
-      <td><span class="k-badge ${STATUS_BADGE[l.status]}">${STATUS_LABELS[l.status]}</span></td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text3)">${l.notes || '—'}</td>
-      <td><div class="td-actions">
-        <button class="btn btn-sm" onclick="openEditLead(${l.id})">Edit</button>
-        <button class="btn btn-sm" style="color:#80b4e8;border-color:var(--blue-border)" onclick="openFollowup(${l.id})">Email</button>
-      </div></td>
-    </tr>`).join('');
+  var body = document.getElementById('leads-table-body');
+  if (!pipelineInqCache) { body.innerHTML = ''; return; }
+  body.innerHTML = pipelineInqCache.map(function(inq) {
+    var name   = inq.customer_name || inq.from || 'Unknown';
+    var email  = inq.from || '';
+    var status = inq.status || 'needs_info';
+    var badge  = INQ_STATUS_BADGE[status] || 'badge-new';
+    var label  = INQ_STATUS_LABELS[status] || status;
+    var dot    = inq.has_unreviewed_update ? ' <span class="inq-update-dot"></span>' : '';
+    return '<tr>'
+      + '<td><div class="td-name">' + name + dot + '</div><div class="td-email">' + email + '</div></td>'
+      + '<td>' + (inq.event_date || '\u2014') + '</td>'
+      + '<td>' + (inq.guest_count || '\u2014') + '</td>'
+      + '<td><span class="k-badge ' + badge + '">' + label + '</span></td>'
+      + '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text3)">' + (inq.subject || '\u2014') + '</td>'
+      + '<td><div class="td-actions"><button class="btn btn-sm" onclick="showPage(\'inquiries\');openInquiry(\'' + inq.threadId + '\')">View</button></div></td>'
+    + '</tr>';
+  }).join('');
 }
 
 function updateStats() {
-  document.getElementById('stat-active').textContent = leads.filter(l => l.status !== 'lost').length;
-  document.getElementById('stat-quoted').textContent = leads.filter(l => l.status === 'quoted').length;
-  document.getElementById('stat-followup').textContent = leads.filter(l => l.followup).length;
-  document.getElementById('stat-booked').textContent = leads.filter(l => l.status === 'booked').length;
-  document.getElementById('notif-badge').textContent = leads.filter(l => l.followup).length;
+  var data = pipelineInqCache || [];
+  document.getElementById('stat-active').textContent = data.filter(function(i){ return i.status !== 'declined'; }).length;
+  document.getElementById('stat-quoted').textContent = data.filter(function(i){ return i.status === 'quote_sent' || i.status === 'quote_approved'; }).length;
+  document.getElementById('stat-followup').textContent = data.filter(function(i){ return i.has_unreviewed_update; }).length;
+  document.getElementById('stat-booked').textContent = data.filter(function(i){ return i.status === 'booked'; }).length;
+  document.getElementById('notif-badge').textContent = data.filter(function(i){ return i.has_unreviewed_update; }).length;
 }
 
 function renderAll() { renderKanban(); renderTable(); updateStats(); }
@@ -2756,19 +2769,13 @@ let pipelineInqCache = null;
 const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_sent','booked','declined'];
 
 async function loadPipelineInquiries() {
-  const loadEl   = document.getElementById('pipeline-inq-loading');
-  const groupsEl = document.getElementById('pipeline-inq-groups');
-  if (!groupsEl) return;
-  loadEl.style.display = 'block';
-  groupsEl.innerHTML = '';
   try {
     const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
     const d = await r.json();
-    loadEl.style.display = 'none';
     // Stage 2: only approved, non-archived, non-test
     pipelineInqCache = (d.inquiries || []).filter(i =>
       i.approved === true && i.status !== 'archived' && !i.threadId.startsWith('test-'));
-    renderPipelineInquiries();
+    renderKanban(); renderTable(); updateStats();
     // Update Recent Replies dashboard widget
     const replies = (d.inquiries || []).filter(i => i.has_unreviewed_update && i.status !== 'archived').slice(0, 3);
     const rrSec = document.getElementById('recent-replies-section');
@@ -2786,8 +2793,7 @@ async function loadPipelineInquiries() {
       }
     }
   } catch(e) {
-    if (loadEl) loadEl.style.display = 'none';
-    groupsEl.innerHTML = '<p style="color:var(--red);padding:16px">Failed: ' + e.message + '</p>';
+    console.error('loadPipelineInquiries failed:', e.message);
   }
 }
 
