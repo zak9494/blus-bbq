@@ -1565,7 +1565,10 @@ async function confirmModify() {
   setStep(1);
   setProgress(5);
   document.getElementById('modify-status-1').textContent = 'Reading current dashboard source...';
-  let sourceHtml = '';
+    // ETA
+  try { const _etaR = await fetch('/api/modify-phases'); if (_etaR.ok) { const _etaD = await _etaR.json(); if (_etaD.totalMs) { setProgress(2, 'Est. ~' + Math.round(_etaD.totalMs/1000) + 's'); } } } catch(e) {}
+  const _t0 = Date.now();
+let sourceHtml = '';
   try {
     const r1 = await fetch('/');
     if (!r1.ok) throw new Error('HTTP ' + r1.status);
@@ -1582,7 +1585,9 @@ async function confirmModify() {
   setStep(2);
   setProgress(20);
   document.getElementById('modify-status-2').textContent = 'Sending to AI — this may take 20–30 seconds…';
-  let newHtml = '';
+    fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'read_source',durationMs:Date.now()-_t0})}).catch(()=>{});
+  const _t1 = Date.now();
+let newHtml = '';
   try {
     const r2 = await fetch('/api/chat-stream', {
       method: 'POST',
@@ -1639,7 +1644,9 @@ async function confirmModify() {
   setProgress(80);
   document.getElementById('modify-status-3').textContent = 'Checking guardrails…';
 
-  let proposalToken;
+    fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'ai_generate',durationMs:Date.now()-_t1})}).catch(()=>{});
+  const _t2 = Date.now();
+let proposalToken;
   try {
     const r3 = await fetch('/api/self-modify', {
       method: 'POST',
@@ -1658,6 +1665,8 @@ async function confirmModify() {
     document.getElementById('modify-status-3').textContent = 'Preview check failed';
     return;
   }
+  fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'preview',durationMs:Date.now()-_t2})}).catch(()=>{});
+  const _t3 = Date.now();
 
   try {
     const r4 = await fetch('/api/self-modify', {
@@ -1671,7 +1680,8 @@ async function confirmModify() {
     }
     document.getElementById('modify-status-3').textContent = 'Committed: ' + (d4.commit || '').slice(0, 7);
     setProgress(93);
-    await renderModifyHistory();
+    await     fetch('/api/modify-phases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phase:'apply',durationMs:Date.now()-_t3})}).catch(()=>{});
+renderModifyHistory();
   } catch (e) {
     showPhaseError(3, 'Commit failed: ' + e.message);
     document.getElementById('modify-status-3').textContent = 'Commit failed';
