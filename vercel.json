@@ -87,6 +87,10 @@
     {
       "source": "/api/quotes/render-pdf",
       "destination": "/api/quotes/render-pdf.js"
+    },
+    {
+      "source": "/api/cron/mark-completed",
+      "destination": "/api/cron/mark-completed.js"
     }
   ],
   "functions": {
@@ -134,12 +138,19 @@
     },
     "api/quotes/render-pdf.js": {
       "maxDuration": 10
+    },
+    "api/cron/mark-completed.js": {
+      "maxDuration": 30
     }
   },
   "crons": [
     {
       "path": "/api/cron/poll-inquiries",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/mark-completed",
+      "schedule": "0 11 * * *"
     }
   ]
 }
