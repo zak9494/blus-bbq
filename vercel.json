@@ -67,6 +67,14 @@
     {
       "source": "/api/inquiries/send-now",
       "destination": "/api/inquiries/send-now.js"
+    },
+    {
+      "source": "/api/inquiries/archive",
+      "destination": "/api/inquiries/archive.js"
+    },
+    {
+      "source": "/api/inquiries/approve",
+      "destination": "/api/inquiries/approve.js"
     }
   ],
   "functions": {
@@ -99,6 +107,12 @@
     },
     "api/inquiries/send-now.js": {
       "maxDuration": 20
+    },
+    "api/inquiries/archive.js": {
+      "maxDuration": 20
+    },
+    "api/inquiries/approve.js": {
+      "maxDuration": 30
     }
   },
   "crons": [
