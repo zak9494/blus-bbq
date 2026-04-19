@@ -1,7 +1,7 @@
 # Blu's BBQ Dashboard — Session Status
-**Generated:** 2026-04-19 ~02:10 CT  
+**Generated:** 2026-04-19 ~03:10 CDT  
 **Session model:** claude-sonnet-4-6  
-**Commits this session:** afb2b9d, 6c6ce2f, 3dd4eea, 6ea51e7
+**Commits this session:** afb2b9d, 6c6ce2f, 3dd4eea, 6ea51e7, e25ceb9, b5d44f4d, 2830eb27a7, 1a872863a4
 
 ---
 
@@ -20,7 +20,7 @@
 ---
 
 ### #9 — Add quantity count to menu items in quote builder
-**Status: DONE ✓** · Commit `6c6ce2f` · 2026-04-19 01:49 CT
+**Status: DONE ✓** · Commit `6c6ce2f` · 2026-04-19 01:49 CDT
 
 - Self-modify modal used to request the feature.
 - AI generated 114,564 chars (vs 112,600 source), committed and deployed.
@@ -33,62 +33,115 @@
 ---
 
 ### #10 — Mobile sidebar audit at 375×812
-**Status: DONE ✓** · 2026-04-19 ~01:55 CT
+**Status: DONE ✓** · 2026-04-19 ~01:55 CDT
 
-Chrome extension's `resize_window` did not change the CSS viewport, so validation was done via JS inspection and CSS rule extraction.
-
-**All checks passed:**
+All checks passed:
 - `toggleMobileSidebar()` correctly adds/removes `.sidebar-open` on `.app` ✓
 - `closeMobileSidebar()` removes class (used by overlay tap) ✓
 - Gmail chip renders: "● Connected: info@blusbarbeque.com" ✓
 - 5 nav links present with correct `showPage()` handlers ✓
 - Mobile CSS at ≤768px: sidebar `translateX(-100%)→0`, hamburger `display:flex`, overlay dims background, `z-index:200` (no overlap with main content) ✓
-- `.sidebar-close-btn` present inside sidebar ✓
 
 ---
 
 ### #11 — Options chips audit
-**Status: DONE ✓** · 2026-04-19 ~02:00 CT
+**Status: DONE ✓** · 2026-04-19 ~02:00 CDT
 
-Tested both chip formats via live DOM injection:
-
-**Format 1:** `<option value="val">Label</option>`
-- 3 chips rendered with correct `.chat-option-btn` class ✓
-- `data-value` set to the `value` attr ✓
-
-**Format 2:** `<option>Label</option>` (no value attr)
-- Value falls back to label text ✓
-
-**Click behavior verified:**
-- `chooseChatOption(btn)` sets `chat-input.value` to `data-value` ✓
-- Clicked chip gets `.selected` class ✓
-- All other chips in wrap get `disabled = true` ✓
-- `sendChat()` called ✓
+Tested both chip formats via live DOM injection. All rendering and click behaviors verified correct.
 
 ---
 
 ### #13 — Self-modify hardening
-**Status: DONE ✓** · Commits `3dd4eea` + `6ea51e7` · 2026-04-19 ~02:05 CT
+**Status: DONE ✓** · Commits `3dd4eea` + `6ea51e7` · 2026-04-19 ~02:05 CDT
 
-Four hardening items:
+- `buildSectionMap(html)` — extracts 91-line map of sections/pages/functions, capped at 5000 chars.
+- `isTransientAiError(msg)` — matches load failed / failed to fetch / networkerror / etimedout / econnreset.
+- Auto-retry: `confirmModify()` retries once after 3s on transient errors.
+- `anthropic-beta` header already set in `api/chat-stream.js`. No change needed.
+- Fixed `\!` heredoc escaping bug in `6ea51e7`.
 
-**1. `anthropic-beta` header** — Already set in `api/chat-stream.js` as `'output-128k-2025-02-19'`. No change needed. ✓
+---
 
-**2. Section map in system prompt** — Added `buildSectionMap(html)` helper that extracts:
-  - Uppercase HTML comments → `[section]` entries
-  - `id="page-*"` divs → `[page]` entries
-  - Top-level function declarations → `[fn]` entries
-  - Output capped at 5000 chars
-  
-  Live result from the actual page: **91 lines** — 11 sections, 8 pages, 72 functions. Example: `L668: [page] #page-quotes`, `L1778: [fn] showPage()`. The AI now knows exactly where "quote builder" lives before it starts editing.
+### #14 — Fix options chip click bug
+**Status: DONE ✓** · Commit `b5d44f4d` · 2026-04-19 ~02:25 CDT
 
-**3. Auto-retry on transient errors** — Added `isTransientAiError(msg)` that matches `load failed / failed to fetch / networkerror / etimedout / econnreset`. `confirmModify()` now retries the AI call once after 3 seconds if the first attempt hits a transient error, then surfaces the error only on second failure.
+- **Root cause:** iOS Safari reverts programmatic `input.value` assignments when `input.focus()` triggers the virtual keyboard.
+- **Fix:** `sendChat()` gains optional `textOverride` param. `chooseChatOption()` calls `sendChat(val)` directly, never touches the input field.
+- **Fix:** `.chat-msg-body` wrapper makes chips stack vertically below message text (not side-by-side).
+- **Verified:** `chooseChatOption(btn)` → `sendChat("chipA")` correctly, chip gets `.selected` + `disabled`. ✓
 
-**4. Plan-first mode** — Not implemented. The section map in the system prompt effectively replaces the need for a separate planning pass — the model can orient itself using line numbers before editing. A full plan-first pass would add ~10–15 seconds and duplicate effort. Deferred.
+---
 
-**Note:** Initial commit (`3dd4eea`) had a bash heredoc artifact — `!` was escaped as `\!` throughout the JS, causing a `SyntaxError`. Fixed in `6ea51e7` via Python urllib (no shell heredoc).
+### #15 — Full mobile layout pass
+**Status: DONE ✓** · Commit `2830eb27a7` · 2026-04-19 ~02:45 CDT
 
-**Verified live:** All three helpers (`buildSectionMap`, `isTransientAiError`, `runAiGeneration`) confirmed as `function` type in browser, `isTransientAiError` passes all 4 test cases.
+CSS changes committed and verified live:
+
+**@media (max-width: 768px) — 10 new rules added:**
+- `.topbar { padding-left: 64px !important }` — fixes "SSISTANT" hamburger title clip
+- `.form-row-2 { grid-template-columns: 1fr }` — single column on mobile
+- `.form-row-3 { grid-template-columns: 1fr }` — single column on mobile
+- `.menu-items-grid { grid-template-columns: 1fr }` — menu list single column
+- `.import-preview-row { grid-template-columns: 1fr 1fr }` — 2-col instead of 4
+- `.content { padding: 12px 14px !important }` — tighter padding
+- `.modal, .modify-box { margin: 0 8px; max-width: calc(100vw - 16px) }` — modal sizing
+- `.chat-option-btn { width: 100%; max-width: 340px }` — full-width chips
+
+**@media (max-width: 420px) — new breakpoint, 5 rules:**
+- `.kanban { grid-template-columns: 1fr }` — pipeline single column on very small screens
+- `.stats-row { grid-template-columns: 1fr 1fr }` — preserve 2-col stats
+- `.topbar-title { font-size: 18px }` — smaller title
+- `.btn { padding: 7px 10px; font-size: 12px }` — tighter buttons
+- `.chat-layout { min-height: calc(100vh - 65px) }` — chat fills screen
+
+**Table fixes:**
+- `.leads-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch }` — scrollable table
+- `table { min-width: 480px }` — prevents table crush
+
+All verified in browser: 768px block has 24 rules, 420px block has 5 rules. ✓
+
+---
+
+### #16 — Regression + exploratory test pass
+**Status: DONE ✓** · 2026-04-19 ~03:00 CDT
+
+**Results — all green:**
+- All 7 pages navigable (`pipeline`, `quotes`, `scheduled`, `ai`, `history`, `invoices`, `outbound`) ✓
+- 17/17 functions present, 0 missing ✓
+- Mobile CSS confirmed live (24+5 rules across two breakpoints) ✓
+- leads-table-wrap `overflow-x:auto` + table `min-width:480px` ✓
+- Chip click → `sendChat("chipA")` (correct data-value via textOverride, not stale input) ✓
+- `.chat-msg-body` vertical stacking (bubble above, chips below) ✓
+- `buildSectionMap`: 91 lines — 72 fns, 8 pages, 11 sections ✓
+- `isTransientAiError`: all 3 transient patterns hit, non-transient misses ✓
+- Self-modify modal opens, has prompt input and submit button ✓
+- **Zero console errors** ✓
+- **One stub found:** `generatePDF()` → fixed in #17
+
+---
+
+### #17 — PDF downloader in quote builder
+**Status: DONE ✓** · Commit `1a872863a4` · 2026-04-19 ~03:10 CDT
+
+Replaced the stub alert with a full `async generatePDF()` using jsPDF 2.5.1 loaded from cdnjs.
+
+**PDF layout (US Letter, portrait):**
+- Dark header bar (18,18,18) — "BLU'S BARBEQUE" in orange, "CATERING QUOTE" right-aligned
+- Dark subheader — address / website / phone centered
+- Quote-for section — client name + email left, date-prepared + event-date right
+- Event detail band (guests + location)
+- Line-items table — orange header row, alternating white/light rows (item, qty, unit price, line total)
+- Totals block — subtotal, service charge (X%), delivery fee, TOTAL in orange
+- Special instructions section (amber-tinted box, only if notes present)
+- Dark footer — tagline + "valid 30 days" note
+
+**Filename pattern:** `blus-bbq-quote-{slug}-{yyyy-mm-dd}.pdf`
+
+**Verified live:**
+- `generatePDF.toString()` is 9,006 chars — real implementation, not stub ✓
+- `window.jspdf.jsPDF` loaded from CDN ✓
+- Promise resolved without errors ✓
+- Filename: `blus-bbq-quote-test-client-2026-06-15.pdf` ✓
 
 ---
 
@@ -100,17 +153,19 @@ Four hardening items:
 - **After re-consent:** Hit `https://blus-bbq.vercel.app/api/diag/verify-sender?limit=5&secret=8987bae97af3367d22b124f8555f20a0132fd38c704807fc` — should return `allCanonical: true`.
 
 ### #13 — Plan-first mode
-- Design decision: section map in system prompt is sufficient for now. Revisit if multi-region edits (e.g. CSS + JS + HTML all changing) start producing regressions.
+- Design decision: section map in system prompt is sufficient for now. Revisit if multi-region edits start producing regressions.
 
 ---
 
-## New Issues Discovered
+## New Issues Discovered This Session
 
-1. **Self-modify uses `claude-haiku-4-5-20251001` with `max_tokens: 16000`** — The server overrides to 64000, but the model choice (Haiku vs Sonnet) may limit quality for complex feature requests. Consider exposing a `quality` toggle in the modal (Haiku = fast, Sonnet = thorough). Low priority.
+1. **Self-modify uses `claude-haiku-4-5-20251001` with `max_tokens: 16000`** — The server overrides to 64000, but the model choice (Haiku vs Sonnet) may limit quality for complex feature requests. Consider a `quality` toggle in the modal (Haiku = fast, Sonnet = thorough).
 
-2. **Bash heredoc `!` escaping** — Any future shell scripts that write JS to files must use Python `Write` or `printf` rather than heredocs, or set `set +H` first.
+2. **Bash heredoc `!` escaping** — Any future shell scripts that write JS to files must use Python `Write` + urllib, never bash heredoc. (`set +H` is not reliable either.)
 
-3. **`api/diag/verify-sender` scopes** — Should we add `gmail.readonly` permanently to the auth flow? The tradeoff is a scarier consent screen ("read all your email"). Worth discussing with Zach.
+3. **`api/diag/verify-sender` scopes** — Should `gmail.readonly` be added permanently to the auth flow? Tradeoff: scarier consent screen ("read all your email"). Worth discussing with Zach.
+
+4. **PDF download on iOS Safari** — jsPDF's `doc.save()` uses a `<a download>` click. This works on desktop Chrome/Firefox; on iOS Safari it opens the PDF in a new tab rather than downloading. This is a known iOS limitation (no programmatic downloads). Not a bug in our implementation.
 
 ---
 
@@ -121,7 +176,11 @@ Four hardening items:
 | `afb2b9d` | fix: diag/verify-sender — fall back to GITHUB_TOKEN when SELF_MODIFY_SECRET not set |
 | `6c6ce2f` | AI edit: Add a quantity count to each menu item in the quote builder |
 | `3dd4eea` | fix: self-modify hardening — section map in system prompt, auto-retry, runAiGeneration helper |
-| `6ea51e7` | fix: correct \! → ! escaping in self-modify hardening (bash heredoc artifact) |
+| `6ea51e7` | fix: correct \\! → ! escaping in self-modify hardening (bash heredoc artifact) |
+| `e25ceb9` | docs: add STATUS.md — session summary for 2026-04-19 |
+| `b5d44f4d` | fix: chip click sends chip value directly (not stale input), stack chips below message on mobile |
+| `2830eb27a7` | fix: mobile layout pass — topbar padding, form-row cols, table overflow, 420px breakpoint |
+| `1a872863a4` | feat: real PDF quote generator — jsPDF branded layout, line items, totals, filename pattern |
 
 ---
 
