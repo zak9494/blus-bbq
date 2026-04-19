@@ -2705,7 +2705,7 @@ async function updateInquiryStatus(threadId, newStatus) {
 let pipelineInqView = 'kanban'; // 'kanban' | 'list'
 let pipelineInqFilter = 'all';
 let pipelineInqCache = null;
-const PIPELINE_STATUSES = ['quote_drafted','quote_approved','quote_sent','booked','declined'];
+const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_sent','booked','declined'];
 
 async function loadPipelineInquiries() {
   const loadEl   = document.getElementById('pipeline-inq-loading');
