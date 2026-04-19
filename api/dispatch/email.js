@@ -4,6 +4,10 @@ module.exports.config = { api: { bodyParser: false } };
 const https = require('https');
 const crypto = require('crypto');
 
+const CANONICAL_SENDER = 'info@blusbarbeque.com';
+const KV_TOKENS_KEY = `gmail:${CANONICAL_SENDER}`;
+const KV_TOKENS_KEY_LEGACY = 'gmail:tokens';
+
 function kvUrl() { return process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL; }
 function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
 
@@ -25,12 +29,9 @@ async function kvSet(key, value) {
   const url = kvUrl(), token = kvToken();
   if (!url) return;
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify([ ['SET', key, typeof value === 'string' ? value : JSON.stringify(value)] ]);
+    const body = JSON.stringify([['SET', key, typeof value === 'string' ? value : JSON.stringify(value)]]);
     const u = new URL(url + '/pipeline');
-    const opts = {
-      hostname: u.hostname, path: u.pathname, method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-    };
+    const opts = { hostname: u.hostname, path: u.pathname, method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } };
     const req = https.request(opts, r => { r.resume().on('end', resolve); });
     req.on('error', reject); req.write(body); req.end();
   });
@@ -65,28 +66,32 @@ async function httpsPost(hostname, path, headers, body) {
   });
 }
 
+async function httpsGet(hostname, path, headers) {
+  return new Promise((resolve, reject) => {
+    const opts = { hostname, path, method: 'GET', headers };
+    const req = https.request(opts, r => {
+      let d = ''; r.on('data', c => d += c);
+      r.on('end', () => { try { resolve({ status: r.statusCode, body: JSON.parse(d) }); } catch { resolve({ status: r.statusCode, body: d }); } });
+    });
+    req.on('error', reject); req.end();
+  });
+}
+
 async function refreshToken(refreshTok) {
-  const body = new URLSearchParams({
-    client_id: process.env.GMAIL_CLIENT_ID, client_secret: process.env.GMAIL_CLIENT_SECRET,
-    refresh_token: refreshTok, grant_type: 'refresh_token',
-  }).toString();
+  const body = new URLSearchParams({ client_id: process.env.GMAIL_CLIENT_ID, client_secret: process.env.GMAIL_CLIENT_SECRET, refresh_token: refreshTok, grant_type: 'refresh_token' }).toString();
   return httpsPost('oauth2.googleapis.com', '/token', { 'Content-Type': 'application/x-www-form-urlencoded' }, body);
 }
 
 async function sendEmail(tok, to, subject, htmlBody) {
-  const mime = ['To: ' + to, 'Subject: ' + subject, 'Content-Type: text/html; charset=utf-8', 'MIME-Version: 1.0', '', htmlBody].join('\r\n');
+  const mime = ['From: ' + CANONICAL_SENDER, 'To: ' + to, 'Subject: ' + subject, 'Content-Type: text/html; charset=utf-8', 'MIME-Version: 1.0', '', htmlBody].join('\r\n');
   const encoded = Buffer.from(mime).toString('base64url');
-  return httpsPost('gmail.googleapis.com', '/gmail/v1/users/me/messages/send',
-    { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
-    JSON.stringify({ raw: encoded }));
+  return httpsPost('gmail.googleapis.com', '/gmail/v1/users/me/messages/send', { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, JSON.stringify({ raw: encoded }));
 }
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const rawBody = await new Promise(resolve => {
-    let data = ''; req.on('data', c => data += c); req.on('end', () => resolve(data));
-  });
+  const rawBody = await new Promise(resolve => { let data = ''; req.on('data', c => data += c); req.on('end', () => resolve(data)); });
 
   const sig = req.headers['upstash-signature'];
   const curKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
@@ -111,10 +116,24 @@ module.exports = async (req, res) => {
     return res.status(422).json({ error: reason });
   };
 
-  const tokensRaw = await kvGet('gmail:tokens');
+  // TOKEN LOAD: canonical key first; legacy key = wrong account, reject immediately
+  let tokensRaw = await kvGet(KV_TOKENS_KEY);
+  if (!tokensRaw) {
+    const legacyRaw = await kvGet(KV_TOKENS_KEY_LEGACY);
+    if (legacyRaw) {
+      return res.status(400).json({ error: `Gmail connected with wrong/unverified account. Re-authenticate at /api/auth/init with ${CANONICAL_SENDER}.` });
+    }
+  }
   if (!tokensRaw) return fail('Gmail not connected - visit /api/auth/init to connect.');
+
   let tokens = typeof tokensRaw === 'string' ? JSON.parse(tokensRaw) : tokensRaw;
 
+  // STORED EMAIL GUARD
+  if (tokens.email && tokens.email !== CANONICAL_SENDER) {
+    return res.status(400).json({ error: `Sender locked to ${CANONICAL_SENDER}. Tokens are for ${tokens.email}. Re-auth at /api/auth/init.` });
+  }
+
+  // REFRESH if expired
   let { access_token: atk, expiry_date } = tokens;
   if (!atk || (expiry_date && expiry_date < Date.now() + 60000)) {
     if (!tokens.refresh_token) return fail('No Gmail refresh token - re-auth at /api/auth/init.');
@@ -122,7 +141,15 @@ module.exports = async (req, res) => {
     if (rr.status >= 300 || rr.body.error) return fail('Token refresh failed: ' + JSON.stringify(rr.body));
     atk = rr.body.access_token;
     tokens = { ...tokens, access_token: atk, expiry_date: Date.now() + (rr.body.expires_in || 3600) * 1000 };
-    await kvSet('gmail:tokens', JSON.stringify(tokens));
+    await kvSet(KV_TOKENS_KEY, JSON.stringify(tokens));
+  }
+
+  // LIVE ACCOUNT VERIFICATION via Gmail users.getProfile
+  const profileResp = await httpsGet('gmail.googleapis.com', '/gmail/v1/users/me/profile', { Authorization: 'Bearer ' + atk });
+  if (profileResp.status >= 300) return fail(`Gmail profile check failed (${profileResp.status}): ${JSON.stringify(profileResp.body).slice(0, 200)}`);
+  const liveEmail = (profileResp.body.emailAddress || '').toLowerCase().trim();
+  if (liveEmail !== CANONICAL_SENDER) {
+    return res.status(400).json({ error: `SENDER MISMATCH: token belongs to ${liveEmail || '(unknown)'}, not ${CANONICAL_SENDER}. Re-auth at /api/auth/init.` });
   }
 
   const ep = task.payload || directPayload || {};
@@ -131,9 +158,6 @@ module.exports = async (req, res) => {
   const result = await sendEmail(atk, ep.to, ep.subject || '(no subject)', ep.body || '');
   if (result.status >= 300) return fail('Gmail API ' + result.status + ': ' + JSON.stringify(result.body).slice(0, 200));
 
-  await kvSet('task:' + taskId, JSON.stringify({
-    ...task, status: 'sent', gmailMessageId: result.body.id,
-    sentAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-  }));
-  return res.status(200).json({ ok: true, taskId, gmailMessageId: result.body.id });
+  await kvSet('task:' + taskId, JSON.stringify({ ...task, status: 'sent', gmailMessageId: result.body.id, sentFrom: CANONICAL_SENDER, sentAt: new Date().toISOString(), updatedAt: new Date().toISOString() }));
+  return res.status(200).json({ ok: true, taskId, gmailMessageId: result.body.id, sentFrom: CANONICAL_SENDER });
 };
