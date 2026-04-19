@@ -530,6 +530,27 @@ setTimeout(() => { toast.remove(); URL.revokeObjectURL(iosUrl); }, 15000);
 
 ---
 
+## Standing Rule — "Schedule Send" on All Outbound Email/Text UIs
+**Established:** 2026-04-19 · Applies to all current and future comm surfaces.
+
+Every UI surface that sends or drafts an outbound email or text message must offer TWO primary actions: **"Send Now"** and **"Schedule Send"** (with a datetime picker). Scheduled sends go through `/api/schedule` → QStash → `/api/dispatch/email`. Immediate sends go directly through `/api/dispatch/email`. Sender lockdown (`info@blusbarbeque.com`) applies to both paths.
+
+### Audit — existing email-sending surfaces
+
+| Surface | Has Schedule Option? | Notes |
+|---------|---------------------|-------|
+| **Follow-up email modal** (`#followup-modal`) | ✅ Yes | `📅 Schedule` toggle already present; `toggleSchedule()` shows datetime picker, switches send button to scheduled path |
+| **Toast payment link modal** (`#toast-modal`) | ❌ No | Only "Send Payment Link" → immediate send via `sendToastLink()`. **Needs schedule option added in a future round.** |
+| **R4-1 Phase 7 — Quote email** | 🔲 Not built yet | Will be built with both "Send Now" and "Schedule Send" from the start |
+| **R4-1 Phase 8 — Request More Info email** | 🔲 Not built yet | Same — both options from the start |
+| **AI Chat `SEND_EMAIL_NOW`** | ⚠️ Edge case | AI-triggered send from chat (e.g. "send follow-up to Danielle"). Not a composition UI — no schedule option currently. Flag for Zach: should AI-triggered sends be forced to a review/schedule step instead of auto-firing? |
+
+### Action items (future rounds)
+- **Toast modal:** add `📅 Schedule` toggle + datetime picker beside "Send Payment Link" (same pattern as follow-up modal)
+- **AI chat sends:** discuss with Zach whether `SEND_EMAIL_NOW` from AI should route to the Inquiries/approval queue instead of firing immediately
+
+---
+
 ## R4-1 Roadmap — Auto-Inquiry → AI Quote → Approval Workflow
 **Status: QUEUED — not started. Begin after R3 fully verified on Zach's device.**  
 **Estimated build time: 2-3+ hours across 8 phases.**
