@@ -75,6 +75,10 @@
     {
       "source": "/api/inquiries/approve",
       "destination": "/api/inquiries/approve.js"
+    },
+    {
+      "source": "/api/inquiries/backfill-source",
+      "destination": "/api/inquiries/backfill-source.js"
     }
   ],
   "functions": {
@@ -112,6 +116,9 @@
       "maxDuration": 20
     },
     "api/inquiries/approve.js": {
+      "maxDuration": 30
+    },
+    "api/inquiries/backfill-source.js": {
       "maxDuration": 30
     }
   },
