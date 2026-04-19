@@ -16,8 +16,11 @@ module.exports.config = { maxDuration: 60 };
 const https = require('https');
 
 const APP_URL    = process.env.APP_URL || 'https://blus-bbq.vercel.app';
-const LABEL_NAME = 'BBQ-Processed';
-const LABEL_KV_KEY = 'bbq:processed-label-id';
+const LABEL_NAME        = 'BBQ-Processed';
+const LABEL_KV_KEY      = 'bbq:processed-label-id';
+const ARCHIVED_NAME     = 'BBQ-Archived';
+const ARCHIVED_KV_KEY   = 'bbq:archived-label-id';
+const { detectSource }  = require('../_lib/source');
 
 // ── KV helpers ────────────────────────────────────────────────────────────────
 function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
@@ -192,10 +195,13 @@ module.exports = async (req, res) => {
   summary.scanned = inquiries.length;
 
   // Get Gmail access token for labeling
-  let accessToken, labelId;
+  let accessToken, labelId, archivedLabelId;
   try {
     accessToken = await getAccessToken();
     labelId = await getOrCreateLabel(accessToken);
+    // Load archived label ID from cache (may be null if no archives yet)
+    const archivedIdRaw = await kvGet(ARCHIVED_KV_KEY).catch(() => null);
+    archivedLabelId = typeof archivedIdRaw === 'string' ? archivedIdRaw : null;
   } catch(e) {
     // Non-fatal — we can still process without labeling
     summary.errors.push('Label setup failed: ' + e.message);
@@ -203,8 +209,12 @@ module.exports = async (req, res) => {
 
   // 2. Process each inquiry
   for (const inq of inquiries) {
-    // Skip if already has the processed label
+    // Skip if already labeled BBQ-Processed
     if (labelId && inq.labels && inq.labels.includes(labelId)) {
+      summary.skipped++; continue;
+    }
+    // Skip if labeled BBQ-Archived (user explicitly archived this thread)
+    if (archivedLabelId && inq.labels && inq.labels.includes(archivedLabelId)) {
       summary.skipped++; continue;
     }
 
@@ -251,7 +261,8 @@ module.exports = async (req, res) => {
       // Step C: Determine status
       const status = canQuote ? 'quote_drafted' : 'needs_info';
 
-      // Step D: Save to KV
+      // Step D: Detect source + save to KV
+      const source = detectSource(inq.from, inq.subject);
       const saveResp = await callInternal('/api/inquiries/save', 'POST', {
         threadId:      inq.threadId,
         messageId:     inq.messageId,
@@ -262,6 +273,8 @@ module.exports = async (req, res) => {
         extracted_fields: extracted,
         quote,
         status,
+        source,
+        approved: false,
         history_entry: { action: 'auto_processed_by_cron', actor: 'system' }
       });
       if (saveResp.status >= 300 || !saveResp.body.ok) {
