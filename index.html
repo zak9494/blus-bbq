@@ -318,6 +318,17 @@ tr:hover td { background: var(--surface2); }
   .chat-layout { min-height: calc(100vh - 65px); }
 }
 
+/* R3-2: Mobile scroll fix — ensure pages and history list scroll freely */
+@media (max-width: 768px) {
+  .app { overflow-y: auto; }
+  .main { overflow-y: auto; height: auto; }
+  .page { overflow-y: auto; height: auto; min-height: 0; }
+  .modify-history-list { overflow-y: auto; max-height: none; height: auto; }
+  /* R3-3: Self-modify input — ensure not hidden behind topbar */
+  .modify-box { margin-top: 16px; padding-bottom: 24px; }
+  #modify-prompt { min-height: 80px; }
+}
+
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -477,7 +488,6 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
         <div class="topbar-actions">
-          <button class="btn" onclick="showPage('scheduled')">📅 Scheduled</button>
           <button class="btn" onclick="openImport()">⬆ Import</button>
           <button class="btn" onclick="showPage('ai')">AI Assistant</button>
           <button class="btn btn-primary" onclick="openNewLead()">+ New Lead</button>
