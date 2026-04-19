@@ -136,8 +136,9 @@ module.exports = async (req, res) => {
 
     // Remove existing entry for this threadId, then prepend updated summary
     index = index.filter(e => e.threadId !== threadId);
+    index = index.filter(e => e.threadId !== threadId);
     const ef = record.extracted_fields || {};
-    index.unshift({
+    index.push({
       threadId,
       from:          record.from || '',
       subject:       record.subject || '',
@@ -145,7 +146,14 @@ module.exports = async (req, res) => {
       event_date:    ef.event_date    || null,
       guest_count:   ef.guest_count   || null,
       status:        record.status,
+      email_date:    record.date || null,
       updated_at:    now,
+    });
+    // Sort by email received date descending (newest email first); nulls last
+    index.sort((a, b) => {
+      const da = a.email_date ? new Date(a.email_date).getTime() : 0;
+      const db = b.email_date ? new Date(b.email_date).getTime() : 0;
+      return db - da;
     });
     // Cap at MAX_INDEX
     if (index.length > MAX_INDEX) index = index.slice(0, MAX_INDEX);
