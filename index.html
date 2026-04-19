@@ -86,6 +86,12 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 
 /* ── INQUIRIES PAGE ─────────────────────────────────────── */
 .inq-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:8px; cursor:pointer; transition:background 0.15s; }
+.inq-chips { display:flex; gap:6px; padding:12px 16px 6px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; flex-shrink:0; }
+.inq-chips::-webkit-scrollbar { display:none; }
+.inq-chip { flex-shrink:0; padding:5px 11px; border-radius:20px; font-size:12px; font-weight:600; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; white-space:nowrap; transition:all 0.15s; line-height:1.4; }
+.inq-chip.active { background:var(--amber); border-color:var(--amber); color:#000; }
+.inq-chip:hover:not(.active) { border-color:var(--amber); color:var(--amber); }
+.pipeline-inq-group-hdr { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); padding:14px 16px 6px; }
 .inq-card:hover { background:var(--surface2); }
 .inq-card-name { font-weight:600; font-size:14px; }
 .inq-card-meta { font-size:12px; color:var(--text3); margin-top:3px; }
@@ -587,6 +593,7 @@ if (typeof marked !== 'undefined') {
         <div class="tabs">
           <div class="tab active" onclick="switchTab('kanban',this)">Kanban</div>
           <div class="tab" onclick="switchTab('list',this)">List View</div>
+          <div class="tab" onclick="switchTab('inq-tab',this)">Inquiries</div>
         </div>
 
         <!-- Kanban -->
@@ -611,6 +618,12 @@ if (typeof marked !== 'undefined') {
               <tbody id="leads-table-body"></tbody>
             </table>
           </div>
+        </div>
+
+        <!-- Catering Inquiries (from KV) -->
+        <div id="view-inq-tab" style="display:none">
+          <div id="pipeline-inq-loading" style="text-align:center;padding:40px;color:var(--text3)">Loading inquiries…</div>
+          <div id="pipeline-inq-groups"></div>
         </div>
       </div>
     </div>
@@ -907,6 +920,7 @@ if (typeof marked !== 'undefined') {
 
       <!-- LIST VIEW -->
       <div id="inq-list-view">
+        <div id="inq-chips" class="inq-chips"></div>
         <div class="content">
           <div id="inq-loading" style="text-align:center;padding:40px;color:var(--text3)">Loading inquiries…</div>
           <div id="inq-empty" class="empty-state" style="display:none">
@@ -1268,6 +1282,8 @@ function switchTab(tab, el) {
   el.classList.add('active');
   document.getElementById('view-kanban').style.display = tab === 'kanban' ? 'block' : 'none';
   document.getElementById('view-list').style.display = tab === 'list' ? 'block' : 'none';
+  document.getElementById('view-inq-tab').style.display = tab === 'inq-tab' ? 'block' : 'none';
+  if (tab === 'inq-tab') loadPipelineInquiries();
 }
 
 // ============================================================
@@ -2496,6 +2512,113 @@ const INQ_STATUS_BADGE = {
   booked: 'badge-booked', declined: 'badge-lost'
 };
 
+let currentInqFilter = 'all';
+let inquiriesCache   = null; // cached full list for re-filtering without refetch
+
+function setInqFilter(status) {
+  currentInqFilter = status;
+  renderInqCards();
+  // Update chip active states
+  document.querySelectorAll('.inq-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.filter === status);
+  });
+}
+
+function renderInqCardHTML(inq) {
+  const name   = inq.customer_name || inq.from || 'Unknown';
+  const date   = inq.event_date ? '📅 ' + inq.event_date : 'Date TBD';
+  const guests = inq.guest_count ? ' · 👥 ' + inq.guest_count + ' guests' : '';
+  const badge  = INQ_STATUS_BADGE[inq.status] || 'badge-new';
+  const label  = INQ_STATUS_LABELS[inq.status] || inq.status || 'new';
+  const eDate  = inq.email_date ? new Date(inq.email_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+  return '<div class="inq-card" onclick="openInquiry(\'' + inq.threadId + '\')">'
+    + '<div class="inq-card-name">' + name + '</div>'
+    + '<div class="inq-card-meta">' + date + guests + '</div>'
+    + '<div class="inq-card-meta" style="margin-top:2px;color:var(--text2)">' + (inq.subject || '') + '</div>'
+    + '<div class="inq-card-bottom">'
+      + '<span class="k-badge ' + badge + '">' + label + '</span>'
+      + '<span style="font-size:11px;color:var(--text3)">' + eDate + '</span>'
+    + '</div></div>';
+}
+
+function renderInqCards() {
+  const cardsEl = document.getElementById('inq-cards');
+  const emptyEl = document.getElementById('inq-empty');
+  if (!cardsEl || !inquiriesCache) return;
+  const filtered = currentInqFilter === 'all'
+    ? inquiriesCache
+    : inquiriesCache.filter(i => i.status === currentInqFilter);
+  if (!filtered.length) {
+    emptyEl.style.display = 'block';
+    cardsEl.innerHTML = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  cardsEl.innerHTML = filtered.map(renderInqCardHTML).join('');
+}
+
+function renderInqChips() {
+  const chipsEl = document.getElementById('inq-chips');
+  if (!chipsEl || !inquiriesCache) return;
+  const ALL_STATUSES = ['new','needs_info','quote_drafted','quote_approved','quote_sent','booked','declined'];
+  const counts = { all: inquiriesCache.length };
+  ALL_STATUSES.forEach(s => { counts[s] = inquiriesCache.filter(i => i.status === s).length; });
+  const defs = [
+    { key:'all', label:'All' }, { key:'new', label:'New' }, { key:'needs_info', label:'Needs Info' },
+    { key:'quote_drafted', label:'Quote Drafted' }, { key:'quote_approved', label:'Approved' },
+    { key:'quote_sent', label:'Quote Sent' }, { key:'booked', label:'Booked' }, { key:'declined', label:'Declined' },
+  ];
+  chipsEl.innerHTML = defs
+    .filter(c => c.key === 'all' || (counts[c.key] || 0) > 0)
+    .map(c => {
+      const active = currentInqFilter === c.key ? ' active' : '';
+      return '<button class="inq-chip' + active + '" data-filter="' + c.key + '" onclick="setInqFilter(\'' + c.key + '\')">' +
+        c.label + ' <span style="opacity:0.65">(' + (counts[c.key] || 0) + ')</span></button>';
+    }).join('');
+}
+
+async function loadPipelineInquiries() {
+  const loadEl  = document.getElementById('pipeline-inq-loading');
+  const groupsEl = document.getElementById('pipeline-inq-groups');
+  if (!groupsEl) return;
+  loadEl.style.display = 'block';
+  groupsEl.innerHTML = '';
+  try {
+    const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
+    const d = await r.json();
+    loadEl.style.display = 'none';
+    const items = (d.inquiries || []).filter(i => !i.threadId.startsWith('test-'));
+    if (!items.length) {
+      groupsEl.innerHTML = '<p style="padding:16px;color:var(--text3)">No catering inquiries yet.</p>';
+      return;
+    }
+    const ORDER = ['new','needs_info','quote_drafted','quote_approved','quote_sent','booked','declined'];
+    const groups = {};
+    items.forEach(inq => { const s = inq.status || 'new'; if (!groups[s]) groups[s] = []; groups[s].push(inq); });
+    groupsEl.innerHTML = ORDER
+      .filter(s => groups[s] && groups[s].length)
+      .map(s => {
+        const label = INQ_STATUS_LABELS[s] || s;
+        const badge = INQ_STATUS_BADGE[s] || 'badge-new';
+        const cards = groups[s].map(inq => {
+          const name   = inq.customer_name || inq.from || 'Unknown';
+          const evDate = inq.event_date ? '📅 ' + inq.event_date : 'Date TBD';
+          const guests = inq.guest_count ? ' · 👥 ' + inq.guest_count : '';
+          const eDate  = inq.email_date ? new Date(inq.email_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+          return '<div class="inq-card" onclick="showPage(\'inquiries\');openInquiry(\'' + inq.threadId + '\')" style="margin:0 16px 8px">'
+            + '<div class="inq-card-name">' + name + '</div>'
+            + '<div class="inq-card-meta">' + evDate + guests + '</div>'
+            + '<div class="inq-card-bottom"><span class="k-badge ' + badge + '">' + label + '</span>'
+            + '<span style="font-size:11px;color:var(--text3)">' + eDate + '</span></div></div>';
+        }).join('');
+        return '<div class="pipeline-inq-group-hdr">' + label + ' (' + groups[s].length + ')</div>' + cards;
+      }).join('');
+  } catch(e) {
+    if (loadEl) loadEl.style.display = 'none';
+    groupsEl.innerHTML = '<p style="color:var(--red);padding:16px">Failed: ' + e.message + '</p>';
+  }
+}
+
 async function loadInquiries() {
   const loadEl  = document.getElementById('inq-loading');
   const emptyEl = document.getElementById('inq-empty');
@@ -2508,25 +2631,12 @@ async function loadInquiries() {
     const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
     const d = await r.json();
     loadEl.style.display = 'none';
-    if (!d.ok || !d.inquiries || !d.inquiries.length) {
+    if (!d.inquiries || !d.inquiries.length) {
       emptyEl.style.display = 'block'; return;
     }
-    cardsEl.innerHTML = d.inquiries.map(inq => {
-      const name   = inq.customer_name || inq.from || 'Unknown';
-      const date   = inq.event_date ? '📅 ' + inq.event_date : 'Date TBD';
-      const guests = inq.guest_count ? ' · 👥 ' + inq.guest_count + ' guests' : '';
-      const badge  = INQ_STATUS_BADGE[inq.status] || 'badge-new';
-      const label  = INQ_STATUS_LABELS[inq.status] || inq.status || 'new';
-      const upd    = inq.updated_at ? new Date(inq.updated_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-      return '<div class="inq-card" onclick="openInquiry(\'' + inq.threadId + '\')">' +
-        '<div class="inq-card-name">' + name + '</div>' +
-        '<div class="inq-card-meta">' + date + guests + '</div>' +
-        '<div class="inq-card-meta" style="margin-top:2px;color:var(--text2)">' + (inq.subject || '') + '</div>' +
-        '<div class="inq-card-bottom">' +
-          '<span class="k-badge ' + badge + '">' + label + '</span>' +
-          '<span style="font-size:11px;color:var(--text3)">' + upd + '</span>' +
-        '</div></div>';
-    }).join('');
+    inquiriesCache = d.inquiries;
+    renderInqChips();
+    renderInqCards();
   } catch(e) {
     loadEl.style.display = 'none';
     cardsEl.innerHTML = '<p style="color:var(--red);padding:16px">Failed to load: ' + e.message + '</p>';
