@@ -1086,6 +1086,7 @@ if (typeof marked !== 'undefined') {
             <button class="btn" id="inq-approve-btn" onclick="approveInquiryQuote()" style="color:#6ee7b7;border-color:#6ee7b750">✅ Approve Quote</button>
             <button class="btn" id="inq-rmi-btn" onclick="requestMoreInfo()" style="color:var(--amber);border-color:var(--amber-border)">❓ Request More Info</button>
             <button class="btn" id="inq-view-email-btn" onclick="viewInquiryEmail()" style="color:var(--text2)">📧 View Email</button>
+            <button class="btn" id="inq-revise-btn" onclick="if(typeof quoteReviseOpen==='function')quoteReviseOpen(currentInquiry)" style="display:none;color:var(--text2)">📋 Revise in Builder</button>
           </div>
 
         </div><!-- /content -->
@@ -2886,9 +2887,12 @@ function renderInqCards() {
     filtered = filtered.filter(i => inqMatchesSearch(i, inqSearchTerm));
   }
   if (!filtered.length) {
+    const isDateFiltered = currentInqDateFilter !== 'all';
     const msg = inqSearchTerm
       ? '<p>🔍 No results for "<strong>' + inqSearchTerm.replace(/</g, '&lt;') + '</strong>"</p>'
-      : '<p>📭 No inquiries yet.</p><p style="color:var(--text2);font-size:12px">The cron poller checks info@blusbarbeque.com every 30 min.</p>';
+      : isDateFiltered
+        ? '<p>📅 No inquiries match this date range.</p><p style="color:var(--text2);font-size:12px">Try "All Dates" to see everything.</p>'
+        : '<p>📭 No inquiries yet.</p><p style="color:var(--text2);font-size:12px">The cron poller checks info@blusbarbeque.com every 30 min.</p>';
     emptyEl.innerHTML = msg;
     emptyEl.style.display = 'block';
     cardsEl.innerHTML = '';
@@ -3435,6 +3439,8 @@ function renderInquiryDetail(inq) {
     document.getElementById('inq-quote-summary').innerHTML = '';
   } else if (q && q.line_items && q.line_items.length) {
     qSec.style.display = 'block';
+    var reviseBtn = document.getElementById('inq-revise-btn');
+    if (reviseBtn) reviseBtn.style.display = '';
     document.getElementById('inq-quote-lines').innerHTML = q.line_items.map((li, i) =>
       '<div class="inq-quote-line">' +
         '<span style="flex:2;font-size:13px">' + li.name + '</span>' +
@@ -3469,6 +3475,8 @@ function renderInquiryDetail(inq) {
     if (ccDiv2) ccDiv2.style.display = 'none';
     var texRow2 = document.getElementById('inq-tax-exempt-row');
     if (texRow2) texRow2.style.display = 'none';
+    var reviseBtn2 = document.getElementById('inq-revise-btn');
+    if (reviseBtn2) reviseBtn2.style.display = 'none';
   }
 
   // Activity log section
@@ -4226,5 +4234,6 @@ function closeMobileSidebar() {
 <script defer src="/static/js/deposits.js"></script>
 <script defer src="/static/js/repeat-customer.js"></script>
 <script defer src="/static/js/pipeline-alerts.js"></script>
+<script defer src="/static/js/quote-revise.js"></script>
 </body>
 </html>
