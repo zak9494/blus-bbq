@@ -85,7 +85,7 @@ function isPermanentError(err) {
       /p256dh|invalid|bad|malformed/i.test(String(err.body))) return true;
   // Encryption failure before HTTP: bad p256dh/auth keys stored in KV
   if (!err.statusCode && err.message &&
-      /p256dh|65 bytes|16 bytes|bytes long/i.test(err.message)) return true;
+      /p256dh.*bytes|auth.*bytes/i.test(err.message)) return true;
   return false;
 }
 
