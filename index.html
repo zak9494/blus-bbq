@@ -250,6 +250,8 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 
 /* MENU PICKER */
 .menu-section { margin-bottom: 14px; }
+/* Special Request field — large bordered box, expands to content, no truncation */
+.special-request-input { min-height: 120px; resize: vertical; line-height: 1.55; font-family: inherit; border: 1px solid var(--border2); border-radius: var(--radius); padding: 10px 12px; background: var(--surface2); color: var(--text); width: 100%; box-sizing: border-box; }
 .menu-section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
 .menu-items-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .menu-item-check { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: var(--radius-sm); cursor: pointer; transition: background 0.1s; }
@@ -808,8 +810,8 @@ if (typeof marked !== 'undefined') {
             </div>
 
             <div class="form-group" style="margin-top:14px">
-              <label class="form-label">Notes / Special Requests</label>
-              <textarea class="form-input" id="q-notes" rows="2" placeholder="Any special instructions..."></textarea>
+              <label class="form-label">Special Requests</label>
+              <textarea class="form-input special-request-input" id="q-special-requests" placeholder="Any special dietary needs, setup instructions, or other requests..."></textarea>
             </div>
           </div>
 
@@ -1773,11 +1775,8 @@ function updatePreview() {
 
   const pct = parseFloat(document.getElementById('charge-pct').value) || 0;
   const service = document.getElementById('q-service').value;
-  const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? 50 : 0;
-  const charge = subtotal * (pct / 100);
-  const baseTax = Math.round(subtotal * 0.0825 * 100) / 100;
-  const tax = qbTaxExempt ? 0 : baseTax;
-  const total = subtotal + charge + tax + deliveryFee;
+  const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? window.QB_DELIVERY_FEE : 0;
+  const { serviceCharge: charge, baseTax, displayTax: tax, total } = window.calcQuoteTotals(subtotal, pct, deliveryFee, qbTaxExempt);
 
   document.getElementById('preview-total').textContent = '$' + total.toFixed(2);
   if (qbTaxExempt) {
@@ -1832,7 +1831,7 @@ function newQuote() {
   document.getElementById('quote-number').textContent = `#QT-${currentQuoteNumber}`;
   selectedItems = {};
   document.querySelectorAll('#page-quotes input[type=checkbox]').forEach(cb => cb.checked = false);
-  ['q-name','q-email','q-date','q-time','q-address','q-notes'].forEach(id => document.getElementById(id).value = '');
+  ['q-name','q-email','q-date','q-time','q-address','q-special-requests'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('q-guests').value = '';
   document.getElementById('q-service').value = 'pickup';
   document.getElementById('q-budget').value = 'unknown';
@@ -1934,7 +1933,7 @@ async function generatePDF() {
   const timeVal = document.getElementById('q-time').value;
   const address = (document.getElementById('q-address').value || '').trim();
   const guests  = document.getElementById('q-guests').value;
-  const notes   = (document.getElementById('q-notes').value || '').trim();
+  const notes   = (document.getElementById('q-special-requests').value || '').trim();
   const service = document.getElementById('q-service').value;
   const pct     = parseFloat(document.getElementById('charge-pct').value) || 0;
 
@@ -2248,7 +2247,7 @@ async function saveQuoteAsInquiry() {
   const timeVal = document.getElementById('q-time').value;
   const address = (document.getElementById('q-address').value || '').trim();
   const guests  = document.getElementById('q-guests').value;
-  const notes   = (document.getElementById('q-notes').value || '').trim();
+  const specialRequests = (document.getElementById('q-special-requests').value || '').trim();
   const service = document.getElementById('q-service').value;
   const pct     = parseFloat(document.getElementById('charge-pct').value) || 0;
 
@@ -2259,12 +2258,9 @@ async function saveQuoteAsInquiry() {
     return { name: item.name, unit: item.unit, unit_price: item.price, qty, subtotal: parseFloat((item.price * qty).toFixed(2)) };
   });
 
-  const subtotal      = items.reduce(function(s, i) { return s + i.subtotal; }, 0);
-  const serviceCharge = parseFloat((subtotal * (pct / 100)).toFixed(2));
-  const deliveryFee   = (service === 'delivery' || service === 'delivery_setup') ? 50 : 0;
-  const baseTax       = Math.round(subtotal * 0.0825 * 100) / 100;
-  const tax           = qbTaxExempt ? 0 : baseTax;
-  const grandTotal    = parseFloat((subtotal + serviceCharge + tax + deliveryFee).toFixed(2));
+  const subtotal    = items.reduce(function(s, i) { return s + i.subtotal; }, 0);
+  const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? window.QB_DELIVERY_FEE : 0;
+  const { serviceCharge, baseTax, displayTax: tax, total: grandTotal } = window.calcQuoteTotals(subtotal, pct, deliveryFee, qbTaxExempt);
 
   const quote = items.length ? {
     line_items:         items,
@@ -2294,7 +2290,7 @@ async function saveQuoteAsInquiry() {
         guest_count:   guests ? parseInt(guests, 10) : null,
         service_type:  service,
         delivery_address: address,
-        notes,
+        special_requests: specialRequests,
         quote,
       })
     });
@@ -3603,6 +3599,14 @@ function renderInquiryDetail(inq) {
   grid.innerHTML = Object.entries(INQ_FIELD_LABELS).map(([key, label]) => {
     const val = ef[key];
     const displayVal = Array.isArray(val) ? val.join(', ') : (val !== null && val !== undefined ? String(val) : '');
+    if (key === 'special_requests') {
+      return '<div class="form-group" style="margin-bottom:0;grid-column:1/-1">' +
+        '<label class="form-label">' + label + '</label>' +
+        '<textarea class="form-input special-request-input" id="inq-field-' + key + '" placeholder="' + (val === null ? 'not provided' : '') + '">' +
+        displayVal.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+        '</textarea>' +
+      '</div>';
+    }
     return '<div class="form-group" style="margin-bottom:0">' +
       '<label class="form-label">' + label + '</label>' +
       '<input class="form-input" id="inq-field-' + key + '" value="' + displayVal.replace(/"/g,'&quot;') + '" placeholder="' + (val === null ? 'not provided' : '') + '">' +
@@ -3734,10 +3738,11 @@ function recalcQuoteLine(idx) {
   li.subtotal = Math.round(qty * price * 100) / 100;
   document.getElementById('inq-li-sub-' + idx).textContent = '$' + li.subtotal.toFixed(2);
   const q = currentInquiry.quote;
-  q.food_subtotal  = Math.round(q.line_items.reduce((s, l) => s + l.subtotal, 0) * 100) / 100;
-  q.service_charge = Math.round(q.food_subtotal * (q.service_charge_pct || 0) / 100 * 100) / 100;
-  q.sales_tax      = Math.round(q.food_subtotal * 0.0825 * 100) / 100;
-  q.total          = Math.round((q.food_subtotal + q.service_charge + q.sales_tax + (q.delivery_fee || 0)) * 100) / 100;
+  q.food_subtotal = Math.round(q.line_items.reduce((s, l) => s + l.subtotal, 0) * 100) / 100;
+  const _qt = window.calcQuoteTotals(q.food_subtotal, q.service_charge_pct || 0, q.delivery_fee || 0, q.tax_exempt);
+  q.service_charge = _qt.serviceCharge;
+  q.sales_tax      = _qt.baseTax;
+  q.total          = _qt.total;
   renderQuoteSummary(q);
 }
 
@@ -4528,6 +4533,7 @@ function closeMobileSidebar() {
   document.querySelector('.app').classList.remove('sidebar-open');
 }
 </script>
+<script defer src="/static/js/quote-engine.js"></script>
 <script defer src="/static/js/calendar.js"></script>
 <script defer src="/static/js/deposits.js"></script>
 <script defer src="/static/js/repeat-customer.js"></script>
