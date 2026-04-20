@@ -191,7 +191,7 @@ module.exports = async (req, res) => {
 
   // ── List matching threads ───────────────────────────────────────────────────
   // Broad catering keyword query — Stage 1 triage inbox catches all potential inquiries
-  const q = encodeURIComponent('in:inbox newer_than:60d (catering OR event OR party OR wedding OR BBQ OR quote)');
+  const q = encodeURIComponent('in:inbox newer_than:60d (catering OR event OR party OR wedding OR BBQ OR quote OR "new submission" OR "catering inquiry" OR "contact form" OR "new contact")');
   const listResp = await httpsGet('gmail.googleapis.com',
     `/gmail/v1/users/me/messages?q=${q}&maxResults=100`,
     { Authorization: authHeader });
