@@ -3800,13 +3800,8 @@ function updateCalAuthStatus(connected) {
 async function registerCalendarWebhook() {
   try {
     showToast('Registering push webhook\u2026');
-    // Send secret in both query string and POST body — belt-and-suspenders
-    // in case Vercel rewrites strip query params on POST requests.
-    const r = await fetch('/api/calendar/watch-register?secret=' + encodeURIComponent(INQ_SECRET), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret: INQ_SECRET }),
-    });
+    // Auth is handled server-side by OAuth token presence in KV — no secret needed.
+    const r = await fetch('/api/calendar/watch-register', { method: 'POST' });
     const d = await r.json();
     if (d.ok) {
       showToast('\u2713 Push webhook registered (expires ' + new Date(+d.expiration).toLocaleDateString() + ')');

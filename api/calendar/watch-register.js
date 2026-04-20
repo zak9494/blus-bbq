@@ -21,30 +21,9 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Accept secret from query string OR request body (belt-and-suspenders for
-  // cases where Vercel rewrites strip query params on POST requests).
-  const q      = req.query || {};
-  let body = req.body;
-  if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
-  body = body || {};
-  const secret   = q.secret || body.secret || '';
-  const expected = process.env.INQ_SECRET || process.env.SELF_MODIFY_SECRET;
-
-  if (!expected) {
-    // Env vars not set — return 500 with clear message instead of a misleading 401
-    return res.status(500).json({
-      error: 'Server misconfiguration: INQ_SECRET and SELF_MODIFY_SECRET env vars are not set on this deployment.',
-      fix:   'Set INQ_SECRET in Vercel project settings → Environment Variables.',
-    });
-  }
-  if (!secret || secret !== expected) {
-    return res.status(401).json({
-      error: 'Unauthorized',
-      detail: !secret
-        ? 'No secret provided. Send ?secret=INQ_SECRET as a query param or in the POST body.'
-        : 'Secret mismatch. Check that the INQ_SECRET env var in Vercel matches the hardcoded value in index.html.',
-    });
-  }
+  // No separate secret check needed — getAccessToken() below proves authorization
+  // by requiring a valid OAuth token in KV (stored by /api/auth/init flow).
+  // A drive-by caller with no token gets a 500 from getAccessToken(), not a silent pass.
 
   try {
     const token      = await getAccessToken();
