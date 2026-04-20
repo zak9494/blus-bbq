@@ -362,6 +362,14 @@ tr:hover td { background: var(--surface2); }
   .topbar-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100vw - 180px); }
   /* Compose modal: must scroll when soft keyboard opens */
   #inq-compose-modal { max-height: calc(100vh - 60px); overflow-y: auto; }
+  /* Kanban: hide empty columns on mobile so non-empty ones are reachable without massive horizontal scroll */
+  .pip-col-empty { display: none; }
+  /* Quote line items: wrap in scroll container on narrow screens */
+  #inq-quote-section { overflow-x: auto; }
+  /* Activity log + email bodies: prevent long strings from blowing out the layout */
+  #inq-activity-entries, .inq-email-body-text { word-break: break-word; overflow-wrap: break-word; }
+  /* Inquiry detail: clip horizontal overflow so no child blows out the viewport width */
+  .inq-detail-scroll { overflow-x: hidden; }
 }
 
 /* Extra breakpoint: very narrow (375px iPhone SE) */
@@ -1016,6 +1024,7 @@ if (typeof marked !== 'undefined') {
             <button class="btn btn-primary" onclick="saveInquiryDraft()">💾 Save Draft</button>
             <button class="btn" id="inq-approve-btn" onclick="approveInquiryQuote()" style="color:#6ee7b7;border-color:#6ee7b750">✅ Approve Quote</button>
             <button class="btn" id="inq-rmi-btn" onclick="requestMoreInfo()" style="color:var(--amber);border-color:var(--amber-border)">❓ Request More Info</button>
+            <button class="btn" id="inq-view-email-btn" onclick="viewInquiryEmail()" style="color:var(--text2)">📧 View Email</button>
           </div>
 
         </div><!-- /content -->
@@ -1161,6 +1170,20 @@ if (typeof marked !== 'undefined') {
         <button class="btn" onclick="closeModal('inq-compose-modal')">Cancel</button>
         <button class="btn btn-primary" id="inq-send-now-btn" onclick="sendInqEmailNow()">Send Now →</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW EMAIL MODAL -->
+<div class="modal-overlay" id="inq-email-modal">
+  <div class="modal" style="max-width:600px;width:calc(100vw - 32px)">
+    <div class="modal-title">Original Email</div>
+    <div id="inq-email-meta" style="font-size:12px;color:var(--text2);margin-bottom:12px;display:flex;flex-direction:column;gap:4px;padding:10px 12px;background:var(--surface2);border-radius:6px;word-break:break-word"></div>
+    <div style="max-height:340px;overflow-y:auto;overflow-x:hidden;background:var(--surface2);border-radius:6px;padding:12px">
+      <pre id="inq-email-body" class="inq-email-body-text" style="margin:0;font-family:inherit;font-size:12px;line-height:1.6;color:var(--text1);white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('inq-email-modal')">Close</button>
     </div>
   </div>
 </div>
@@ -1367,7 +1390,8 @@ function renderKanban() {
           + '</div>'
         + '</div>';
       }).join('');
-      return '<div class="pip-col">'
+      var isEmpty = !cards;
+      return '<div class="pip-col' + (isEmpty ? ' pip-col-empty' : '') + '">'
         + '<div class="pip-col-hdr"><span>' + (INQ_STATUS_LABELS[s] || s) + '</span><span>' + (groups[s] ? groups[s].length : 0) + '</span></div>'
         + '<div class="pip-col-body">' + (cards || '<p style="font-size:11px;color:var(--text3);padding:8px">Empty</p>') + '</div>'
       + '</div>';
@@ -3053,6 +3077,33 @@ function renderInquiryDetail(inq) {
     if (actLogEl) actLogEl.style.display = 'none';
     if (ackBtn) ackBtn.style.display = 'none';
   }
+}
+
+function viewInquiryEmail() {
+  if (!currentInquiry) return;
+  var raw = currentInquiry.raw_email;
+  var metaEl = document.getElementById('inq-email-meta');
+  var bodyEl = document.getElementById('inq-email-body');
+  if (!raw || (!raw.body && !raw.from && !raw.subject)) {
+    metaEl.innerHTML = '<span style="color:var(--text3)">No original email stored for this inquiry.</span>';
+    bodyEl.textContent = '';
+  } else {
+    var dateStr = '—';
+    if (raw.date) {
+      try {
+        dateStr = new Date(raw.date).toLocaleString('en-US', {
+          timeZone: 'America/Chicago', month: 'short', day: 'numeric',
+          year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+        });
+      } catch(e) { dateStr = raw.date; }
+    }
+    metaEl.innerHTML =
+      '<div><strong>From:</strong> ' + (raw.from || '—') + '</div>' +
+      '<div><strong>Date:</strong> ' + dateStr + '</div>' +
+      '<div><strong>Subject:</strong> ' + (raw.subject || '—') + '</div>';
+    bodyEl.textContent = raw.body || '(no body)';
+  }
+  openModal('inq-email-modal');
 }
 
 function recalcQuoteLine(idx) {
