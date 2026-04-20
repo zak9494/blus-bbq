@@ -1,97 +1,103 @@
-/* ===== MODULE: PUSH SUBSCRIPTION STORE
-   POST   /api/notifications/subscribe  { secret, subscription: PushSubscription }
-   DELETE /api/notifications/subscribe?secret=...&endpoint=<encoded>
-   GET    /api/notifications/subscribe?secret=...  → { ok, count, subscriptions }
-   KV key: push:subscriptions → JSON array (max 50)
-   ===== */
-'use strict';
-const https = require('https');
+/* ===== MODULE: PUSH SUBSCRIPTION MANAGER =====
+   GET  /api/notifications/subscribe           -> list count
+   POST /api/notifications/subscribe           -> store subscription
+   DELETE /api/notifications/subscribe?purge=1 -> wipe all (admin)
+*/
 
-const KV_KEY  = 'push:subscriptions';
-const MAX_SUBS = 50;
-
-function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
-function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
+const KV_URL   = process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+const SECRET   = process.env.SELF_MODIFY_SECRET;
+const KV_KEY   = 'push:subscriptions';
 
 async function kvGet(key) {
-  return new Promise(resolve => {
-    const url = kvUrl(), tok = kvToken();
-    if (!url) return resolve(null);
-    const u = new URL(url + '/get/' + encodeURIComponent(key));
-    const opts = { hostname: u.hostname, path: u.pathname + u.search, method: 'GET',
-      headers: { Authorization: 'Bearer ' + tok } };
-    const req = https.request(opts, r => {
-      let d = ''; r.on('data', c => d += c);
-      r.on('end', () => { try { resolve(JSON.parse(d).result); } catch { resolve(null); } });
-    });
-    req.on('error', () => resolve(null)); req.end();
+  const r = await fetch(`${KV_URL}/get/${key}`, {
+    headers: { Authorization: `Bearer ${KV_TOKEN}` }
   });
+  const j = await r.json();
+  return j.result;
 }
 
 async function kvSet(key, value) {
-  return new Promise((resolve, reject) => {
-    const url = kvUrl(), tok = kvToken();
-    if (!url) return resolve(null);
-    const body = JSON.stringify([['SET', key, typeof value === 'string' ? value : JSON.stringify(value)]]);
-    const u = new URL(url + '/pipeline');
-    const opts = { hostname: u.hostname, path: u.pathname, method: 'POST',
-      headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body) } };
-    const req = https.request(opts, r => { r.resume().on('end', resolve); });
-    req.on('error', reject);
-    req.write(body); req.end();
+  const r = await fetch(`${KV_URL}/set/${key}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value })
   });
+  return r.json();
 }
 
-module.exports = async (req, res) => {
+function validateSubscription(sub) {
+  if (!sub || typeof sub.endpoint !== 'string') {
+    return 'subscription.endpoint must be a string';
+  }
+  try { new URL(sub.endpoint); } catch(e) {
+    return 'subscription.endpoint is not a valid URL';
+  }
+  if (!sub.endpoint.startsWith('https://')) {
+    return 'subscription.endpoint must be https';
+  }
+  if (!sub.keys || typeof sub.keys.p256dh !== 'string' || typeof sub.keys.auth !== 'string') {
+    return 'subscription.keys.p256dh and subscription.keys.auth are required strings';
+  }
+  const p256dhBuf = Buffer.from(
+    sub.keys.p256dh.replace(/-/g, '+').replace(/_/g, '/'), 'base64'
+  );
+  if (p256dhBuf.length !== 65) {
+    return 'subscription.keys.p256dh must decode to 65 bytes (got ' + p256dhBuf.length + ')';
+  }
+  const authBuf = Buffer.from(
+    sub.keys.auth.replace(/-/g, '+').replace(/_/g, '/'), 'base64'
+  );
+  if (authBuf.length !== 16) {
+    return 'subscription.keys.auth must decode to 16 bytes (got ' + authBuf.length + ')';
+  }
+  return null;
+}
+
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const secret = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN;
   const q = req.query || {};
 
-  /* ── POST: save subscription ────────────────────────────────── */
+  if (req.method === 'GET') {
+    const raw = await kvGet(KV_KEY);
+    const subs = raw ? JSON.parse(raw) : [];
+    return res.status(200).json({ ok: true, count: subs.length });
+  }
+
+  if (req.method === 'DELETE') {
+    if (q.secret !== SECRET) {
+      return res.status(403).json({ ok: false, error: 'Forbidden' });
+    }
+    if (q.purge === '1') {
+      await kvSet(KV_KEY, JSON.stringify([]));
+      return res.status(200).json({ ok: true, purged: true });
+    }
+    return res.status(400).json({ ok: false, error: 'Missing purge=1' });
+  }
+
   if (req.method === 'POST') {
     const body = req.body || {};
-    if (!secret || body.secret !== secret) return res.status(401).json({ error: 'Unauthorized' });
+    if (body.secret !== SECRET) {
+      return res.status(403).json({ ok: false, error: 'Forbidden' });
+    }
     const sub = body.subscription;
-    if (!sub || !sub.endpoint) return res.status(400).json({ error: 'subscription.endpoint required' });
-    try {
-      const raw  = await kvGet(KV_KEY);
-      const subs = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : [];
-      // Deduplicate by endpoint; newest first
-      const rest = subs.filter(s => s.endpoint !== sub.endpoint);
-      rest.unshift({ ...sub, savedAt: new Date().toISOString() });
-      if (rest.length > MAX_SUBS) rest.length = MAX_SUBS;
-      await kvSet(KV_KEY, JSON.stringify(rest));
-      return res.status(200).json({ ok: true });
-    } catch(err) { return res.status(500).json({ error: err.message }); }
+    const validationError = validateSubscription(sub);
+    if (validationError) {
+      return res.status(400).json({ ok: false, error: validationError });
+    }
+    const raw = await kvGet(KV_KEY);
+    const subs = raw ? JSON.parse(raw) : [];
+    const exists = subs.some(s => s.endpoint === sub.endpoint);
+    if (!exists) {
+      subs.push(sub);
+      await kvSet(KV_KEY, JSON.stringify(subs));
+    }
+    return res.status(200).json({ ok: true, stored: !exists, total: subs.length });
   }
 
-  /* ── GET: list subscriptions (admin) ───────────────────────── */
-  if (req.method === 'GET') {
-    if (!secret || q.secret !== secret) return res.status(401).json({ error: 'Unauthorized' });
-    try {
-      const raw  = await kvGet(KV_KEY);
-      const subs = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : [];
-      return res.status(200).json({ ok: true, count: subs.length });
-    } catch(err) { return res.status(500).json({ error: err.message }); }
-  }
-
-  /* ── DELETE: remove subscription ───────────────────────────── */
-  if (req.method === 'DELETE') {
-    if (!secret || q.secret !== secret) return res.status(401).json({ error: 'Unauthorized' });
-    const endpoint = q.endpoint;
-    if (!endpoint) return res.status(400).json({ error: 'endpoint required' });
-    try {
-      const raw  = await kvGet(KV_KEY);
-      const subs = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : [];
-      const next = subs.filter(s => s.endpoint !== endpoint);
-      await kvSet(KV_KEY, JSON.stringify(next));
-      return res.status(200).json({ ok: true });
-    } catch(err) { return res.status(500).json({ error: err.message }); }
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' });
-};
+  return res.status(405).json({ ok: false, error: 'Method not allowed' });
+}
