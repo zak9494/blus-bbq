@@ -356,8 +356,18 @@ tr:hover td { background: var(--surface2); }
   /* PDF/Quote buttons: 44px tap targets, more breathing room */
   .pdf-btn { min-height: 44px; font-size: 13px; margin-top: 12px; }
   .toast-send-btn { min-height: 44px; font-size: 13px; }
-  /* Inquiries page: 44px tap targets for Archive/Approve buttons */
-  .inq-card-actions .btn { min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  /* Inquiries page: 44px tap targets for Archive/Approve buttons — stack vertically so
+     neither button overflows the card edge at 375–430px viewport width */
+  .inq-card-actions { flex-direction: column; gap: 6px; }
+  .inq-card-actions .btn { min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 12px; width: 100%; flex: none; }
+  /* Inquiry chips: wrap onto multiple lines on mobile so every chip is reachable
+     without horizontal scrolling (which can bleed into page scroll on iOS Safari) */
+  .inq-chips { flex-wrap: wrap; overflow-x: visible; }
+  /* Clip any rogue overflow in the main content column */
+  .main { overflow-x: hidden; }
+  /* Hide hamburger while the nav drawer is open — the drawer's own close affordance
+     (tap-outside overlay) is sufficient; showing both at once is confusing on iOS */
+  .sidebar-open .mobile-hamburger { display: none !important; }
   /* Topbar subtitle: truncate so it doesn't overflow at 375px with 64px left padding */
   .topbar-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100vw - 180px); }
   /* Compose modal: must scroll when soft keyboard opens */
@@ -2256,6 +2266,10 @@ function showToast(msg) {
 // SELF-MODIFY ENGINE
 // ============================================================
 function openModify() {
+  // Close mobile sidebar first — if opened from nav, the .sidebar-open class keeps
+  // .mobile-overlay at pointer-events:auto, which (iOS Safari bug) swallows hamburger
+  // taps even though the hamburger is at a higher z-index. Closing first is safe.
+  closeMobileSidebar();
   renderModifyHistory();
   document.getElementById('modify-prompt').value = '';
   setStep(0);
@@ -2675,14 +2689,17 @@ function renderInqCards() {
 
 function getFilteredInquiries(filter) {
   if (!inquiriesCache) return [];
-  if (filter === 'all')      return inquiriesCache.filter(i => i.status !== 'archived');
-  if (filter === 'new')      return inquiriesCache.filter(i => i.status !== 'archived' && !i.approved);
-  if (filter === 'wix')      return inquiriesCache.filter(i => i.source === 'wix' && i.status !== 'archived');
-  if (filter === 'ezcater')  return inquiriesCache.filter(i => i.source === 'ezcater');
-  if (filter === 'direct')   return inquiriesCache.filter(i => i.source === 'direct' && i.status !== 'archived');
-  if (filter === 'archived') return inquiriesCache.filter(i => i.status === 'archived');
-  if (filter === 'needs_review') return inquiriesCache.filter(i => i.has_unreviewed_update && i.status !== 'archived');
-  return inquiriesCache.filter(i => i.status !== 'archived');
+  // Strip test/seed records — threadIds prefixed with 'test-' are dev fixtures
+  // not real inquiries and should never appear in the UI
+  const real = inquiriesCache.filter(i => !i.threadId.startsWith('test-'));
+  if (filter === 'all')      return real.filter(i => i.status !== 'archived');
+  if (filter === 'new')      return real.filter(i => i.status !== 'archived' && !i.approved);
+  if (filter === 'wix')      return real.filter(i => i.source === 'wix' && i.status !== 'archived');
+  if (filter === 'ezcater')  return real.filter(i => i.source === 'ezcater');
+  if (filter === 'direct')   return real.filter(i => i.source === 'direct' && i.status !== 'archived');
+  if (filter === 'archived') return real.filter(i => i.status === 'archived');
+  if (filter === 'needs_review') return real.filter(i => i.has_unreviewed_update && i.status !== 'archived');
+  return real.filter(i => i.status !== 'archived');
 }
 
 function renderInqChips() {
