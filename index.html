@@ -594,21 +594,8 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
 
-        <!-- Alerts -->
-        <div class="alerts-section" id="alerts-section">
-          <div class="alert alert-urgent">
-            <span>⚑ Sherika Rodgers — event Apr 19, no payment received</span>
-            <span class="alert-action" onclick="openFollowup(3)">Send follow-up →</span>
-          </div>
-          <div class="alert alert-warn">
-            <span>⚑ Audrea Cowan — no response in 3+ days</span>
-            <span class="alert-action" onclick="openFollowup(5)">Draft email →</span>
-          </div>
-          <div class="alert alert-warn">
-            <span>⚑ Danielle Woods — quote sent, awaiting reply</span>
-            <span class="alert-action" onclick="openFollowup(1)">Draft email →</span>
-          </div>
-        </div>
+        <!-- Alerts: hidden (stale hardcoded data replaced by dynamic recent-replies-section) -->
+        <div class="alerts-section" id="alerts-section" style="display:none"></div>
         <div id="recent-replies-section" style="display:none;margin-top:4px"></div>
 
         <!-- Tabs -->
@@ -2807,9 +2794,9 @@ async function loadPipelineInquiries() {
   try {
     const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
     const d = await r.json();
-    // Stage 2: only approved, non-archived, non-test
+    // Show all non-archived, non-test inquiries regardless of approved flag
     pipelineInqCache = (d.inquiries || []).filter(i =>
-      i.approved === true && i.status !== 'archived' && !i.threadId.startsWith('test-'));
+      i.status !== 'archived' && !i.threadId.startsWith('test-'));
     renderKanban(); renderTable(); updateStats();
     // Update Recent Replies dashboard widget
     const replies = (d.inquiries || []).filter(i => i.has_unreviewed_update && i.status !== 'archived').slice(0, 3);
@@ -3410,6 +3397,7 @@ function init() {
   buildMenuPicker('drinks', 'menu-drinks');
   buildMenuPicker('extras', 'menu-extras');
   renderAll();
+  loadPipelineInquiries(); // pre-load on startup (Pipeline is the default page)
 }
 
 
