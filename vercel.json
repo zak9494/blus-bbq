@@ -1,156 +1,17 @@
 {
   "rewrites": [
-    {
-      "source": "/api/chat",
-      "destination": "/api/chat.js"
-    },
-    {
-      "source": "/api/chat-stream",
-      "destination": "/api/chat-stream.js"
-    },
-    {
-      "source": "/api/self-modify",
-      "destination": "/api/self-modify.js"
-    },
-    {
-      "source": "/api/auth/init",
-      "destination": "/api/auth/init.js"
-    },
-    {
-      "source": "/api/auth/callback",
-      "destination": "/api/auth/callback.js"
-    },
-    {
-      "source": "/api/auth/status",
-      "destination": "/api/auth/status.js"
-    },
-    {
-      "source": "/api/auth/gmail",
-      "destination": "/api/auth/gmail.js"
-    },
-    {
-      "source": "/api/gmail/send",
-      "destination": "/api/gmail/send.js"
-    },
-    {
-      "source": "/api/gmail/list-inquiries",
-      "destination": "/api/gmail/list-inquiries.js"
-    },
-    {
-      "source": "/api/gmail/extract-inquiry",
-      "destination": "/api/gmail/extract-inquiry.js"
-    },
-    {
-      "source": "/api/quotes/ai-generate",
-      "destination": "/api/quotes/ai-generate.js"
-    },
-    {
-      "source": "/api/inquiries/save",
-      "destination": "/api/inquiries/save.js"
-    },
-    {
-      "source": "/api/inquiries/list",
-      "destination": "/api/inquiries/list.js"
-    },
-    {
-      "source": "/api/inquiries/get",
-      "destination": "/api/inquiries/get.js"
-    },
-    {
-      "source": "/api/cron/poll-inquiries",
-      "destination": "/api/cron/poll-inquiries.js"
-    },
-    {
-      "source": "/api/inquiries/draft-email",
-      "destination": "/api/inquiries/draft-email.js"
-    },
-    {
-      "source": "/api/inquiries/send-now",
-      "destination": "/api/inquiries/send-now.js"
-    },
-    {
-      "source": "/api/inquiries/archive",
-      "destination": "/api/inquiries/archive.js"
-    },
-    {
-      "source": "/api/inquiries/approve",
-      "destination": "/api/inquiries/approve.js"
-    },
-    {
-      "source": "/api/inquiries/process-followup",
-      "destination": "/api/inquiries/process-followup.js"
-    },
-    {
-      "source": "/api/inquiries/acknowledge",
-      "destination": "/api/inquiries/acknowledge.js"
-    },
-    {
-      "source": "/api/quotes/render-pdf",
-      "destination": "/api/quotes/render-pdf.js"
-    },
-    {
-      "source": "/api/cron/mark-completed",
-      "destination": "/api/cron/mark-completed.js"
-    }
-  ],
-  "functions": {
-    "api/chat-stream.js": {
-      "maxDuration": 300
-    },
-    "api/gmail/list-inquiries.js": {
-      "maxDuration": 60
-    },
-    "api/gmail/extract-inquiry.js": {
-      "maxDuration": 60
-    },
-    "api/quotes/ai-generate.js": {
-      "maxDuration": 60
-    },
-    "api/inquiries/save.js": {
-      "maxDuration": 30
-    },
-    "api/inquiries/list.js": {
-      "maxDuration": 15
-    },
-    "api/inquiries/get.js": {
-      "maxDuration": 15
-    },
-    "api/cron/poll-inquiries.js": {
-      "maxDuration": 60
-    },
-    "api/inquiries/draft-email.js": {
-      "maxDuration": 30
-    },
-    "api/inquiries/send-now.js": {
-      "maxDuration": 20
-    },
-    "api/inquiries/archive.js": {
-      "maxDuration": 20
-    },
-    "api/inquiries/approve.js": {
-      "maxDuration": 30
-    },
-    "api/inquiries/process-followup.js": {
-      "maxDuration": 30
-    },
-    "api/inquiries/acknowledge.js": {
-      "maxDuration": 10
-    },
-    "api/quotes/render-pdf.js": {
-      "maxDuration": 10
-    },
-    "api/cron/mark-completed.js": {
-      "maxDuration": 30
-    }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/poll-inquiries",
-      "schedule": "*/30 * * * *"
-    },
-    {
-      "path": "/api/cron/mark-completed",
-      "schedule": "0 11 * * *"
-    }
+    { "source": "/api/chat", "destination": "/api/chat.js" },
+    { "source": "/api/chat-stream", "destination": "/api/chat-stream.js" },
+    { "source": "/api/self-modify", "destination": "/api/self-modify.js" },
+    { "source": "/api/auth/init", "destination": "/api/auth/init.js" },
+    { "source": "/api/auth/callback", "destination": "/api/auth/callback.js" },
+    { "source": "/api/auth/status", "destination": "/api/auth/status.js" },
+    { "source": "/api/auth/gmail", "destination": "/api/auth/gmail.js" },
+    { "source": "/api/gmail/send", "destination": "/api/gmail/send.js" },
+    { "source": "/api/calendar/list", "destination": "/api/calendar/list.js" },
+    { "source": "/api/calendar/create", "destination": "/api/calendar/create.js" },
+    { "source": "/api/calendar/update", "destination": "/api/calendar/update.js" },
+    { "source": "/api/calendar/delete", "destination": "/api/calendar/delete.js" },
+    { "source": "/api/calendar/webhook", "destination": "/api/calendar/webhook.js" }
   ]
 }
