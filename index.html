@@ -496,10 +496,13 @@ tr:hover td { background: var(--surface2); }
 #modify-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
 #modify-overlay.open { display: flex; pointer-events: none; }
 #modify-overlay.open .modify-box { pointer-events: auto; }
-.modify-box { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 28px; width: 100%; max-width: 560px; }
+.modify-box { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 28px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
 .modify-step { display: none; }
 .modify-step.active { display: block; }
-.step-indicator { display: flex; gap: 8px; margin-bottom: 20px; }
+/* D26: sticky step-indicator at top of scrollable modify-box */
+.step-indicator { display: flex; gap: 8px; margin-bottom: 20px; position: sticky; top: -28px; background: var(--surface); z-index: 2; padding: 28px 0 10px; margin-top: -28px; }
+/* D26: sticky Apply Change footer at bottom of scrollable modify-box */
+.modify-box .modal-footer { position: sticky; bottom: -28px; background: var(--surface); margin-bottom: -28px; padding: 16px 0 28px; border-top: 1px solid var(--border); margin-top: 20px; }
 .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--surface3); transition: background 0.3s; }
 .step-dot.done { background: var(--green); }
 .step-dot.active { background: var(--amber); }
