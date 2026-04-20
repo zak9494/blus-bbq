@@ -1019,6 +1019,9 @@ if (typeof marked !== 'undefined') {
             <div class="inq-fields-grid" id="inq-fields-grid"></div>
           </div>
 
+          <!-- Repeat customer banner (C15) -->
+          <div id="inq-repeat-customer" class="inq-section" style="display:none;background:var(--surface2);border-radius:8px;padding:12px;border:1px solid var(--border)"></div>
+
           <!-- AI Quote (editable line items) -->
           <div class="inq-section" id="inq-quote-section" style="display:none">
             <div class="inq-section-title">AI-Generated Quote</div>
@@ -3226,6 +3229,7 @@ async function openInquiry(threadId) {
     currentInquiry = d.inquiry;
     renderInquiryDetail(d.inquiry);
     if (typeof depositsInit === 'function') depositsInit(d.inquiry);
+    if (typeof repeatCustomerInit === 'function') repeatCustomerInit(d.inquiry);
     document.getElementById('inq-list-view').style.display = 'none';
     document.getElementById('inq-list-topbar').style.display = 'none';
     document.getElementById('inq-detail-view').style.display = 'block';
@@ -4072,5 +4076,6 @@ function closeMobileSidebar() {
 </script>
 <script defer src="/static/js/calendar.js"></script>
 <script defer src="/static/js/deposits.js"></script>
+<script defer src="/static/js/repeat-customer.js"></script>
 </body>
 </html>
