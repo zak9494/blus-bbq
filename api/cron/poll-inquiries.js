@@ -233,7 +233,7 @@ module.exports = async (req, res) => {
     try {
       // Step A: Extract fields
       const extractResp = await callInternal('/api/gmail/extract-inquiry', 'POST', {
-        body: inq.body, subject: inq.subject, from: inq.from, date: inq.date
+        body: inq.body.slice(0, 8000), subject: inq.subject, from: inq.from, date: inq.date
       });
       if (extractResp.status >= 300 || !extractResp.body.ok) {
         throw new Error('extract failed: ' + JSON.stringify(extractResp.body).slice(0,100));
