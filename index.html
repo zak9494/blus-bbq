@@ -356,6 +356,12 @@ tr:hover td { background: var(--surface2); }
   /* PDF/Quote buttons: 44px tap targets, more breathing room */
   .pdf-btn { min-height: 44px; font-size: 13px; margin-top: 12px; }
   .toast-send-btn { min-height: 44px; font-size: 13px; }
+  /* Inquiries page: 44px tap targets for Archive/Approve buttons */
+  .inq-card-actions .btn { min-height: 44px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  /* Topbar subtitle: truncate so it doesn't overflow at 375px with 64px left padding */
+  .topbar-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100vw - 180px); }
+  /* Compose modal: must scroll when soft keyboard opens */
+  #inq-compose-modal { max-height: calc(100vh - 60px); overflow-y: auto; }
 }
 
 /* Extra breakpoint: very narrow (375px iPhone SE) */
