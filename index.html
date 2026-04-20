@@ -3009,9 +3009,74 @@ async function updateInquiryStatus(threadId, newStatus) {
       body: JSON.stringify({ threadId, status: newStatus, history_entry: { action: 'status_changed_to_' + newStatus, actor: 'user' } })
     });
     const d = await r.json();
-    if (d.ok) showToast('Status → ' + newStatus.replace(/_/g,' '));
-    else showToast('Status update failed');
+    if (d.ok) {
+      showToast('Status \u2192 ' + newStatus.replace(/_/g,' '));
+      // Auto-create Google Calendar event when a booking is confirmed
+      if (newStatus === 'booked') {
+        calAutoCreateOnBooking(threadId).catch(function(e) {
+          console.warn('Calendar auto-create failed (non-fatal):', e.message);
+        });
+      }
+    } else {
+      showToast('Status update failed');
+    }
   } catch(e) { showToast('Error: ' + e.message); }
+}
+
+/* ===== MODULE: CALENDAR AUTO-BOOKING ===== */
+// Called when an inquiry transitions to 'booked'.
+// Looks up inquiry data from cache and creates a Google Calendar event.
+// Non-fatal — status change is not rolled back if this fails.
+async function calAutoCreateOnBooking(threadId) {
+  // Find inquiry data in any available cache
+  var inq = null;
+  if (pipelineInqCache) inq = pipelineInqCache.find(function(i) { return i.threadId === threadId; });
+  if (!inq && typeof inquiriesCache !== 'undefined' && inquiriesCache) {
+    inq = inquiriesCache.find(function(i) { return i.threadId === threadId; });
+  }
+  // If not in cache, do a quick fetch
+  if (!inq) {
+    try {
+      var fr = await fetch('/api/inquiries/get?secret=' + INQ_SECRET + '&threadId=' + encodeURIComponent(threadId));
+      if (fr.ok) { var fd = await fr.json(); inq = fd.inquiry || fd; }
+    } catch(_e) {}
+  }
+  if (!inq) return; // can't auto-create without data
+
+  // Check if a calendar event is already linked (avoid duplicates on re-booking)
+  if (inq.calendarEventId) return;
+
+  var payload = {
+    secret:       INQ_SECRET,
+    threadId:     threadId,
+    customerName: inq.customer_name || inq.from || '',
+    guestCount:   inq.guests || inq.guest_count || '',
+    eventDate:    inq.event_date || '',
+    eventTime:    inq.event_time || '',
+    eventAddress: inq.event_address || inq.address || '',
+    email:        inq.email || inq.customer_email || '',
+    phone:        inq.phone || inq.customer_phone || '',
+    quoteTotal:   inq.quote_total || '',
+    notes:        inq.notes || '',
+  };
+
+  if (!payload.eventDate) return; // can't create event without a date
+
+  var resp = await fetch('/api/calendar/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  var data = await resp.json();
+  if (data.ok && data.eventId) {
+    showToast('\uD83D\uDCC5 Added to Google Calendar');
+    // Optionally save the eventId back to the inquiry for dedup
+    fetch('/api/inquiries/save?secret=' + INQ_SECRET, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threadId: threadId, calendarEventId: data.eventId }),
+    }).catch(function() {});
+  }
 }
 
 let pipelineInqView = 'kanban'; // 'kanban' | 'list'
