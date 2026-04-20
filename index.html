@@ -864,6 +864,7 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
         <div class="topbar-actions">
+          <button class="btn" onclick="clearChatHistory()" style="font-size:12px;padding:6px 12px;color:var(--text3)" title="Clear conversation history">🗑 Clear</button>
           <button class="btn" onclick="showPage('pipeline')" style="font-size:20px;padding:2px 12px;line-height:1;" title="Back">&times;</button>
         </div>
       </div>
@@ -1493,6 +1494,7 @@ function showPage(page) {
   if (page === 'inquiries') loadInquiries();
   else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
   if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); }
+  if (page === 'ai') loadChatHistory(); // C21: load persistent history
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
   });
@@ -2278,6 +2280,57 @@ function emailQuote() {
   showToast('Quote emailed to customer!');
 }
 
+/* ===== C21: CHAT HISTORY PERSISTENCE ===== */
+let chatHistoryLoaded = false;
+
+async function loadChatHistory() {
+  if (chatHistoryLoaded) return; // only load once per session
+  try {
+    const r = await fetch('/api/chat/history?secret=' + INQ_SECRET);
+    if (!r.ok) return;
+    const d = await r.json();
+    if (!d.ok || !d.messages || !d.messages.length) return;
+    chatHistory = d.messages;
+    chatHistoryLoaded = true;
+    // Render past messages
+    const container = document.getElementById('chat-messages');
+    if (!container) return;
+    // Remove the welcome message if history exists
+    const welcome = container.querySelector('.chat-msg.ai');
+    if (welcome && d.messages.length > 0) welcome.remove();
+    d.messages.forEach(function(m) { appendChatMsg(m.role === 'user' ? 'user' : 'ai', m.content); });
+    showToast('Chat history loaded (' + d.messages.length + ' messages)', 2500);
+  } catch(e) { /* silently fail — non-critical */ }
+}
+
+async function saveChatHistory() {
+  try {
+    await fetch('/api/chat/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: INQ_SECRET, messages: chatHistory })
+    });
+  } catch(e) { /* silently fail */ }
+}
+
+async function clearChatHistory() {
+  if (!confirm('Clear all chat history?')) return;
+  chatHistory = [];
+  chatHistoryLoaded = false;
+  try {
+    await fetch('/api/chat/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: INQ_SECRET, messages: [] })
+    });
+  } catch(e) { /* silently fail */ }
+  // Reset UI
+  const container = document.getElementById('chat-messages');
+  if (container) container.innerHTML = '<div class="chat-msg ai"><div class="chat-avatar ai">AI</div><div class="chat-bubble">History cleared. How can I help you?</div></div>';
+  showToast('Chat history cleared');
+}
+/* end C21 ============================= */
+
 /* ===== MODULE: AI CHAT ===== */
 const CHAT_SYSTEM = `You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque (17630 Preston Rd, Dallas TX 75252, 214-514-8684, blusbarbeque.com).
 
@@ -2332,6 +2385,7 @@ async function sendChat(textOverride) {
     removeTyping(typingId);
     appendChatMsg('ai', reply);
     chatHistory.push({ role: 'assistant', content: reply });
+    saveChatHistory(); // C21: persist
   } catch(e) {
     removeTyping(typingId);
     appendChatMsg('ai', 'Could not connect to AI. Please check your internet connection and try again.');
@@ -2478,6 +2532,7 @@ async function sendImageToChat(base64, mediaType, filename) {
     removeTyping(typingId);
     appendChatMsg('ai', reply);
     chatHistory.push({ role: 'assistant', content: reply });
+    saveChatHistory(); // C21: persist
   } catch(e) {
     removeTyping(typingId);
     appendChatMsg('ai', 'Could not analyze image. Please try again.');

@@ -35,6 +35,7 @@ const STATIC_MODULE_FILES = [
   'api/pipeline/alerts.js',
   'api/inquiries/by-email.js',
   'api/inquiries/save.js',
+  'api/chat/history.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
