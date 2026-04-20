@@ -794,9 +794,23 @@ if (typeof marked !== 'undefined') {
               <span style="font-size:12px; color:var(--text2);">Delivery fee</span>
               <span style="font-size:12px; color:var(--text);" id="delivery-fee-display">$50.00</span>
             </div>
-            <div class="charge-row">
-              <span style="font-size:12px; color:var(--text2);">TX Sales Tax (8.25%)</span>
+            <div class="charge-row" id="qb-tax-row">
+              <span style="font-size:12px; color:var(--text2);" id="qb-tax-label">TX Sales Tax (8.25%)</span>
               <span style="font-size:12px; color:var(--text);" id="preview-tax">$0.00</span>
+            </div>
+
+            <!-- Tax-exempt toggle (mirrors inquiry detail Q2 feature) -->
+            <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border)">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--text2); font-size:12px;">
+                <input type="checkbox" id="qb-tax-exempt-chk" onchange="qbToggleTaxExempt(this.checked)">
+                <span>Tax Exempt</span>
+              </label>
+              <div id="qb-tax-exempt-cert-row" style="display:none; margin-top:6px">
+                <label style="font-size:11px; color:var(--text3); display:block; margin-bottom:3px">Exemption Certificate Number</label>
+                <input class="form-input" id="qb-tax-exempt-cert" placeholder="e.g. 1-74-1234567-8"
+                  style="font-size:12px; padding:6px 10px; width:100%"
+                  oninput="updatePreview()">
+              </div>
             </div>
 
             <div class="divider"></div>
@@ -1336,6 +1350,7 @@ let nextLeadId = 8;
 let editingLeadId = null;
 let currentQuoteNumber = 1043;
 let selectedItems = {};
+let qbTaxExempt = false;  // standalone quote builder tax-exempt state
 let chatHistory = [];
 
 // ============================================================
@@ -1644,11 +1659,23 @@ function updatePreview() {
   const service = document.getElementById('q-service').value;
   const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? 50 : 0;
   const charge = subtotal * (pct / 100);
-  const tax = Math.round(subtotal * 0.0825 * 100) / 100;
+  const baseTax = Math.round(subtotal * 0.0825 * 100) / 100;
+  const tax = qbTaxExempt ? 0 : baseTax;
   const total = subtotal + charge + tax + deliveryFee;
 
   document.getElementById('preview-total').textContent = '$' + total.toFixed(2);
-  document.getElementById('preview-tax').textContent = '$' + tax.toFixed(2);
+  if (qbTaxExempt) {
+    const certNum = (document.getElementById('qb-tax-exempt-cert').value || '').trim();
+    document.getElementById('preview-tax').textContent = 'Exempt';
+    document.getElementById('qb-tax-label').textContent = certNum
+      ? 'TX Sales Tax (Cert #' + certNum + ')'
+      : 'TX Sales Tax';
+    document.getElementById('preview-tax').style.color = 'var(--text3)';
+  } else {
+    document.getElementById('preview-tax').textContent = '$' + baseTax.toFixed(2);
+    document.getElementById('qb-tax-label').textContent = 'TX Sales Tax (8.25%)';
+    document.getElementById('preview-tax').style.color = 'var(--text)';
+  }
   document.getElementById('delivery-row').style.display = deliveryFee ? 'flex' : 'none';
 
   const serviceLabels = { pickup:'Pickup order', delivery:'Delivery order (+$50)', delivery_setup:'Delivery & setup (+$50)' };
@@ -1695,7 +1722,19 @@ function newQuote() {
   document.getElementById('q-budget').value = 'unknown';
   document.getElementById('charge-pct').value = '0';
   document.getElementById('ai-suggestion-box').classList.remove('show');
+  // Reset tax-exempt state
+  qbTaxExempt = false;
+  document.getElementById('qb-tax-exempt-chk').checked = false;
+  document.getElementById('qb-tax-exempt-cert').value = '';
+  document.getElementById('qb-tax-exempt-cert-row').style.display = 'none';
   updateQtyControls();
+  updatePreview();
+}
+
+function qbToggleTaxExempt(checked) {
+  qbTaxExempt = checked;
+  document.getElementById('qb-tax-exempt-cert-row').style.display = checked ? 'block' : 'none';
+  if (!checked) document.getElementById('qb-tax-exempt-cert').value = '';
   updatePreview();
 }
 
@@ -1740,11 +1779,13 @@ async function generatePDF() {
     return;
   }
 
-  const subtotal     = items.reduce((s, i) => s + i.linePrice, 0);
+  const subtotal      = items.reduce((s, i) => s + i.linePrice, 0);
   const serviceCharge = subtotal * (pct / 100);
-  const deliveryFee  = (service === 'delivery' || service === 'delivery_setup') ? 50 : 0;
-  const tax          = Math.round(subtotal * 0.0825 * 100) / 100;
-  const total        = subtotal + serviceCharge + tax + deliveryFee;
+  const deliveryFee   = (service === 'delivery' || service === 'delivery_setup') ? 50 : 0;
+  const baseTax       = Math.round(subtotal * 0.0825 * 100) / 100;
+  const tax           = qbTaxExempt ? 0 : baseTax;
+  const total         = subtotal + serviceCharge + tax + deliveryFee;
+  const taxExemptCert = qbTaxExempt ? (document.getElementById('qb-tax-exempt-cert').value || '').trim() : '';
 
   // ── Load jsPDF from CDN (once) ─────────────────────────────────────────────
   if (!window.jspdf) {
@@ -1917,8 +1958,16 @@ async function generatePDF() {
     doc.text('$' + deliveryFee.toFixed(2), TV, y, { align: 'right' });
     y += 16;
   }
-  doc.text('TX Sales Tax (8.25%)', TL, y);
-  doc.text('$' + tax.toFixed(2), TV, y, { align: 'right' });
+  if (qbTaxExempt) {
+    doc.setTextColor(120, 120, 120);
+    const certLabel = taxExemptCert ? 'TX Sales Tax (Cert #' + taxExemptCert + ')' : 'TX Sales Tax';
+    doc.text(certLabel, TL, y);
+    doc.text('Exempt', TV, y, { align: 'right' });
+    doc.setTextColor(80, 80, 80);
+  } else {
+    doc.text('TX Sales Tax (8.25%)', TL, y);
+    doc.text('$' + baseTax.toFixed(2), TV, y, { align: 'right' });
+  }
   y += 16;
 
   doc.setDrawColor(200, 200, 200);
