@@ -570,7 +570,8 @@ if (typeof marked !== 'undefined') {
         <button onclick="connectGmail()" class="btn btn-sm" style="width:100%;font-size:11px;margin-bottom:8px;">Connect Gmail</button>
         <div id="cal-auth-status" style="font-size:11px;color:var(--text3);margin-bottom:6px;">○ Calendar not authorized</div>
         <button onclick="authorizeCalendar()" class="btn btn-sm" style="width:100%;font-size:11px;margin-bottom:6px;">Authorize Calendar</button>
-        <button onclick="registerCalendarWebhook()" class="btn btn-sm" style="width:100%;font-size:11px;">Register Push Webhook</button>
+        <div id="cal-watch-status" style="font-size:10px;color:var(--text3);margin-bottom:4px;"></div>
+        <button id="cal-webhook-btn" onclick="registerCalendarWebhook()" class="btn btn-sm" style="width:100%;font-size:11px;">Register Push Webhook</button>
       </div>
       <div class="sidebar-footer-version">v2.1</div>
       <div class="sidebar-footer-copyright">&copy; 2026 Blu's Barbeque</div>
@@ -3751,6 +3752,8 @@ async function checkGmailStatus() {
     if (params.get('gmailConnected') === '1' && data.connected) {
       showToast('Gmail + Calendar authorized as ' + data.email + '!');
     }
+    // Check watch channel status and dim the button if active
+    checkWatchStatus();
   } catch(e) {
     console.error('Failed to check Gmail status:', e);
   }
@@ -3800,6 +3803,28 @@ function updateCalAuthStatus(connected, hasCalendar) {
   }
 }
 
+async function checkWatchStatus() {
+  try {
+    const r = await fetch('/api/calendar/watch-status');
+    const d = await r.json();
+    const statusEl = document.getElementById('cal-watch-status');
+    const btn = document.getElementById('cal-webhook-btn');
+    if (!statusEl || !btn) return;
+    if (d.active) {
+      statusEl.textContent = '\u21bb Auto-renewing \u00b7 expires ' + (d.expiresDate || '');
+      statusEl.style.color = 'var(--green)';
+      btn.style.opacity = '0.5';
+      btn.style.fontSize = '10px';
+      btn.title = 'Push webhook active — auto-renews daily. Tap to force re-register.';
+    } else {
+      statusEl.textContent = '';
+      btn.style.opacity = '';
+      btn.style.fontSize = '';
+      btn.title = '';
+    }
+  } catch(e) { /* non-fatal */ }
+}
+
 async function registerCalendarWebhook() {
   try {
     showToast('Registering push webhook\u2026');
@@ -3808,6 +3833,7 @@ async function registerCalendarWebhook() {
     const d = await r.json();
     if (d.ok) {
       showToast('\u2713 Push webhook registered (expires ' + new Date(+d.expiration).toLocaleDateString() + ')');
+      checkWatchStatus();
     } else {
       // Show the full server error detail so debugging is possible without Vercel log access
       var msg = d.error || 'Unknown error';
