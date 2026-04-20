@@ -22,6 +22,7 @@ const STATIC_MODULE_FILES = [
   'api/calendar/update.js',
   'api/calendar/delete.js',
   'api/calendar/webhook.js',
+  'api/calendar/watch-register.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

@@ -12,6 +12,7 @@
     { "source": "/api/calendar/create", "destination": "/api/calendar/create.js" },
     { "source": "/api/calendar/update", "destination": "/api/calendar/update.js" },
     { "source": "/api/calendar/delete", "destination": "/api/calendar/delete.js" },
-    { "source": "/api/calendar/webhook", "destination": "/api/calendar/webhook.js" }
+    { "source": "/api/calendar/webhook", "destination": "/api/calendar/webhook.js" },
+    { "source": "/api/calendar/watch-register", "destination": "/api/calendar/watch-register.js" }
   ]
 }
