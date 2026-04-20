@@ -38,7 +38,7 @@
   /* ── VAPID key fetch ──────────────────────────────────────────────── */
   async function fetchVapidKey() {
     try {
-      var r = await fetch('/api/notifications/vapid-key');
+      var r = await fetch('/api/notifications/vapid-key', { cache: 'no-store' });
       var d = await r.json();
       if (d.ok && d.publicKey) { _publicKey = d.publicKey; return true; }
       _status = 'no-vapid';
