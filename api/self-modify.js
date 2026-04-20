@@ -16,6 +16,11 @@ const TARGET_BRANCH = 'main';
 const STATIC_MODULE_FILES = [
   'static/js/calendar.js',
   'static/css/calendar.css',
+  'static/js/deposits.js',
+  'static/css/deposits.css',
+  'static/js/repeat-customer.js',
+  'static/js/pipeline-alerts.js',
+  'static/js/quote-revise.js',
   'api/calendar/_gcal.js',
   'api/calendar/list.js',
   'api/calendar/create.js',
@@ -23,6 +28,10 @@ const STATIC_MODULE_FILES = [
   'api/calendar/delete.js',
   'api/calendar/webhook.js',
   'api/calendar/watch-register.js',
+  'api/calendar/watch-status.js',
+  'api/cron/renew-calendar-watch.js',
+  'api/deposits/list.js',
+  'api/deposits/save.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

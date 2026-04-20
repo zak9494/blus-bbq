@@ -13,6 +13,16 @@
     { "source": "/api/calendar/update", "destination": "/api/calendar/update.js" },
     { "source": "/api/calendar/delete", "destination": "/api/calendar/delete.js" },
     { "source": "/api/calendar/webhook", "destination": "/api/calendar/webhook.js" },
-    { "source": "/api/calendar/watch-register", "destination": "/api/calendar/watch-register.js" }
+    { "source": "/api/calendar/watch-register", "destination": "/api/calendar/watch-register.js" },
+    { "source": "/api/calendar/watch-status", "destination": "/api/calendar/watch-status.js" },
+    { "source": "/api/cron/renew-calendar-watch", "destination": "/api/cron/renew-calendar-watch.js" },
+    { "source": "/api/deposits/list", "destination": "/api/deposits/list.js" },
+    { "source": "/api/deposits/save", "destination": "/api/deposits/save.js" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/renew-calendar-watch",
+      "schedule": "0 11 * * *"
+    }
   ]
 }
