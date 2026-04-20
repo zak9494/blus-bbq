@@ -965,6 +965,20 @@ if (typeof marked !== 'undefined') {
       <!-- LIST VIEW -->
       <div id="inq-list-view">
         <div id="inq-chips" class="inq-chips"></div>
+        <!-- Search bar — sits between chips and cards, respects active chip filter -->
+        <div style="padding:6px 16px 10px;position:relative">
+          <input type="search" id="inq-search"
+            placeholder="Search name, email, subject, date…"
+            autocomplete="off" autocorrect="off" spellcheck="false"
+            style="width:100%;box-sizing:border-box;height:44px;padding:0 40px 0 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;"
+            oninput="schedInqSearch(this.value)"
+            onfocus="this.style.borderColor='var(--amber)'"
+            onblur="this.style.borderColor='var(--border)'">
+          <button id="inq-search-clear"
+            onclick="clearInqSearch()"
+            aria-label="Clear search"
+            style="display:none;position:absolute;right:24px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);font-size:20px;line-height:1;cursor:pointer;padding:2px 6px">×</button>
+        </div>
         <div class="content">
           <div id="inq-loading" style="text-align:center;padding:40px;color:var(--text3)">Loading inquiries…</div>
           <div id="inq-empty" class="empty-state" style="display:none">
@@ -2671,6 +2685,8 @@ const INQ_STATUS_BADGE = {
 };
 
 let currentInqFilter = 'all';
+let inqSearchTerm = '';
+let inqSearchTimer = null;
 let inquiriesCache   = null; // cached full list for re-filtering without refetch
 
 function setInqFilter(status) {
@@ -2722,12 +2738,51 @@ function renderInqCardHTML(inq) {
     + '</div>';
 }
 
+function inqMatchesSearch(inq, term) {
+  // Search across: name, email (from), subject, event_date, body snippet
+  const haystack = [
+    inq.customer_name || '',
+    inq.from || '',
+    inq.subject || '',
+    inq.event_date || '',
+    (inq.body || '').slice(0, 600)
+  ].join(' ').toLowerCase();
+  return haystack.includes(term);
+}
+
+function schedInqSearch(val) {
+  clearTimeout(inqSearchTimer);
+  inqSearchTimer = setTimeout(function() {
+    inqSearchTerm = val.trim().toLowerCase();
+    const clearBtn = document.getElementById('inq-search-clear');
+    if (clearBtn) clearBtn.style.display = inqSearchTerm ? 'block' : 'none';
+    renderInqCards();
+  }, 200);
+}
+
+function clearInqSearch() {
+  inqSearchTerm = '';
+  const inp = document.getElementById('inq-search');
+  const clearBtn = document.getElementById('inq-search-clear');
+  if (inp) inp.value = '';
+  if (clearBtn) clearBtn.style.display = 'none';
+  renderInqCards();
+}
+
 function renderInqCards() {
   const cardsEl = document.getElementById('inq-cards');
   const emptyEl = document.getElementById('inq-empty');
   if (!cardsEl || !inquiriesCache) return;
-  const filtered = getFilteredInquiries(currentInqFilter);
+  let filtered = getFilteredInquiries(currentInqFilter);
+  // Apply search within the already-filtered set (chip filter wins first)
+  if (inqSearchTerm) {
+    filtered = filtered.filter(i => inqMatchesSearch(i, inqSearchTerm));
+  }
   if (!filtered.length) {
+    const msg = inqSearchTerm
+      ? '<p>🔍 No results for "<strong>' + inqSearchTerm.replace(/</g, '&lt;') + '</strong>"</p>'
+      : '<p>📭 No inquiries yet.</p><p style="color:var(--text2);font-size:12px">The cron poller checks info@blusbarbeque.com every 30 min.</p>';
+    emptyEl.innerHTML = msg;
     emptyEl.style.display = 'block';
     cardsEl.innerHTML = '';
     return;
