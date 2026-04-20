@@ -19,13 +19,14 @@ module.exports = (req, res) => {
   url.searchParams.set('client_id', clientId);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('response_type', 'code');
-  // gmail.send for sending; readonly+modify for R4-1 inquiry polling; openid+email for id_token validation
-  url.searchParams.set('scope',
-    // R4-1: gmail.readonly (read inbox for inquiry polling) + gmail.modify (label threads)
-    'https://www.googleapis.com/auth/gmail.send ' +
-    'https://www.googleapis.com/auth/gmail.readonly ' +
-    'https://www.googleapis.com/auth/gmail.modify ' +
-    'openid email');
+  // gmail.send for sending emails; calendar.events for Google Calendar sync;
+  // openid + email so id_token carries the user email for account validation
+  url.searchParams.set('scope', [
+    'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/calendar.events',
+    'openid',
+    'email',
+  ].join(' '));
   url.searchParams.set('access_type', 'offline');
   // Force the account picker and pre-select the required sender
   url.searchParams.set('prompt', 'consent select_account');
