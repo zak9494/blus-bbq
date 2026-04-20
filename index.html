@@ -157,6 +157,17 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .inq-quote-line { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
 .inq-quote-line input { padding:4px 6px; font-size:12px; }
 .inq-quote-summary { margin-top:12px; background:var(--surface2); border-radius:6px; padding:12px; }
+/* Show All Menu Items picker (show-all-menu feature) */
+.inq-mp-panel { margin-top:10px; max-height:55vh; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; background:var(--surface2); }
+.inq-mp-cat { margin-bottom:14px; }
+.inq-mp-cat-label { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; padding-bottom:4px; border-bottom:1px solid var(--border); margin-bottom:4px; }
+.inq-mp-item { display:flex; align-items:center; gap:6px; padding:3px 0; }
+.inq-mp-check { display:flex; align-items:center; gap:6px; flex:1; font-size:12px; cursor:pointer; color:var(--text); user-select:none; }
+.inq-mp-check input[type=checkbox] { flex-shrink:0; }
+.inq-mp-price { margin-left:auto; font-size:11px; color:var(--text3); white-space:nowrap; }
+.inq-mp-qty { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+.inq-mp-qty button { padding:1px 7px; font-size:13px; line-height:1; border:1px solid var(--border); background:var(--surface3); border-radius:4px; cursor:pointer; color:var(--text); }
+.inq-mp-qty-input { width:40px; text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:12px; padding:2px 4px; font-family:inherit; }
 .inq-actions { display:flex; gap:10px; flex-wrap:wrap; padding-top:16px; border-top:1px solid var(--border); margin-top:8px; }
 .inq-detail-scroll { overflow-y:auto; }
 @media (max-width:768px) {
@@ -1076,6 +1087,9 @@ if (typeof marked !== 'undefined') {
               <span style="width:80px;text-align:right">Subtotal</span>
             </div>
             <div id="inq-quote-lines"></div>
+            <!-- show-all-menu: inline full-menu picker -->
+            <div id="inq-menu-picker-panel" class="inq-mp-panel" style="display:none"></div>
+            <button id="inq-menu-toggle-btn" onclick="toggleInqMenuPicker()" class="btn" style="width:100%;font-size:11px;margin-top:8px;color:var(--text2)">📋 Add / Remove Items</button>
             <div id="inq-charge-controls" style="display:none;margin-top:8px;padding:10px 12px;background:var(--surface2);border-radius:6px">
               <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
                 <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
@@ -3745,6 +3759,122 @@ function renderQuoteSummary(q) {
       '<span>TOTAL</span><span>$' + displayTotal.toFixed(2) + '</span>' +
     '</div>';
 }
+
+/* ===== show-all-menu: inline full-menu picker for inquiry quote ===== */
+function toggleInqMenuPicker() {
+  var panel = document.getElementById('inq-menu-picker-panel');
+  var btn   = document.getElementById('inq-menu-toggle-btn');
+  if (!panel || !btn) return;
+  var open = panel.style.display !== 'none';
+  if (open) {
+    panel.style.display = 'none';
+    btn.textContent = '📋 Add / Remove Items';
+  } else {
+    buildInqMenuPicker();
+    panel.style.display = 'block';
+    btn.textContent = '▲ Close Menu';
+  }
+}
+
+function buildInqMenuPicker() {
+  var panel = document.getElementById('inq-menu-picker-panel');
+  if (!panel || !currentInquiry || !currentInquiry.quote) return;
+  var lineItems = currentInquiry.quote.line_items || [];
+  // Name → {qty, unit_price} lookup from current line items
+  var qtyMap = {};
+  lineItems.forEach(function(li) { qtyMap[li.name.toLowerCase()] = li; });
+
+  var CATS = ['meats','packages','sides','desserts','drinks','extras'];
+  var LABELS = { meats:'Meats', packages:'Packages', sides:'Sides', desserts:'Desserts', drinks:'Drinks', extras:'Extras' };
+
+  function esc2(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+  panel.innerHTML = CATS.map(function(cat) {
+    var items = (window.MENU && window.MENU[cat]) ? window.MENU[cat] : [];
+    if (!items.length) return '';
+    return '<div class="inq-mp-cat">' +
+      '<div class="inq-mp-cat-label">' + LABELS[cat] + '</div>' +
+      items.map(function(item) {
+        var existing = qtyMap[item.name.toLowerCase()];
+        var checked  = !!existing;
+        var qty      = existing ? existing.qty : 1;
+        var chk = checked ? ' checked' : '';
+        return '<div class="inq-mp-item">' +
+          '<label class="inq-mp-check">' +
+            '<input type="checkbox"' + chk + ' onchange="toggleInqMenuItemCheck(this,\'' + esc2(item.name) + '\',' + item.price + ',\'' + esc2(item.unit) + '\')">' +
+            '<span>' + item.name + '</span>' +
+            '<span class="inq-mp-price">$' + item.price + '/' + item.unit + '</span>' +
+          '</label>' +
+          '<div class="inq-mp-qty" style="display:' + (checked ? 'flex' : 'none') + '">' +
+            '<button onclick="adjustInqMpQty(this,-1,\'' + esc2(item.name) + '\',' + item.price + ',\'' + esc2(item.unit) + '\')">−</button>' +
+            '<input type="number" min="1" value="' + qty + '" class="inq-mp-qty-input" onchange="updateInqMpQty(this,\'' + esc2(item.name) + '\',' + item.price + ',\'' + esc2(item.unit) + '\')">' +
+            '<button onclick="adjustInqMpQty(this,1,\'' + esc2(item.name) + '\',' + item.price + ',\'' + esc2(item.unit) + '\')">+</button>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+  }).join('');
+}
+
+function toggleInqMenuItemCheck(cb, name, price, unit) {
+  if (!currentInquiry || !currentInquiry.quote) return;
+  var q    = currentInquiry.quote;
+  var items = q.line_items || [];
+  var key  = name.toLowerCase();
+  var qtyDiv = cb.closest('.inq-mp-item').querySelector('.inq-mp-qty');
+  if (cb.checked) {
+    if (!items.find(function(li){ return li.name.toLowerCase() === key; })) {
+      items.push({ name: name, unit: unit, unit_price: price, qty: 1, subtotal: price });
+      q.line_items = items;
+    }
+    if (qtyDiv) qtyDiv.style.display = 'flex';
+  } else {
+    q.line_items = items.filter(function(li){ return li.name.toLowerCase() !== key; });
+    if (qtyDiv) qtyDiv.style.display = 'none';
+  }
+  refreshInqQuoteFromPicker();
+}
+
+function adjustInqMpQty(btn, delta, name, price, unit) {
+  var inp = btn.parentElement.querySelector('.inq-mp-qty-input');
+  if (!inp) return;
+  var val = Math.max(1, (parseInt(inp.value) || 1) + delta);
+  inp.value = val;
+  updateInqMpQty(inp, name, price, unit);
+}
+
+function updateInqMpQty(input, name, price, unit) {
+  if (!currentInquiry || !currentInquiry.quote) return;
+  var qty  = Math.max(1, parseInt(input.value) || 1);
+  input.value = qty;
+  var q    = currentInquiry.quote;
+  var key  = name.toLowerCase();
+  var li   = (q.line_items || []).find(function(x){ return x.name.toLowerCase() === key; });
+  if (li) { li.qty = qty; li.subtotal = Math.round(li.unit_price * qty * 100) / 100; }
+  refreshInqQuoteFromPicker();
+}
+
+function refreshInqQuoteFromPicker() {
+  if (!currentInquiry || !currentInquiry.quote) return;
+  var q = currentInquiry.quote;
+  // Recalc totals
+  q.food_subtotal  = Math.round((q.line_items || []).reduce(function(s,li){ return s + li.subtotal; }, 0) * 100) / 100;
+  q.service_charge = Math.round(q.food_subtotal * (q.service_charge_pct || 0) / 100 * 100) / 100;
+  q.sales_tax      = q.tax_exempt ? 0 : Math.round(q.food_subtotal * 0.0825 * 100) / 100;
+  q.total          = Math.round((q.food_subtotal + q.service_charge + q.sales_tax + (q.delivery_fee || 0)) * 100) / 100;
+  // Re-render quote lines table
+  document.getElementById('inq-quote-lines').innerHTML = (q.line_items || []).map(function(li, i) {
+    return '<div class="inq-quote-line">' +
+      '<span style="flex:2;font-size:13px">' + li.name + '</span>' +
+      '<input type="number" min="0" step="0.5" class="form-input" id="inq-li-qty-' + i + '" value="' + li.qty + '" style="width:68px;text-align:center" onchange="recalcQuoteLine(' + i + ')">' +
+      '<span style="color:var(--text3);font-size:12px">×</span>' +
+      '<input type="number" min="0" step="0.01" class="form-input" id="inq-li-price-' + i + '" value="' + li.unit_price + '" style="width:80px;text-align:right" onchange="recalcQuoteLine(' + i + ')">' +
+      '<span style="width:80px;text-align:right;font-size:13px;font-weight:600" id="inq-li-sub-' + i + '">$' + li.subtotal.toFixed(2) + '</span>' +
+    '</div>';
+  }).join('');
+  renderQuoteSummary(q);
+}
+/* ===== end show-all-menu ===== */
 
 function toggleTaxExempt(checked) {
   if (!currentInquiry || !currentInquiry.quote) return;
