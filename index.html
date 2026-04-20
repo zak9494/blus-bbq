@@ -1292,9 +1292,7 @@ if (typeof marked !== 'undefined') {
 </div>
 
 <script>
-// ============================================================
-// DATA
-// ============================================================
+/* ===== MODULE: CONSTANTS & STATIC DATA ===== */
 // ⚠️  KEEP IN SYNC — Duplicate of MENU in api/_lib/menu.js (R4-1 Phase 3).
 // If you edit prices here, edit api/_lib/menu.js too. Consolidation is a future queue item.
 const MENU = {
@@ -1368,9 +1366,7 @@ let selectedItems = {};
 let qbTaxExempt = false;  // standalone quote builder tax-exempt state
 let chatHistory = [];
 
-// ============================================================
-// NAV
-// ============================================================
+/* ===== MODULE: NAVIGATION ===== */
 function showPage(page) {
   if (window.innerWidth <= 768) closeMobileSidebar();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1393,9 +1389,7 @@ function switchTab(tab, el) {
   document.getElementById('view-list').style.display = tab === 'list' ? 'block' : 'none';
 }
 
-// ============================================================
-// PIPELINE
-// ============================================================
+/* ===== MODULE: PIPELINE KANBAN ===== */
 const STATUS_ORDER = ['new','quoted','followup','booked','lost'];
 const STATUS_LABELS = { new:'New Inquiry', quoted:'Quote Sent', followup:'Follow-up Needed', booked:'Booked', lost:'Lost' };
 const STATUS_BADGE = { new:'badge-new', quoted:'badge-quoted', followup:'badge-followup', booked:'badge-booked', lost:'badge-lost' };
@@ -1471,9 +1465,7 @@ function updateStats() {
 
 function renderAll() { renderKanban(); renderTable(); updateStats(); }
 
-// ============================================================
-// LEAD MODAL
-// ============================================================
+/* ===== MODULE: LEAD MANAGEMENT ===== */
 function openNewLead() {
   editingLeadId = null;
   document.getElementById('lead-modal-title').textContent = 'New Lead';
@@ -1538,9 +1530,7 @@ function deleteLead() {
   renderAll();
 }
 
-// ============================================================
-// FOLLOW-UP EMAIL
-// ============================================================
+/* ===== MODULE: FOLLOW-UP EMAIL ===== */
 function openFollowup(id) {
   const l = leads.find(x => x.id === id);
   if (!l) return;
@@ -1572,9 +1562,7 @@ function sendFollowupEmail() {
   }
 }
 
-// ============================================================
-// QUOTE BUILDER
-// ============================================================
+/* ===== MODULE: QUOTE BUILDER ===== */
 function buildMenuPicker(category, containerId) {
   const items = MENU[category];
   const el = document.getElementById(containerId);
@@ -2100,9 +2088,7 @@ function emailQuote() {
   showToast('Quote emailed to customer!');
 }
 
-// ============================================================
-// AI CHAT
-// ============================================================
+/* ===== MODULE: AI CHAT ===== */
 const CHAT_SYSTEM = `You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque (17630 Preston Rd, Dallas TX 75252, 214-514-8684, blusbarbeque.com).
 
 Current pipeline: ${JSON.stringify(leads)}
@@ -2308,9 +2294,7 @@ async function sendImageToChat(base64, mediaType, filename) {
   }
 }
 
-// ============================================================
-// MODALS & TOASTS
-// ============================================================
+/* ===== MODULE: SHARED UI UTILITIES ===== */
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
@@ -2326,9 +2310,7 @@ function showToast(msg) {
   setTimeout(() => t.remove(), 3000);
 }
 
-// ============================================================
-// SELF-MODIFY ENGINE
-// ============================================================
+/* ===== MODULE: SELF-MODIFY DASHBOARD ===== */
 function openModify() {
   // Close mobile sidebar first — if opened from nav, the .sidebar-open class keeps
   // .mobile-overlay at pointer-events:auto, which (iOS Safari bug) swallows hamburger
@@ -2413,9 +2395,7 @@ function stopEtaCountdown() {
   if (el) el.textContent = '';
 }
 
-// ============================================================
-// SELF-MODIFY SECTION MAP + HARDENING HELPERS
-// ============================================================
+// --- section map & AI hardening helpers ---
 
 /**
  * Build a compact section map from raw HTML so the AI knows where
@@ -2671,9 +2651,7 @@ let proposalToken;
   }, 1000);
 }
 
-// ============================================================
-// INQUIRIES PAGE
-// ============================================================
+/* ===== MODULE: INQUIRIES TRIAGE ===== */
 const INQ_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
 let currentInquiry = null;
 
@@ -2934,6 +2912,9 @@ async function acknowledgeUpdates(threadId) {
   }
 }
 
+
+/* ===== MODULE: PIPELINE INQUIRIES ===== */
+
 async function updateInquiryStatus(threadId, newStatus) {
   try {
     const r = await fetch('/api/inquiries/save?secret=' + INQ_SECRET, {
@@ -3108,6 +3089,9 @@ const INQ_FIELD_LABELS = {
   menu_preferences:'Menu (comma-separated)', dietary_restrictions:'Dietary Restrictions',
   budget:'Budget ($)', special_requests:'Special Requests'
 };
+
+
+/* ===== MODULE: INQUIRY DETAIL ===== */
 
 function renderInquiryDetail(inq) {
   const ef = inq.extracted_fields || {};
@@ -3527,9 +3511,7 @@ async function scheduleInqEmail() {
   finally { schedBtn.disabled = false; schedBtn.textContent = '📅 Confirm Schedule'; }
 }
 
-// ============================================================
-// INIT
-// ============================================================
+/* ===== MODULE: MOD HISTORY ===== */
 async function loadModHistory() {
   const filter = (document.getElementById('hist-filter-status') || {}).value || '';
   const listEl = document.getElementById('hist-list');
@@ -3582,6 +3564,9 @@ async function renderModifyHistory() {
   }
 }
 
+
+/* ===== MODULE: INIT & STARTUP ===== */
+
 function init() {
   buildMenuPicker('meats', 'menu-meats');
   buildMenuPicker('packages', 'menu-packages');
@@ -3594,9 +3579,7 @@ function init() {
 }
 
 
-// ============================================================
-// GMAIL DIRECT SEND
-// ============================================================
+/* ===== MODULE: GMAIL AUTH ===== */
 let gmailConnected = false;
 
 async function checkGmailStatus() {
@@ -3672,9 +3655,7 @@ window.markSent = function(id) {
 };
 
 
-// ============================================================
-// LOCALSTORAGE PERSISTENCE
-// ============================================================
+/* ===== MODULE: LOCAL STORAGE ===== */
 function saveLeads() {
   try { localStorage.setItem('blus_leads', JSON.stringify(leads)); localStorage.setItem('blus_next_id', nextLeadId); } catch(e) {}
 }
@@ -3687,9 +3668,7 @@ function loadLeads() {
   } catch(e) {}
 }
 
-// ============================================================
-// SCHEDULED MESSAGES
-// ============================================================
+/* ===== MODULE: SCHEDULED EMAILS ===== */
 let scheduledMessages = [];
 function loadScheduled() {
   try { const s = localStorage.getItem('blus_scheduled'); if (s) scheduledMessages = JSON.parse(s); } catch(e) {}
@@ -3757,9 +3736,7 @@ function toggleSchedule() {
   }
 }
 
-// ============================================================
-// CSV IMPORT
-// ============================================================
+/* ===== MODULE: CSV IMPORT ===== */
 let importRows = [];
 function openImport() { document.getElementById('import-step-1').style.display='block'; document.getElementById('import-step-2').style.display='none'; document.getElementById('import-confirm-btn').style.display='none'; document.getElementById('csv-file-input').value=''; importRows=[]; openModal('import-modal'); }
 function resetImport() { closeModal('import-modal'); importRows=[]; }
@@ -3839,9 +3816,7 @@ function confirmImport() {
   showToast(`Imported ${added} customer${added!==1?'s':''}!`);
 }
 
-// ============================================================
-// CHECK SCHEDULED ON INTERVAL
-// ============================================================
+/* ===== STARTUP ===== */
 setInterval(() => { loadScheduled(); renderScheduled(); }, 60000);
 
 loadLeads();
@@ -3854,6 +3829,9 @@ document.addEventListener('visibilitychange', () => {
 });
 init();
 renderScheduled();
+
+
+/* ===== MODULE: MOBILE NAV UTILITIES ===== */
 
 function toggleMobileSidebar() {
   document.querySelector('.app').classList.toggle('sidebar-open');
