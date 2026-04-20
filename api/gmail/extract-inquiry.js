@@ -92,6 +92,7 @@ function callAnthropic(apiKey, emailBody, subject, from, date) {
       });
     });
     req.on('error', reject);
+    req.setTimeout(55000, () => { req.destroy(new Error('Anthropic API timeout after 55s')); });
     req.write(requestBody);
     req.end();
   });
@@ -100,17 +101,14 @@ function callAnthropic(apiKey, emailBody, subject, from, date) {
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // ── Secret gate ─────────────────────────────────────────────────────────────
   const secret = process.env.GMAIL_READ_SECRET;
   const provided = (req.query && req.query.secret) || req.headers['x-secret'];
   if (!secret) return res.status(500).json({ error: 'GMAIL_READ_SECRET env var not configured' });
   if (provided !== secret) return res.status(401).json({ error: 'Unauthorized — invalid or missing secret' });
 
-  // ── API key check ────────────────────────────────────────────────────────────
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY env var not configured' });
 
-  // ── Parse input ──────────────────────────────────────────────────────────────
   let input = req.body;
   if (typeof input === 'string') {
     try { input = JSON.parse(input); } catch { return res.status(400).json({ error: 'Invalid JSON body' }); }
@@ -120,7 +118,6 @@ module.exports = async (req, res) => {
   const { body: emailBody, subject, from, date } = input;
   if (!emailBody) return res.status(400).json({ error: 'body (email text) is required' });
 
-  // ── Call Claude ──────────────────────────────────────────────────────────────
   let anthropicResp;
   try {
     anthropicResp = await callAnthropic(apiKey, emailBody, subject || '', from || '', date || '');
@@ -135,13 +132,11 @@ module.exports = async (req, res) => {
     });
   }
 
-  // ── Extract JSON from Claude response ────────────────────────────────────────
   const rawText = (anthropicResp.body.content && anthropicResp.body.content[0] &&
                    anthropicResp.body.content[0].text) || '';
 
   let extracted;
   try {
-    // Strip any accidental markdown fences Claude might add
     const jsonStr = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
     extracted = JSON.parse(jsonStr);
   } catch (e) {
@@ -152,7 +147,6 @@ module.exports = async (req, res) => {
     });
   }
 
-  // ── Enforce schema — ensure missing_fields is always present ─────────────────
   const EXPECTED_FIELDS = [
     'customer_name', 'customer_email', 'customer_phone',
     'event_date', 'event_time', 'event_type', 'guest_count',
