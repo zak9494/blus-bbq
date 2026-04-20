@@ -1,6 +1,9 @@
 {
   "name": "blus-bbq",
   "private": true,
+  "dependencies": {
+    "web-push": "^3.6.7"
+  },
   "scripts": {
     "lint": "node scripts/lint.js",
     "install-hooks": "cp scripts/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit && echo 'Pre-commit hook installed.'"
