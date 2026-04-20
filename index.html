@@ -118,6 +118,13 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .inq-card-meta { font-size:12px; color:var(--text3); margin-top:3px; }
 .inq-card-bottom { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
 .inq-update-dot { display:inline-block; width:8px; height:8px; background:var(--red); border-radius:50%; margin-right:5px; vertical-align:middle; flex-shrink:0; }
+/* C18: bulk selection */
+.inq-card.inq-selected { border-color:var(--amber); background:var(--amber-bg); }
+.inq-bulk-toolbar { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface); border:1px solid var(--amber); border-radius:12px; padding:10px 18px; display:flex; align-items:center; gap:12px; z-index:300; box-shadow:0 4px 24px rgba(0,0,0,0.45); white-space:nowrap; }
+.inq-bulk-count { font-size:13px; font-weight:600; color:var(--text); }
+.inq-bulk-btn { font-size:12px; font-weight:600; padding:6px 14px; border-radius:7px; border:none; cursor:pointer; }
+.inq-bulk-archive { background:var(--amber); color:#000; }
+.inq-bulk-clear   { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
 .inq-section { margin-bottom:24px; }
 .inq-section-title { font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text3); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:6px; }
 .inq-fields-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -966,6 +973,7 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
         <div class="topbar-actions">
+          <button class="btn" onclick="selectAllInq()" style="font-size:12px;padding:6px 12px" title="Select all visible">☑ All</button>
           <button class="btn" onclick="loadInquiries()" style="font-size:12px;padding:6px 12px">🔄 Refresh</button>
         </div>
       </div>
@@ -1083,6 +1091,12 @@ if (typeof marked !== 'undefined') {
         </div><!-- /content -->
       </div><!-- /inq-detail-view -->
 
+      <!-- C18: floating bulk action toolbar -->
+      <div id="inq-bulk-toolbar" class="inq-bulk-toolbar" style="display:none">
+        <span class="inq-bulk-count" id="inq-bulk-count">0 selected</span>
+        <button class="inq-bulk-btn inq-bulk-archive" onclick="bulkArchiveInq()">🗄 Archive Selected</button>
+        <button class="inq-bulk-btn inq-bulk-clear" onclick="clearInqSelection()">✕ Clear</button>
+      </div>
     </div><!-- /page-inquiries -->
 
     <!-- CALENDAR PAGE -->
@@ -1473,6 +1487,7 @@ function showPage(page) {
   if (window.innerWidth <= 768) closeMobileSidebar();
   if (page === 'scheduled') renderScheduled();
   if (page === 'inquiries') loadInquiries();
+  else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
   if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); }
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
@@ -2804,8 +2819,10 @@ function renderInqCardHTML(inq) {
     ? '<button title="In Pipeline" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--green-bg);border:1px solid var(--green-border);border-radius:8px;cursor:default;font-size:16px;color:#80c898" disabled>✓</button>'
     : '<button title="Approve → Pipeline" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:8px;cursor:pointer;font-size:16px;color:var(--amber)" onclick="approveInq(event,\'' + tid + '\')">✓</button>';
   const updateDot = inq.has_unreviewed_update ? '<span class="inq-update-dot" title="Customer replied — needs review"></span>' : '';
-  return '<div class="inq-card">'
+  const isSelected = inqSelectedIds.has(tid);
+  return '<div class="inq-card' + (isSelected ? ' inq-selected' : '') + '" data-tid="' + tid + '">'
     + '<div class="inq-card-top">'
+      + '<label onclick="event.stopPropagation()" style="display:flex;align-items:center;margin-right:10px;cursor:pointer;flex-shrink:0"><input type="checkbox" class="inq-bulk-cb" ' + (isSelected ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;accent-color:var(--amber)" onchange="toggleInqSelect(\'' + tid + '\',this)"></label>'
       + '<div onclick="openInquiry(\'' + tid + '\')" style="flex:1;min-width:0">'
         + '<div class="inq-card-name">' + updateDot + name + '</div>'
         + '<div class="inq-card-meta">' + date + guests + '</div>'
@@ -2961,6 +2978,85 @@ function renderInqDateChips() {
   }).join('');
 }
 /* end C17 ---------------------------------------------------------------- */
+
+/* C18: bulk selection ---------------------------------------------------- */
+const inqSelectedIds = new Set();
+
+function toggleInqSelect(threadId, checkbox) {
+  if (checkbox.checked) {
+    inqSelectedIds.add(threadId);
+  } else {
+    inqSelectedIds.delete(threadId);
+  }
+  const card = document.querySelector('.inq-card[data-tid="' + threadId + '"]');
+  if (card) card.classList.toggle('inq-selected', checkbox.checked);
+  updateInqBulkToolbar();
+}
+
+function selectAllInq() {
+  const visible = document.querySelectorAll('#inq-cards .inq-card[data-tid]');
+  visible.forEach(function(card) {
+    const tid = card.getAttribute('data-tid');
+    inqSelectedIds.add(tid);
+    card.classList.add('inq-selected');
+    const cb = card.querySelector('.inq-bulk-cb');
+    if (cb) cb.checked = true;
+  });
+  updateInqBulkToolbar();
+}
+
+function clearInqSelection() {
+  inqSelectedIds.clear();
+  document.querySelectorAll('#inq-cards .inq-card').forEach(function(card) {
+    card.classList.remove('inq-selected');
+    const cb = card.querySelector('.inq-bulk-cb');
+    if (cb) cb.checked = false;
+  });
+  updateInqBulkToolbar();
+}
+
+function updateInqBulkToolbar() {
+  const toolbar  = document.getElementById('inq-bulk-toolbar');
+  const countEl  = document.getElementById('inq-bulk-count');
+  const n = inqSelectedIds.size;
+  if (!toolbar) return;
+  if (n > 0) {
+    toolbar.style.display = 'flex';
+    if (countEl) countEl.textContent = n + ' selected';
+  } else {
+    toolbar.style.display = 'none';
+  }
+}
+
+async function bulkArchiveInq() {
+  const ids = Array.from(inqSelectedIds);
+  if (!ids.length) return;
+  const btn = document.querySelector('.inq-bulk-archive');
+  if (btn) { btn.disabled = true; btn.textContent = 'Archiving…'; }
+  let ok = 0, fail = 0;
+  for (const threadId of ids) {
+    try {
+      const r = await fetch('/api/inquiries/archive?secret=' + INQ_SECRET, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId })
+      });
+      const d = await r.json();
+      if (d.ok) {
+        if (inquiriesCache) {
+          const idx = inquiriesCache.findIndex(function(i) { return i.threadId === threadId; });
+          if (idx >= 0) inquiriesCache[idx].status = 'archived';
+        }
+        ok++;
+      } else { fail++; }
+    } catch(e) { fail++; }
+  }
+  clearInqSelection();
+  renderInqChips();
+  renderInqCards();
+  if (btn) { btn.disabled = false; btn.textContent = '🗄 Archive Selected'; }
+  showToast(ok + ' archived' + (fail ? ', ' + fail + ' failed' : '') + ' ✓');
+}
+/* end C18 ---------------------------------------------------------------- */
 
 async function archiveInq(event, threadId) {
   event.stopPropagation();
