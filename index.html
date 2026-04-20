@@ -2390,12 +2390,12 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
 
-function showToast(msg) {
+function showToast(msg, durationMs) {
   const t = document.createElement('div');
-  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1816;border:1px solid var(--green-border);color:#80c898;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;white-space:nowrap;';
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1816;border:1px solid var(--green-border);color:#80c898;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;max-width:90vw;word-break:break-word;white-space:normal;text-align:center;';
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
+  setTimeout(function() { t.remove(); }, durationMs || 3000);
 }
 
 /* ===== MODULE: SELF-MODIFY DASHBOARD ===== */

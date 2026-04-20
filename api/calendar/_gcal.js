@@ -125,7 +125,11 @@ async function getOrCreateCalendarId() {
 
   // List all calendars and look for existing one
   const list = await gcalRequest('GET', '/calendar/v3/users/me/calendarList', null, token);
-  if (list.status !== 200) throw new Error('Could not list calendars: HTTP ' + list.status);
+  if (list.status !== 200) {
+    // Surface Google's full error message (e.g. "API not enabled", "Insufficient Permission")
+    var googleMsg = (list.body && list.body.error && (list.body.error.message || list.body.error.status)) || JSON.stringify(list.body).slice(0, 300);
+    throw new Error('Google Calendar API error (HTTP ' + list.status + '): ' + googleMsg);
+  }
 
   const existing = (list.body.items || []).find(function(c) { return c.summary === CALENDAR_NAME; });
   if (existing) {
@@ -141,7 +145,8 @@ async function getOrCreateCalendarId() {
   }, token);
 
   if (created.status !== 200 && created.status !== 201) {
-    throw new Error('Could not create calendar: ' + JSON.stringify(created.body));
+    var cMsg = (created.body && created.body.error && (created.body.error.message || created.body.error.status)) || JSON.stringify(created.body).slice(0, 300);
+    throw new Error('Could not create calendar (HTTP ' + created.status + '): ' + cMsg);
   }
 
   await kvSet(CAL_ID_KEY, created.body.id);
