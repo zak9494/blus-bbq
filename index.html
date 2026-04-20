@@ -1081,25 +1081,80 @@ if (typeof marked !== 'undefined') {
         <div class="topbar-left">
           <div>
             <div class="topbar-title">Calendar</div>
-            <div class="topbar-sub">Booked &amp; upcoming events</div>
+            <div class="topbar-sub">Google Calendar sync &mdash; Blu's Barbeque Catering</div>
           </div>
         </div>
         <div class="topbar-actions">
-          <button class="btn" onclick="calRefresh()" style="font-size:12px;padding:6px 12px">🔄 Refresh</button>
+          <button class="cal-new-btn" onclick="calOpenNewEvent()">+ New Event</button>
+          <button class="btn" onclick="calRefresh()" style="font-size:12px;padding:6px 12px">&#x1F504; Refresh</button>
         </div>
       </div>
       <div class="content" style="padding:0">
-        <div id="cal-error" style="display:none;color:#f87171;padding:10px 20px;font-size:13px"></div>
-        <div id="cal-loading" style="display:none;padding:10px 20px;font-size:13px;color:var(--text3)">Loading events…</div>
+        <div id="cal-error" class="cal-error-state"></div>
+        <div id="cal-loading" class="cal-loading-state">Loading events&hellip;</div>
         <div class="cal-header">
-          <button class="cal-nav-btn" onclick="calPrev()" aria-label="Previous month">‹</button>
-          <span class="cal-month-label" id="cal-month-label">—</span>
+          <button class="cal-nav-btn" onclick="calPrev()" aria-label="Previous month">&#x2039;</button>
+          <span class="cal-month-label" id="cal-month-label">&mdash;</span>
           <div class="cal-nav-group">
             <button class="cal-nav-btn today-btn" onclick="calToday()">Today</button>
-            <button class="cal-nav-btn" onclick="calNext()" aria-label="Next month">›</button>
+            <button class="cal-nav-btn" onclick="calNext()" aria-label="Next month">&#x203a;</button>
           </div>
         </div>
-        <div id="cal-grid"></div>
+        <div class="cal-body">
+          <div class="cal-grid-wrap">
+            <div id="cal-grid"></div>
+          </div>
+          <div id="cal-day-panel" class="cal-day-panel"></div>
+        </div>
+      </div>
+
+      <!-- New Event Modal -->
+      <div id="cal-new-event-modal" class="cal-modal-overlay" onclick="if(event.target===this)window._calCloseNewEvent()">
+        <div class="cal-modal">
+          <div class="cal-modal-header">
+            <span class="cal-modal-title">New Catering Event</span>
+            <button class="cal-modal-close" onclick="window._calCloseNewEvent()" aria-label="Close">&times;</button>
+          </div>
+          <div class="cal-modal-body">
+            <div class="cal-modal-row">
+              <label>Customer Name</label>
+              <input id="cal-ne-customer" type="text" placeholder="Smith Family" autocomplete="off">
+            </div>
+            <div class="cal-modal-row-half">
+              <div>
+                <label>Date</label>
+                <input id="cal-ne-date" type="date">
+              </div>
+              <div>
+                <label>Start Time</label>
+                <input id="cal-ne-time" type="time" value="12:00">
+              </div>
+            </div>
+            <div class="cal-modal-row-half">
+              <div>
+                <label>Guest Count</label>
+                <input id="cal-ne-guests" type="number" min="1" placeholder="150">
+              </div>
+              <div>
+                <label>Duration (hours)</label>
+                <input id="cal-ne-duration" type="number" min="0.5" step="0.5" value="3">
+              </div>
+            </div>
+            <div class="cal-modal-row">
+              <label>Event Address</label>
+              <input id="cal-ne-address" type="text" placeholder="123 Main St, Dallas, TX">
+            </div>
+            <div class="cal-modal-row">
+              <label>Notes</label>
+              <textarea id="cal-ne-notes" rows="2" placeholder="Optional notes&hellip;"></textarea>
+            </div>
+            <div id="cal-ne-error" class="cal-modal-error"></div>
+          </div>
+          <div class="cal-modal-footer">
+            <button class="btn" onclick="window._calCloseNewEvent()">Cancel</button>
+            <button id="cal-ne-submit" class="btn btn-primary" onclick="window._calSubmitNewEvent()">Create Event</button>
+          </div>
+        </div>
       </div>
     </div><!-- /page-calendar -->
 

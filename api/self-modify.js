@@ -5,8 +5,24 @@ const KV_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
 const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPO = process.env.GITHUB_REPO;
-const TARGET_FILE = 'index.html';
+const TARGET_FILE   = 'index.html';
 const TARGET_BRANCH = 'main';
+
+/* ── Static module files (Rule 14) ──────────────────────────────────────────
+   GET handler appends these as read-only context so the AI can see them.
+   POST handler can write them back via <<<FILE: path>>> delimiters.
+   Update this array whenever a new module file is added under /static/.
+   ────────────────────────────────────────────────────────────────────────── */
+const STATIC_MODULE_FILES = [
+  'static/js/calendar.js',
+  'static/css/calendar.css',
+  'api/calendar/_gcal.js',
+  'api/calendar/list.js',
+  'api/calendar/create.js',
+  'api/calendar/update.js',
+  'api/calendar/delete.js',
+  'api/calendar/webhook.js',
+];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
 const FORBIDDEN_PATTERNS = [
@@ -79,7 +95,20 @@ module.exports = async (req, res) => {
     try {
       const current = await githubRequest('GET', `/repos/${GITHUB_REPO}/contents/${TARGET_FILE}?ref=${TARGET_BRANCH}`);
       if (current.status !== 200) return res.status(502).json({ error: 'could not fetch source', detail: current.body });
-      const content = Buffer.from(current.body.content, 'base64').toString('utf-8');
+      let content = Buffer.from(current.body.content, 'base64').toString('utf-8');
+
+      // Append static module files as read-only AI context (Rule 14)
+      // The AI can reference these files and return updated versions using <<<FILE: path>>> delimiters.
+      for (const filePath of STATIC_MODULE_FILES) {
+        try {
+          const fr = await githubRequest('GET', `/repos/${GITHUB_REPO}/contents/${filePath}?ref=${TARGET_BRANCH}`);
+          if (fr.status === 200) {
+            const fc = Buffer.from(fr.body.content, 'base64').toString('utf-8');
+            content += `\n\n<<<FILE: ${filePath}\n${fc}\nEND FILE: ${filePath}>>>`;
+          }
+        } catch(_e) { /* non-fatal — file may not exist yet */ }
+      }
+
       return res.status(200).json({ ok: true, content, sha: current.body.sha });
     } catch (err) { return res.status(500).json({ error: err && err.message || String(err) }); }
   }
@@ -115,14 +144,70 @@ module.exports = async (req, res) => {
     if (!body.proposalToken || body.proposalToken !== proposalToken) return res.status(400).json({ error: 'proposalToken missing or mismatch; call mode=preview first' });
     if (body.confirmed !== true) return res.status(400).json({ error: 'confirmed: true is required to apply' });
 
-    const update = await githubRequest('PUT', `/repos/${GITHUB_REPO}/contents/${TARGET_FILE}`, { message: commitMessage, content: Buffer.from(content, 'utf-8').toString('base64'), sha: currentSha, branch: TARGET_BRANCH });
-    if (update.status >= 300) {
-      await logModHistory(`[COMMIT FAIL] ${prompt}`, 'error', null, `GitHub commit failed (${update.status})`);
-      return res.status(500).json({ error: 'GitHub commit failed', detail: update.body });
+    // ── Parse multi-file response (Rule 14) ────────────────────────────────
+    // Content may contain <<<FILE: path\n...\nEND FILE: path>>> blocks for module files.
+    // Extract them and commit everything atomically via git tree API.
+    const FILE_BLOCK_RE = /<<<FILE:\s*([^\n]+)\n([\s\S]*?)\nEND FILE:[^\n]*>>>/g;
+    const extraFiles = []; // { path, content }
+    let mainContent = content;
+
+    // Strip FILE blocks from the main content, collect module file updates
+    mainContent = content.replace(FILE_BLOCK_RE, function(_, filePath, fileContent) {
+      const cleanPath = filePath.trim();
+      // Only allow writes to known static module paths (safety check)
+      if (STATIC_MODULE_FILES.includes(cleanPath)) {
+        extraFiles.push({ path: cleanPath, content: fileContent });
+      }
+      return ''; // remove from main content
+    }).trimEnd();
+
+    // If main content got stripped to nothing, use original (no FILE blocks present)
+    if (mainContent.length < 100) mainContent = content.replace(FILE_BLOCK_RE, '').trimEnd();
+
+    if (extraFiles.length === 0) {
+      // Single-file path (backwards-compatible): use simple PUT
+      const update = await githubRequest('PUT', `/repos/${GITHUB_REPO}/contents/${TARGET_FILE}`, { message: commitMessage, content: Buffer.from(mainContent, 'utf-8').toString('base64'), sha: currentSha, branch: TARGET_BRANCH });
+      if (update.status >= 300) {
+        await logModHistory(`[COMMIT FAIL] ${prompt}`, 'error', null, `GitHub commit failed (${update.status})`);
+        return res.status(500).json({ error: 'GitHub commit failed', detail: update.body });
+      }
+      const _sha = update.body.commit && update.body.commit.sha;
+      await logModHistory(commitMessage, 'done', _sha || null, null);
+      return res.status(200).json({ ok: true, success: true, mode: 'apply', commit: _sha, diff, filesWritten: [TARGET_FILE] });
     }
 
-    const _sha = update.body.commit && update.body.commit.sha;
-    await logModHistory(commitMessage, 'done', _sha || null, null);
-    return res.status(200).json({ ok: true, success: true, mode: 'apply', commit: _sha, diff });
+    // Multi-file path: git blob → tree → commit → update ref
+    const refResp = await githubRequest('GET', `/repos/${GITHUB_REPO}/git/ref/heads/${TARGET_BRANCH}`);
+    if (refResp.status !== 200) return res.status(500).json({ error: 'could not get branch ref' });
+    const headSha  = refResp.body.object.sha;
+    const commitR  = await githubRequest('GET', `/repos/${GITHUB_REPO}/git/commits/${headSha}`);
+    const treeSha  = commitR.body.tree.sha;
+
+    const allFiles = [{ path: TARGET_FILE, content: mainContent }, ...extraFiles];
+    const treeEntries = await Promise.all(allFiles.map(async (f) => {
+      const blobResp = await githubRequest('POST', `/repos/${GITHUB_REPO}/git/blobs`, {
+        content: Buffer.from(f.content, 'utf-8').toString('base64'), encoding: 'base64'
+      });
+      if (blobResp.status !== 201) throw new Error(`Blob creation failed for ${f.path}: ${blobResp.status}`);
+      return { path: f.path, mode: '100644', type: 'blob', sha: blobResp.body.sha };
+    }));
+
+    const newTree = await githubRequest('POST', `/repos/${GITHUB_REPO}/git/trees`, { base_tree: treeSha, tree: treeEntries });
+    if (newTree.status !== 201) return res.status(500).json({ error: 'tree creation failed', detail: newTree.body });
+
+    const newCommit = await githubRequest('POST', `/repos/${GITHUB_REPO}/git/commits`, {
+      message: commitMessage, tree: newTree.body.sha, parents: [headSha]
+    });
+    if (newCommit.status !== 201) return res.status(500).json({ error: 'commit creation failed', detail: newCommit.body });
+
+    const refUpdate = await githubRequest('PATCH', `/repos/${GITHUB_REPO}/git/refs/heads/${TARGET_BRANCH}`, { sha: newCommit.body.sha });
+    if (refUpdate.status >= 300) {
+      await logModHistory(`[COMMIT FAIL] ${prompt}`, 'error', null, `Ref update failed (${refUpdate.status})`);
+      return res.status(500).json({ error: 'ref update failed', detail: refUpdate.body });
+    }
+
+    const _sha = newCommit.body.sha;
+    await logModHistory(commitMessage, 'done', _sha, null);
+    return res.status(200).json({ ok: true, success: true, mode: 'apply', commit: _sha, diff, filesWritten: allFiles.map(f => f.path) });
   } catch (err) { return res.status(500).json({ error: err && err.message || String(err) }); }
 };
