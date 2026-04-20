@@ -80,9 +80,12 @@ function isPermanentError(err) {
   if (!err) return false;
   // 410 Gone / 404 Not Found = subscription deleted at push service
   if (err.statusCode === 410 || err.statusCode === 404) return true;
-  // 400 with body indicating the subscription record itself is invalid
+  // 403 Forbidden = push service permanently rejects (e.g. after VAPID key rotation)
+  if (err.statusCode === 403) return true;
+  // 400 with body indicating the subscription record itself is invalid;
+  // includes VapidPkHashMismatch (stale sub from a previous VAPID key set)
   if (err.statusCode === 400 && err.body &&
-      /p256dh|invalid|bad|malformed/i.test(String(err.body))) return true;
+      /p256dh|invalid|bad|malformed|VapidPkHashMismatch/i.test(String(err.body))) return true;
   // Encryption failure before HTTP: bad p256dh/auth keys stored in KV
   if (!err.statusCode && err.message &&
       /p256dh.*bytes|auth.*bytes/i.test(err.message)) return true;
