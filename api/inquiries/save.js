@@ -207,8 +207,9 @@ async function handlePipelineSave(req, res, body) {
 async function handleQuoteBuilderSave(req, res, body) {
   const {
     customer_name, email, event_date, event_time, guest_count,
-    service_type, delivery_address, notes, quote,
+    service_type, delivery_address, quote,
   } = body;
+  const special_requests = (body.special_requests || body.notes || '').trim();
 
   const now      = new Date().toISOString();
   const rand     = crypto.randomBytes(4).toString('hex');
@@ -220,7 +221,7 @@ async function handleQuoteBuilderSave(req, res, body) {
     guest_count      ? 'Guests: '  + guest_count      : '',
     service_type     ? 'Service: ' + service_type     : '',
     delivery_address ? 'Address: ' + delivery_address : '',
-    notes            ? 'Notes: '   + notes            : '',
+    special_requests ? 'Special Requests: ' + special_requests : '',
   ].filter(Boolean).join('\n');
 
   const indexEntry = {
@@ -246,7 +247,7 @@ async function handleQuoteBuilderSave(req, res, body) {
     body:       bodyText,
     event_time: event_time || '',
     delivery_address: delivery_address || '',
-    notes:      notes || '',
+    special_requests: special_requests || '',
     extracted_fields: {
       customer_name,
       customer_email: email || '',
@@ -255,7 +256,7 @@ async function handleQuoteBuilderSave(req, res, body) {
       guest_count:   guest_count || null,
       service_type:  service_type || 'pickup',
       delivery_address: delivery_address || '',
-      notes:         notes || '',
+      special_requests: special_requests || '',
     },
     quote: quote || null,
     activity_log: [],
