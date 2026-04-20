@@ -196,7 +196,7 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .alerts-section { margin-bottom: 20px; }
 
 /* KANBAN */
-.kanban { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+.kanban { display: block; margin-bottom: 28px; }
 .k-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; min-height: 200px; }
 .k-col-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .k-col-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); }
@@ -367,7 +367,6 @@ tr:hover td { background: var(--surface2); }
   .sidebar-open .mobile-overlay { opacity: 1; pointer-events: auto; }
   .mobile-hamburger { display: flex !important; }
   .stats-row { grid-template-columns: repeat(2,1fr); }
-  .kanban { grid-template-columns: 1fr; }
   .quote-layout { grid-template-columns: 1fr; }
   .chat-layout { grid-template-columns: 1fr; height: auto; }
   /* Mobile: ensure page headers clear the 38px hamburger button */
@@ -430,7 +429,6 @@ tr:hover td { background: var(--surface2); }
 
 /* Extra breakpoint: very narrow (375px iPhone SE) */
 @media (max-width: 420px) {
-  .kanban { grid-template-columns: 1fr; }
   .stats-row { grid-template-columns: 1fr 1fr; }
   .topbar-title { font-size: 18px; }
   .btn { padding: 7px 10px; font-size: 12px; }
