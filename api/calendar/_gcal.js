@@ -115,42 +115,28 @@ function gcalRequest(method, path, body, accessToken) {
   });
 }
 
-/* ── Get or create the dedicated calendar ───── */
+/* ── Resolve calendar ID ─────────────────────
+   We use calendar.events scope (sensitive, no app-verification required).
+   calendarList.list + calendars.insert both require the broader 'calendar'
+   scope (restricted) which Google silently trims to calendar.events for
+   unverified apps — so we avoid those API calls entirely.
+
+   Resolution order:
+   1. GOOGLE_CALENDAR_ID env var  — admin-set specific calendar ID
+   2. KV cache (calendar:id)      — previously resolved / manually set
+   3. 'primary'                   — always accessible with calendar.events
+
+   To use a dedicated calendar instead of primary:
+   a) Create it in Google Calendar, copy its ID (e.g. abc123@group.calendar.google.com)
+   b) Set GOOGLE_CALENDAR_ID=<id> in Vercel env vars, or call kvSet('calendar:id', id)
+   ─────────────────────────────────────────── */
 async function getOrCreateCalendarId() {
-  // Check cache
+  if (process.env.GOOGLE_CALENDAR_ID) return process.env.GOOGLE_CALENDAR_ID;
   const cached = await kvGet(CAL_ID_KEY);
   if (cached) return cached;
-
-  const token = await getAccessToken();
-
-  // List all calendars and look for existing one
-  const list = await gcalRequest('GET', '/calendar/v3/users/me/calendarList', null, token);
-  if (list.status !== 200) {
-    // Surface Google's full error message (e.g. "API not enabled", "Insufficient Permission")
-    var googleMsg = (list.body && list.body.error && (list.body.error.message || list.body.error.status)) || JSON.stringify(list.body).slice(0, 300);
-    throw new Error('Google Calendar API error (HTTP ' + list.status + '): ' + googleMsg);
-  }
-
-  const existing = (list.body.items || []).find(function(c) { return c.summary === CALENDAR_NAME; });
-  if (existing) {
-    await kvSet(CAL_ID_KEY, existing.id);
-    return existing.id;
-  }
-
-  // Create the calendar
-  const created = await gcalRequest('POST', '/calendar/v3/calendars', {
-    summary:     CALENDAR_NAME,
-    description: "Catering events for Blu's Barbeque — synced from the booking dashboard",
-    timeZone:    'America/Chicago',
-  }, token);
-
-  if (created.status !== 200 && created.status !== 201) {
-    var cMsg = (created.body && created.body.error && (created.body.error.message || created.body.error.status)) || JSON.stringify(created.body).slice(0, 300);
-    throw new Error('Could not create calendar (HTTP ' + created.status + '): ' + cMsg);
-  }
-
-  await kvSet(CAL_ID_KEY, created.body.id);
-  return created.body.id;
+  // Default to primary calendar — works with calendar.events scope
+  await kvSet(CAL_ID_KEY, 'primary');
+  return 'primary';
 }
 
 /* ── Exports ─────────────────────────────────── */

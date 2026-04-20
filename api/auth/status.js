@@ -53,8 +53,15 @@ module.exports = async (req, res) => {
     return res.status(200).json({ connected: false, email: null, hasRefreshToken, error: 'legacy_token', message: 'Gmail tokens need re-authentication. Visit /api/auth/init.' });
   }
 
-  // Include scope so the client can verify calendar access without guessing
+  // Include scope so the client can verify calendar access without guessing.
+  // calendar.events (sensitive) is sufficient for all event CRUD + watch.
+  // calendar (restricted, requires app verification) is only needed for
+  // calendarList.list / calendars.insert — which we no longer call.
   const scope = tokens.scope || null;
-  const hasCalendar = !!(scope && scope.includes('calendar'));
+  const hasCalendar = !!(scope && (
+    scope.includes('/auth/calendar.events') ||
+    scope.includes('/auth/calendar ') ||
+    scope.endsWith('/auth/calendar')
+  ));
   return res.status(200).json({ connected: true, email: storedEmail, hasRefreshToken, scope, hasCalendar, storedAt: tokens.storedAt || null });
 };
