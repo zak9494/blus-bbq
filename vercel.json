@@ -19,7 +19,8 @@
     { "source": "/api/deposits/list", "destination": "/api/deposits/list.js" },
     { "source": "/api/deposits/save", "destination": "/api/deposits/save.js" },
     { "source": "/api/inquiries/by-email", "destination": "/api/inquiries/by-email.js" },
-    { "source": "/api/pipeline/alerts", "destination": "/api/pipeline/alerts.js" }
+    { "source": "/api/pipeline/alerts", "destination": "/api/pipeline/alerts.js" },
+    { "source": "/api/inquiries/save", "destination": "/api/inquiries/save.js" }
   ],
   "crons": [
     {

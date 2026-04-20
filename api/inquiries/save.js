@@ -1,177 +1,130 @@
-/**
- * POST /api/inquiries/save
- * R4-1 Phase 4 — Create or update a catering inquiry record in KV.
- *
- * Body fields (all optional except threadId):
- *   threadId (required), messageId, raw_email, subject, from, date,
- *   extracted_fields, quote, status, history_entry: {action, actor}
- *
- * Creates record if new; deep-merges if existing.
- * Also updates inquiries:index (sorted newest-first, max 500).
- *
- * Returns: { ok, threadId, created, updated_at }
- */
-
-module.exports.config = { maxDuration: 30 };
-
-
+/* ===== MODULE: INQUIRIES SAVE (C20)
+   POST /api/inquiries/save
+   Body: { secret, customer_name, email, event_date, event_time, guest_count,
+           service_type, delivery_address, notes, quote }
+   Creates a new inquiry in KV from Quote Builder data.
+   KV keys written:
+     inquiries:index  (append summary entry)
+     inquiry:{threadId}  (full detail)
+   ===== */
+'use strict';
 const https = require('https');
+const crypto = require('crypto');
 
 function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
 function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
 
-function kvGet(key) {
-  const url = kvUrl(), token = kvToken();
-  if (!url) return Promise.reject(new Error('KV env vars not set'));
-  return new Promise((resolve, reject) => {
+async function kvGet(key) {
+  return new Promise(resolve => {
+    const url = kvUrl(), tok = kvToken();
+    if (!url) return resolve(null);
     const u = new URL(url + '/get/' + encodeURIComponent(key));
-    const req = https.request({ hostname: u.hostname, path: u.pathname + u.search,
-      method: 'GET', headers: { Authorization: 'Bearer ' + token } }, r => {
-      let d = '';
-      r.on('data', c => d += c);
+    const opts = { hostname: u.hostname, path: u.pathname + u.search, method: 'GET',
+      headers: { Authorization: 'Bearer ' + tok } };
+    const req = https.request(opts, r => {
+      let d = ''; r.on('data', c => d += c);
       r.on('end', () => { try { resolve(JSON.parse(d).result); } catch { resolve(null); } });
     });
-    req.on('error', reject);
-    req.end();
+    req.on('error', () => resolve(null)); req.end();
   });
 }
 
-function kvSet(key, value) {
-  const url = kvUrl(), token = kvToken();
-  if (!url) return Promise.resolve();
-  const body = JSON.stringify([['SET', key, typeof value === 'string' ? value : JSON.stringify(value)]]);
+async function kvPipeline(commands) {
   return new Promise((resolve, reject) => {
+    const url = kvUrl(), tok = kvToken();
+    if (!url) return resolve(null);
+    const body = JSON.stringify(commands);
     const u = new URL(url + '/pipeline');
-    const req = https.request({ hostname: u.hostname, path: u.pathname,
-      method: 'POST', headers: { Authorization: 'Bearer ' + token,
-        'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, r => {
-      r.resume().on('end', resolve);
-    });
+    const opts = { hostname: u.hostname, path: u.pathname, method: 'POST',
+      headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body) } };
+    const req = https.request(opts, r => { r.resume().on('end', resolve); });
     req.on('error', reject);
-    req.write(body);
-    req.end();
+    req.write(body); req.end();
   });
 }
-
-function secretGate(req, res) {
-  const secret = process.env.GMAIL_READ_SECRET;
-  const provided = (req.query && req.query.secret) || req.headers['x-secret'];
-  if (!secret) { res.status(500).json({ error: 'GMAIL_READ_SECRET not configured' }); return false; }
-  if (provided !== secret) { res.status(401).json({ error: 'Unauthorized' }); return false; }
-  return true;
-}
-
-const VALID_STATUSES = ['new','needs_info','quote_drafted','quote_approved','quote_sent','booked','declined','archived'];
-
-const INDEX_KEY = 'inquiries:index';
-const MAX_INDEX = 500;
-
-function recordKey(threadId) { return 'inquiries:' + threadId; }
 
 module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!secretGate(req, res)) return;
 
-  let body = req.body;
-  if (typeof body === 'string') {
-    try { body = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid JSON' }); }
-  }
-  body = body || {};
+  const body = req.body || {};
+  const secret   = body.secret;
+  const expected = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN;
+  if (!expected || secret !== expected) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { threadId } = body;
-  if (!threadId) return res.status(400).json({ error: 'threadId is required' });
+  const {
+    customer_name, email, event_date, event_time, guest_count,
+    service_type, delivery_address, notes, quote,
+  } = body;
 
-  if (body.status && !VALID_STATUSES.includes(body.status)) {
-    return res.status(400).json({ error: 'Invalid status', valid: VALID_STATUSES });
-  }
+  if (!customer_name) return res.status(400).json({ error: 'customer_name is required' });
 
-  const now = new Date().toISOString();
-  const key = recordKey(threadId);
+  const now       = new Date().toISOString();
+  const rand      = crypto.randomBytes(4).toString('hex');
+  const threadId  = 'qb-' + Date.now() + '-' + rand;
+  const fromAddr  = email ? customer_name + ' <' + email + '>' : customer_name;
+  const subject   = 'Quote for ' + customer_name + (event_date ? ' (' + event_date + ')' : '');
+  const bodyText  = [
+    'Created manually from Quote Builder.',
+    guest_count   ? 'Guests: ' + guest_count               : '',
+    service_type  ? 'Service: ' + service_type             : '',
+    delivery_address ? 'Address: ' + delivery_address       : '',
+    notes         ? 'Notes: ' + notes                      : '',
+  ].filter(Boolean).join('\n');
 
-  // Load existing record (or start fresh)
-  let raw;
-  try { raw = await kvGet(key); } catch (e) {
-    return res.status(500).json({ error: 'KV read failed', detail: e.message });
-  }
-  const existing = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
-  const isNew = !existing;
-
-  // Build merged record
-  const record = {
+  const indexEntry = {
     threadId,
-    messageId:        body.messageId        ?? existing?.messageId        ?? null,
-    raw_email:        body.raw_email        ?? existing?.raw_email        ?? null,
-    subject:          body.subject          ?? existing?.subject          ?? null,
-    from:             body.from             ?? existing?.from             ?? null,
-    date:             body.date             ?? existing?.date             ?? null,
-    extracted_fields: body.extracted_fields ?? existing?.extracted_fields ?? null,
-    quote:            body.quote            ?? existing?.quote            ?? null,
-    status:           body.status           ?? existing?.status           ?? 'new',
-    source:           body.source           ?? existing?.source           ?? 'direct',
-    approved:         body.approved         ?? existing?.approved         ?? false,
-    has_unreviewed_update:         body.has_unreviewed_update         ?? existing?.has_unreviewed_update         ?? false,
-    activity_log:                  body.activity_log                  ?? existing?.activity_log                  ?? [],
-    last_processed_message_id:     body.last_processed_message_id     ?? existing?.last_processed_message_id     ?? null,
-    message_count_at_last_process: body.message_count_at_last_process ?? existing?.message_count_at_last_process ?? 1,
-    created_at:       existing?.created_at  ?? now,
-    updated_at:       now,
-    history:          Array.isArray(existing?.history) ? [...existing.history] : [],
+    customer_name,
+    from:      fromAddr,
+    email:     email || '',
+    source:    'direct',
+    status:    quote && quote.line_items && quote.line_items.length ? 'quote_drafted' : 'new',
+    event_date: event_date || '',
+    guest_count: guest_count || null,
+    subject,
+    storedAt:  now,
+    approved:  false,
+    has_unreviewed_update: false,
+    quote_total: quote && quote.grand_total ? quote.grand_total : null,
   };
 
-  // Append history entry if provided
-  if (body.history_entry && body.history_entry.action) {
-    record.history.push({
-      action:    body.history_entry.action,
-      timestamp: now,
-      actor:     body.history_entry.actor || 'system',
-    });
-  } else if (isNew) {
-    record.history.push({ action: 'created', timestamp: now, actor: 'system' });
-  }
+  const fullInquiry = {
+    ...indexEntry,
+    body:       bodyText,
+    event_time: event_time || '',
+    delivery_address: delivery_address || '',
+    notes:      notes || '',
+    source:     'direct',
+    extracted_fields: {
+      customer_name,
+      customer_email: email || '',
+      event_date:    event_date || '',
+      event_time:    event_time || '',
+      guest_count:   guest_count || null,
+      service_type:  service_type || 'pickup',
+      delivery_address: delivery_address || '',
+      notes:         notes || '',
+    },
+    quote: quote || null,
+    activity_log: [],
+  };
 
-  // Save record
-  try { await kvSet(key, record); } catch (e) {
-    return res.status(500).json({ error: 'KV write failed', detail: e.message });
-  }
-
-  // Update index
   try {
-    const idxRaw = await kvGet(INDEX_KEY);
-    let index = idxRaw ? (typeof idxRaw === 'string' ? JSON.parse(idxRaw) : idxRaw) : [];
-    if (!Array.isArray(index)) index = [];
+    // Load existing index, append, save
+    const indexRaw = await kvGet('inquiries:index');
+    const index    = indexRaw ? (typeof indexRaw === 'string' ? JSON.parse(indexRaw) : indexRaw) : [];
+    index.unshift(indexEntry); // newest first
 
-    // Remove existing entry for this threadId, insert updated summary
-    index = index.filter(e => e.threadId !== threadId);
-    const ef = record.extracted_fields || {};
-    index.push({
-      threadId,
-      from:          record.from || '',
-      subject:       record.subject || '',
-      customer_name: ef.customer_name || null,
-      event_date:    ef.event_date    || null,
-      guest_count:   ef.guest_count   || null,
-      status:        record.status,
-      source:        record.source   || 'direct',
-      approved:      record.approved || false,
-      has_unreviewed_update: record.has_unreviewed_update || false,
-      email_date:    record.date || null,
-      updated_at:    now,
-    });
-    // Sort by email received date descending (newest email first); nulls last
-    index.sort((a, b) => {
-      const da = a.email_date ? new Date(a.email_date).getTime() : 0;
-      const db = b.email_date ? new Date(b.email_date).getTime() : 0;
-      return db - da;
-    });
-    // Cap at MAX_INDEX
-    if (index.length > MAX_INDEX) index = index.slice(0, MAX_INDEX);
+    await kvPipeline([
+      ['SET', 'inquiries:index',    JSON.stringify(index)],
+      ['SET', 'inquiry:' + threadId, JSON.stringify(fullInquiry)],
+    ]);
 
-    await kvSet(INDEX_KEY, index);
-  } catch (e) {
-    // Non-fatal — record is saved, index update failed
-    return res.status(200).json({ ok: true, threadId, created: isNew, updated_at: now,
-      warning: 'Record saved but index update failed: ' + e.message });
+    return res.status(200).json({ ok: true, threadId });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || String(err) });
   }
-
-  return res.status(200).json({ ok: true, threadId, created: isNew, updated_at: now });
 };

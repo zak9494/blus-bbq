@@ -846,6 +846,9 @@ if (typeof marked !== 'undefined') {
             <button class="pdf-btn" onclick="emailQuote()" style="margin-top:4px; color:#80b4e8; border-color:var(--blue-border);">
               Email Quote to Customer
             </button>
+            <button class="pdf-btn" id="qb-save-inq-btn" onclick="saveQuoteAsInquiry()" style="margin-top:4px; color:#6ee7b7; border-color:rgba(110,231,183,0.3);">
+              📁 Save as Inquiry
+            </button>
           </div>
         </div>
       </div>
@@ -2186,6 +2189,80 @@ async function generatePDF() {
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/* C20: Save as Inquiry --------------------------------------------------- */
+async function saveQuoteAsInquiry() {
+  const name    = (document.getElementById('q-name').value || '').trim();
+  const email   = (document.getElementById('q-email').value || '').trim();
+  const dateVal = document.getElementById('q-date').value;
+  const timeVal = document.getElementById('q-time').value;
+  const address = (document.getElementById('q-address').value || '').trim();
+  const guests  = document.getElementById('q-guests').value;
+  const notes   = (document.getElementById('q-notes').value || '').trim();
+  const service = document.getElementById('q-service').value;
+  const pct     = parseFloat(document.getElementById('charge-pct').value) || 0;
+
+  if (!name) { showToast('Enter a customer name first.'); return; }
+
+  const items = Object.entries(selectedItems).map(function([id, item]) {
+    const qty = getItemQty(id);
+    return { name: item.name, unit: item.unit, unit_price: item.price, qty, subtotal: parseFloat((item.price * qty).toFixed(2)) };
+  });
+
+  const subtotal      = items.reduce(function(s, i) { return s + i.subtotal; }, 0);
+  const serviceCharge = parseFloat((subtotal * (pct / 100)).toFixed(2));
+  const deliveryFee   = (service === 'delivery' || service === 'delivery_setup') ? 50 : 0;
+  const baseTax       = Math.round(subtotal * 0.0825 * 100) / 100;
+  const tax           = qbTaxExempt ? 0 : baseTax;
+  const grandTotal    = parseFloat((subtotal + serviceCharge + tax + deliveryFee).toFixed(2));
+
+  const quote = items.length ? {
+    line_items:         items,
+    food_subtotal:      parseFloat(subtotal.toFixed(2)),
+    service_charge:     serviceCharge,
+    service_charge_pct: pct,
+    sales_tax:          tax,
+    delivery_fee:       deliveryFee,
+    grand_total:        grandTotal,
+    tax_exempt:         qbTaxExempt,
+    tax_exempt_number:  qbTaxExempt ? (document.getElementById('qb-tax-exempt-cert') || {}).value || null : null,
+  } : null;
+
+  const btn = document.getElementById('qb-save-inq-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  try {
+    const r = await fetch('/api/inquiries/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: INQ_SECRET,
+        customer_name: name,
+        email,
+        event_date:    dateVal,
+        event_time:    timeVal,
+        guest_count:   guests ? parseInt(guests, 10) : null,
+        service_type:  service,
+        delivery_address: address,
+        notes,
+        quote,
+      })
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Unknown error');
+    showToast('Saved as inquiry ✓', 3500);
+    if (btn) { btn.disabled = false; btn.textContent = '📁 Save as Inquiry'; }
+    // Offer to navigate
+    if (confirm('Saved! Open the new inquiry now?')) {
+      showPage('inquiries');
+      openInquiry(d.threadId);
+    }
+  } catch(e) {
+    showToast('Save failed: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '📁 Save as Inquiry'; }
+  }
+}
+/* end C20 ---------------------------------------------------------------- */
 
 function emailQuote() {
   const email = document.getElementById('q-email').value;
