@@ -3800,15 +3800,27 @@ function updateCalAuthStatus(connected) {
 async function registerCalendarWebhook() {
   try {
     showToast('Registering push webhook\u2026');
-    const r = await fetch('/api/calendar/watch-register?secret=' + encodeURIComponent(INQ_SECRET), { method: 'POST' });
+    // Send secret in both query string and POST body — belt-and-suspenders
+    // in case Vercel rewrites strip query params on POST requests.
+    const r = await fetch('/api/calendar/watch-register?secret=' + encodeURIComponent(INQ_SECRET), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: INQ_SECRET }),
+    });
     const d = await r.json();
     if (d.ok) {
       showToast('\u2713 Push webhook registered (expires ' + new Date(+d.expiration).toLocaleDateString() + ')');
     } else {
-      showToast('Webhook registration failed: ' + (d.error || 'Unknown error'));
+      // Show the full server error detail so debugging is possible without Vercel log access
+      var msg = d.error || 'Unknown error';
+      if (d.detail) msg += ' \u2014 ' + d.detail;
+      if (d.fix)    msg += ' Fix: ' + d.fix;
+      showToast('Webhook failed: ' + msg, 8000);
+      console.error('watch-register error:', d);
     }
   } catch(e) {
     showToast('Webhook error: ' + e.message);
+    console.error('registerCalendarWebhook exception:', e);
   }
 }
 
