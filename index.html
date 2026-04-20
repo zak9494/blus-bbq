@@ -1288,13 +1288,17 @@ if (typeof marked !== 'undefined') {
     <div class="form-group"><label class="form-label">Message to Customer</label>
       <textarea class="form-input" id="tm-message" rows="4">Hi, please find your Blu's Barbeque payment link below. Please complete payment at your earliest convenience to confirm your catering order. Thank you!</textarea>
     </div>
+    <!-- D23: schedule row (hidden until "Schedule" clicked) -->
+    <div id="tm-schedule-row" class="form-group" style="display:none">
+      <label class="form-label">Schedule for</label>
+      <input class="form-input" id="tm-send-at" type="datetime-local">
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('toast-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="sendToastLink()">Send Payment Link</button>
+      <button class="btn" id="tm-sched-btn" onclick="toggleToastScheduleRow()" style="color:var(--text2)">📅 Schedule</button>
+      <button class="btn btn-primary" id="tm-send-btn" onclick="sendToastLink()">Send Now</button>
     </div>
   </div>
-
-    
 </div>
 
 <!-- MODAL: Inquiries compose (quote + request-more-info) -->
@@ -1823,8 +1827,61 @@ function sendToastLink() {
   if (!link || !email) { alert('Please enter email and payment link'); return; }
   sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({to: email, name: email, subject: "Blu's BBQ — Payment Link for Your Catering Order", body: `${message}\n\nPayment link: ${link}\nAmount due: ${amount}\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`})}`);
   closeModal('toast-modal');
+  // reset schedule UI
+  const sr = document.getElementById('tm-schedule-row');
+  if (sr) sr.style.display = 'none';
   showToast('Payment link sent!');
 }
+
+/* D23: Toast schedule helpers */
+function toggleToastScheduleRow() {
+  const row = document.getElementById('tm-schedule-row');
+  const sendBtn = document.getElementById('tm-send-btn');
+  if (!row) return;
+  const showing = row.style.display !== 'none';
+  row.style.display = showing ? 'none' : 'block';
+  if (sendBtn) sendBtn.textContent = showing ? 'Send Now' : '📤 Send Scheduled';
+  if (sendBtn) sendBtn.onclick = showing ? sendToastLink : scheduleToastLink;
+}
+
+async function scheduleToastLink() {
+  const link    = document.getElementById('tm-link').value.trim();
+  const email   = document.getElementById('tm-email').value.trim();
+  const amount  = document.getElementById('tm-amount').value.trim();
+  const message = document.getElementById('tm-message').value.trim();
+  const sendAt  = document.getElementById('tm-send-at').value;
+  if (!link || !email) { showToast('Enter email and payment link first'); return; }
+  if (!sendAt) { showToast('Pick a date/time to schedule'); return; }
+  const btn = document.getElementById('tm-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Scheduling…'; }
+  try {
+    const r = await fetch('/api/schedule', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        channel: 'email',
+        sendAt: new Date(sendAt).toISOString(),
+        payload: {
+          to: email, name: email,
+          subject: "Blu's BBQ — Payment Link for Your Catering Order",
+          body: message + '\n\nPayment link: ' + link + '\nAmount due: ' + amount + '\n\nThanks,\nZach\nBlu\'s Barbeque\n214-514-8684'
+        }
+      })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      closeModal('toast-modal');
+      // reset schedule UI
+      const sr = document.getElementById('tm-schedule-row');
+      if (sr) sr.style.display = 'none';
+      if (btn) { btn.disabled = false; btn.textContent = 'Send Now'; btn.onclick = sendToastLink; }
+      showToast('Payment link scheduled for ' + new Date(sendAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) + ' ✓', 4000);
+    } else { throw new Error(d.error || 'Schedule failed'); }
+  } catch(e) {
+    showToast('Error: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '📤 Send Scheduled'; }
+  }
+}
+/* end D23 */
 
 async function generatePDF() {
   // ── Collect form data ──────────────────────────────────────────────────────
