@@ -348,3 +348,10 @@
   .cal-day-panel { display: none !important; } /* agenda replaces grid on mobile */
   .cal-body { flex-direction: column; }
 }
+
+/* ── Narrow mobile: Refresh button icon-only, compact New Event ── */
+@media (max-width: 520px) {
+  .cal-refresh-text { display: none; }
+  .cal-new-btn { font-size: 11px; padding: 5px 10px; }
+  #page-calendar .topbar-actions { gap: 4px; }
+}

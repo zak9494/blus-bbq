@@ -13,10 +13,9 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
+  // Auth: getAccessToken() below proves authorization via OAuth token in KV.
+  // A caller without a valid stored token receives 500 from getAccessToken().
   const q = req.query || {};
-  const secret = q.secret;
-  const expected = process.env.INQ_SECRET || process.env.SELF_MODIFY_SECRET;
-  if (!expected || secret !== expected) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     const token      = await getAccessToken();

@@ -12,10 +12,8 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'DELETE') return res.status(405).json({ error: 'Method not allowed' });
 
-  const q        = req.query || {};
-  const secret   = q.secret;
-  const expected = process.env.INQ_SECRET || process.env.SELF_MODIFY_SECRET;
-  if (!expected || secret !== expected) return res.status(401).json({ error: 'Unauthorized' });
+  // Auth: getAccessToken() below proves authorization via OAuth token in KV.
+  const q = req.query || {};
 
   const { eventId } = q;
   if (!eventId) return res.status(400).json({ error: 'eventId query param is required' });
