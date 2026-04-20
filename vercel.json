@@ -16,6 +16,7 @@
     { "source": "/api/calendar/watch-register", "destination": "/api/calendar/watch-register.js" },
     { "source": "/api/calendar/watch-status", "destination": "/api/calendar/watch-status.js" },
     { "source": "/api/cron/renew-calendar-watch", "destination": "/api/cron/renew-calendar-watch.js" },
+    { "source": "/api/cron/poll-inquiries", "destination": "/api/cron/poll-inquiries.js" },
     { "source": "/api/deposits/list", "destination": "/api/deposits/list.js" },
     { "source": "/api/deposits/save", "destination": "/api/deposits/save.js" },
     { "source": "/api/inquiries/by-email", "destination": "/api/inquiries/by-email.js" },
@@ -31,6 +32,10 @@
     {
       "path": "/api/cron/renew-calendar-watch",
       "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/poll-inquiries",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
