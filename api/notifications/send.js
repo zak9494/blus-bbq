@@ -4,13 +4,13 @@
    Sends a Web Push notification to all stored subscriptions using VAPID.
 
    Required Vercel env vars (set once):
-     VAPID_PUBLIC_KEY  — base64url-encoded P-256 public key
-     VAPID_PRIVATE_KEY — base64url-encoded P-256 private key
-     VAPID_SUBJECT     — mailto: or https: URL (default: mailto:info@blusbarbeque.com)
+     VAPID_PUBLIC_KEY â base64url-encoded P-256 public key
+     VAPID_PRIVATE_KEY â base64url-encoded P-256 private key
+     VAPID_SUBJECT     â xmailto: or https: URL (default: mailto:info@blusbarbeque.com)
 
    To generate VAPID keys:
      npx web-push generate-vapid-keys
-   Then paste them into Vercel → Settings → Environment Variables.
+   Then paste them into Vercel â Settings â Environment Variables.
    ===== */
 'use strict';
 
@@ -52,7 +52,7 @@ async function kvSet(key, value) {
   });
 }
 
-/* ── VAPID JWT signing (no external deps — uses built-in Node crypto) ───── */
+/* ââ VAPID JWT signing (no external deps â uses built-in Node crypto) âââââ */
 function base64urlEncode(buf) {
   return (Buffer.isBuffer(buf) ? buf : Buffer.from(buf))
     .toString('base64')
@@ -88,7 +88,7 @@ async function sendPushToSubscription(sub, payloadStr, vapidPublicKey, vapidPriv
       // Encrypt payload using ECDH + AES-GCM (aesgcm / RFC 8291 draft)
       // For simplicity, send an unencrypted push if keys not available.
       // If sub has keys (auth + p256dh), we must encrypt. Use RFC 8188 / draft-ietf-webpush-encryption.
-      // Full RFC 8291 encryption is complex — use the web-push package if available,
+      // Full RFC 8291 encryption is complex â use the web-push package if available,
       // otherwise fallback to empty push (client shows notification via push event data).
 
       let webpush;
@@ -102,7 +102,7 @@ async function sendPushToSubscription(sub, payloadStr, vapidPublicKey, vapidPriv
       }
 
       // Fallback: raw HTTPS request without payload encryption (works if sub has no keys,
-      // or push service accepts empty body — browser will fire 'push' event with no data)
+      // or push service accepts empty body â browser will fire 'push' event with no data)
       const bodyBuf = Buffer.from(payloadStr, 'utf-8');
       const headers = {
         'Authorization': auth,
@@ -166,11 +166,12 @@ module.exports = async (req, res) => {
       subs.map(sub => sendPushToSubscription(sub, payload, vapidPublicKey, vapidPrivateKey, vapidSubject))
     );
 
-    // Collect expired endpoints (410/404 → subscription gone)
+    // Collect expired endpoints (410/404 â subscription gone)
     const expired = new Set();
     results.forEach((r, i) => {
       if (r.status === 'rejected') {
         const sc = r.reason && r.reason.statusCode;
+        console.error("[push-fail] idx=" + i + " sc=" + sc + " err=" + JSON.stringify(r.reason && (r.reason.body || r.reason.message || String(r.reason))));
         if (sc === 410 || sc === 404) expired.add(subs[i].endpoint);
       }
     });
