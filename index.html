@@ -973,6 +973,7 @@ if (typeof marked !== 'undefined') {
       <!-- LIST VIEW -->
       <div id="inq-list-view">
         <div id="inq-chips" class="inq-chips"></div>
+        <div id="inq-date-chips" class="inq-chips" style="padding-top:0;border-top:none"></div>
         <!-- Search bar — sits between chips and cards, respects active chip filter -->
         <div style="padding:6px 16px 10px;position:relative">
           <input type="search" id="inq-search"
@@ -2763,6 +2764,7 @@ const INQ_STATUS_BADGE = {
 };
 
 let currentInqFilter = 'all';
+let currentInqDateFilter = 'all'; // C17: date-range filter
 let inqSearchTerm = '';
 let inqSearchTimer = null;
 let inquiriesCache   = null; // cached full list for re-filtering without refetch
@@ -2858,6 +2860,10 @@ function renderInqCards() {
   const emptyEl = document.getElementById('inq-empty');
   if (!cardsEl || !inquiriesCache) return;
   let filtered = getFilteredInquiries(currentInqFilter);
+  // C17: apply date-range filter after status filter
+  if (currentInqDateFilter !== 'all') {
+    filtered = filtered.filter(i => inqEventDateInRange(i, currentInqDateFilter));
+  }
   // Apply search within the already-filtered set (chip filter wins first)
   if (inqSearchTerm) {
     filtered = filtered.filter(i => inqMatchesSearch(i, inqSearchTerm));
@@ -2908,7 +2914,53 @@ function renderInqChips() {
     return '<button class="inq-chip' + active + '" data-filter="' + c.key + '" onclick="setInqFilter(\'' + c.key + '\')">' +
       c.label + ' <span style="opacity:0.65">(' + count + ')</span></button>';
   }).join('');
+  renderInqDateChips(); // C17: keep date chips in sync
 }
+
+/* C17: date-range filter ------------------------------------------------- */
+function setInqDateFilter(key) {
+  currentInqDateFilter = key;
+  renderInqDateChips();
+  renderInqCards();
+}
+
+function inqEventDateInRange(inq, key) {
+  const ds = inq.event_date || inq.eventDate || '';
+  if (!ds) return key === 'all'; // no event date → only show under "All Dates"
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const parts = ds.split('-').map(Number);
+  if (parts.length < 3) return key === 'all';
+  const ed = new Date(parts[0], parts[1] - 1, parts[2]);
+  if (key === 'all') return true;
+  if (key === 'today') return ed.getTime() === today.getTime();
+  if (key === 'week') {
+    const dow = today.getDay(); // 0=Sun
+    const mon = new Date(today); mon.setDate(today.getDate() - ((dow + 6) % 7));
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    return ed >= mon && ed <= sun;
+  }
+  if (key === 'month') {
+    return ed.getFullYear() === today.getFullYear() && ed.getMonth() === today.getMonth();
+  }
+  return true;
+}
+
+function renderInqDateChips() {
+  const el = document.getElementById('inq-date-chips');
+  if (!el) return;
+  const defs = [
+    { key: 'all',   label: 'All Dates' },
+    { key: 'today', label: 'Today' },
+    { key: 'week',  label: 'This Week' },
+    { key: 'month', label: 'This Month' },
+  ];
+  el.innerHTML = defs.map(function(c) {
+    const active = currentInqDateFilter === c.key ? ' active' : '';
+    return '<button class="inq-chip' + active + '" onclick="setInqDateFilter(\'' + c.key + '\')">' + c.label + '</button>';
+  }).join('');
+}
+/* end C17 ---------------------------------------------------------------- */
 
 async function archiveInq(event, threadId) {
   event.stopPropagation();
