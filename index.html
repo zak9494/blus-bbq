@@ -7,6 +7,7 @@
 <title>Blu's BBQ — Operations Dashboard</title> <!-- sm:2026-04-18T18:42:54 -->
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/calendar.css">
+<link rel="stylesheet" href="/static/css/deposits.css">
 <style>
 :root {
   --bg: #0f0e0d;
@@ -1054,6 +1055,9 @@ if (typeof marked !== 'undefined') {
               </div>
             </div>
           </div>
+
+          <!-- Deposit tracker (C14) -->
+          <div class="inq-section" id="inq-deposit-section" style="display:none"></div>
 
           <!-- Activity log -->
           <div class="inq-section" id="inq-activity-log" style="display:none">
@@ -3221,6 +3225,7 @@ async function openInquiry(threadId) {
     if (!d.ok) { showToast('Error: ' + (d.error||'unknown')); return; }
     currentInquiry = d.inquiry;
     renderInquiryDetail(d.inquiry);
+    if (typeof depositsInit === 'function') depositsInit(d.inquiry);
     document.getElementById('inq-list-view').style.display = 'none';
     document.getElementById('inq-list-topbar').style.display = 'none';
     document.getElementById('inq-detail-view').style.display = 'block';
@@ -4066,5 +4071,6 @@ function closeMobileSidebar() {
 }
 </script>
 <script defer src="/static/js/calendar.js"></script>
+<script defer src="/static/js/deposits.js"></script>
 </body>
 </html>
