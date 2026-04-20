@@ -19,11 +19,13 @@ module.exports = (req, res) => {
   url.searchParams.set('client_id', clientId);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('response_type', 'code');
-  // gmail.send for sending emails; calendar.events for Google Calendar sync;
-  // openid + email so id_token carries the user email for account validation
+  // gmail.send for sending emails; calendar (full) covers calendarList.list,
+  // calendars.insert, events.*, and events.watch — calendar.events alone is
+  // insufficient for getOrCreateCalendarId() which calls the calendarList API.
+  // openid + email so id_token carries the user email for account validation.
   url.searchParams.set('scope', [
     'https://www.googleapis.com/auth/gmail.send',
-    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/calendar',
     'openid',
     'email',
   ].join(' '));

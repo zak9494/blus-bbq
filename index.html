@@ -3746,9 +3746,8 @@ async function checkGmailStatus() {
     const data = await res.json();
     gmailConnected = data.connected;
     updateGmailStatus(data.connected, data.email, data.error, data.message);
-    // Calendar scope is requested alongside Gmail — if Gmail is connected the
-    // token includes calendar.events scope (after re-auth).
-    updateCalAuthStatus(data.connected);
+    // Pass hasCalendar flag so the dot reflects actual token scope, not just connection.
+    updateCalAuthStatus(data.connected, data.hasCalendar);
     if (params.get('gmailConnected') === '1' && data.connected) {
       showToast('Gmail + Calendar authorized as ' + data.email + '!');
     }
@@ -3785,12 +3784,16 @@ function authorizeCalendar() {
   window.location.href = '/api/auth/init';
 }
 
-function updateCalAuthStatus(connected) {
+function updateCalAuthStatus(connected, hasCalendar) {
   const el = document.getElementById('cal-auth-status');
   if (!el) return;
-  if (connected) {
+  if (connected && hasCalendar) {
     el.textContent = '● Calendar authorized';
     el.style.color = 'var(--green)';
+  } else if (connected && !hasCalendar) {
+    // Token exists but lacks calendar scope — old auth before C13 fix
+    el.textContent = '⚠ Re-authorize for Calendar access';
+    el.style.color = '#f59e0b';
   } else {
     el.textContent = '○ Calendar not authorized';
     el.style.color = 'var(--text3)';

@@ -53,5 +53,8 @@ module.exports = async (req, res) => {
     return res.status(200).json({ connected: false, email: null, hasRefreshToken, error: 'legacy_token', message: 'Gmail tokens need re-authentication. Visit /api/auth/init.' });
   }
 
-  return res.status(200).json({ connected: true, email: storedEmail, hasRefreshToken, storedAt: tokens.storedAt || null });
+  // Include scope so the client can verify calendar access without guessing
+  const scope = tokens.scope || null;
+  const hasCalendar = !!(scope && scope.includes('calendar'));
+  return res.status(200).json({ connected: true, email: storedEmail, hasRefreshToken, scope, hasCalendar, storedAt: tokens.storedAt || null });
 };
