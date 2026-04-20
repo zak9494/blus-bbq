@@ -4,23 +4,24 @@
    DELETE /api/notifications/subscribe?purge=1 -> wipe all (admin)
 */
 
-const KV_URL   = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
-const SECRET   = process.env.SELF_MODIFY_SECRET;
-const KV_KEY   = 'push:subscriptions';
+const KV_KEY = 'push:subscriptions';
+
+function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
+function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
+function secret()  { return process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN; }
 
 async function kvGet(key) {
-  const r = await fetch(`${KV_URL}/get/${key}`, {
-    headers: { Authorization: `Bearer ${KV_TOKEN}` }
+  const r = await fetch(`${kvUrl()}/get/${key}`, {
+    headers: { Authorization: `Bearer ${kvToken()}` }
   });
   const j = await r.json();
   return j.result;
 }
 
 async function kvSet(key, value) {
-  const r = await fetch(`${KV_URL}/set/${key}`, {
+  const r = await fetch(`${kvUrl()}/set/${key}`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${kvToken()}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ value })
   });
   return r.json();
@@ -60,44 +61,49 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const q = req.query || {};
+  try {
+    const q = req.query || {};
 
-  if (req.method === 'GET') {
-    const raw = await kvGet(KV_KEY);
-    const subs = raw ? JSON.parse(raw) : [];
-    return res.status(200).json({ ok: true, count: subs.length });
+    if (req.method === 'GET') {
+      const raw = await kvGet(KV_KEY);
+      const subs = raw ? JSON.parse(raw) : [];
+      return res.status(200).json({ ok: true, count: subs.length });
+    }
+
+    if (req.method === 'DELETE') {
+      if (q.secret !== secret()) {
+        return res.status(403).json({ ok: false, error: 'Forbidden' });
+      }
+      if (q.purge === '1') {
+        await kvSet(KV_KEY, JSON.stringify([]));
+        return res.status(200).json({ ok: true, purged: true });
+      }
+      return res.status(400).json({ ok: false, error: 'Missing purge=1' });
+    }
+
+    if (req.method === 'POST') {
+      const body = req.body || {};
+      if (body.secret !== secret()) {
+        return res.status(403).json({ ok: false, error: 'Forbidden' });
+      }
+      const sub = body.subscription;
+      const validationError = validateSubscription(sub);
+      if (validationError) {
+        return res.status(400).json({ ok: false, error: validationError });
+      }
+      const raw = await kvGet(KV_KEY);
+      const subs = raw ? JSON.parse(raw) : [];
+      const exists = subs.some(s => s.endpoint === sub.endpoint);
+      if (!exists) {
+        subs.push(sub);
+        await kvSet(KV_KEY, JSON.stringify(subs));
+      }
+      return res.status(200).json({ ok: true, stored: !exists, total: subs.length });
+    }
+
+    return res.status(405).json({ ok: false, error: 'Method not allowed' });
+  } catch(err) {
+    console.error('[subscribe] error:', err);
+    return res.status(500).json({ ok: false, error: err && err.message || String(err) });
   }
-
-  if (req.method === 'DELETE') {
-    if (q.secret !== SECRET) {
-      return res.status(403).json({ ok: false, error: 'Forbidden' });
-    }
-    if (q.purge === '1') {
-      await kvSet(KV_KEY, JSON.stringify([]));
-      return res.status(200).json({ ok: true, purged: true });
-    }
-    return res.status(400).json({ ok: false, error: 'Missing purge=1' });
-  }
-
-  if (req.method === 'POST') {
-    const body = req.body || {};
-    if (body.secret !== SECRET) {
-      return res.status(403).json({ ok: false, error: 'Forbidden' });
-    }
-    const sub = body.subscription;
-    const validationError = validateSubscription(sub);
-    if (validationError) {
-      return res.status(400).json({ ok: false, error: validationError });
-    }
-    const raw = await kvGet(KV_KEY);
-    const subs = raw ? JSON.parse(raw) : [];
-    const exists = subs.some(s => s.endpoint === sub.endpoint);
-    if (!exists) {
-      subs.push(sub);
-      await kvSet(KV_KEY, JSON.stringify(subs));
-    }
-    return res.status(200).json({ ok: true, stored: !exists, total: subs.length });
-  }
-
-  return res.status(405).json({ ok: false, error: 'Method not allowed' });
 }
