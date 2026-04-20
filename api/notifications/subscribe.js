@@ -11,18 +11,26 @@ function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH
 function secret()  { return process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN; }
 
 async function kvGet(key) {
-  const r = await fetch(`${kvUrl()}/get/${key}`, {
-    headers: { Authorization: `Bearer ${kvToken()}` }
-  });
-  const j = await r.json();
-  return j.result;
+  const url = kvUrl();
+  if (!url) return null;
+  try {
+    const r = await fetch(`${url}/get/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${kvToken()}` }
+    });
+    const j = await r.json();
+    return j.result;
+  } catch(e) { return null; }
 }
 
 async function kvSet(key, value) {
-  const r = await fetch(`${kvUrl()}/set/${key}`, {
+  const url = kvUrl();
+  if (!url) return null;
+  const stored = typeof value === 'string' ? value : JSON.stringify(value);
+  const body = JSON.stringify([['SET', key, stored]]);
+  const r = await fetch(`${url}/pipeline`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${kvToken()}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value })
+    body
   });
   return r.json();
 }
@@ -66,7 +74,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
       const raw = await kvGet(KV_KEY);
-      const subs = raw ? JSON.parse(raw) : [];
+      const subs = (raw && typeof raw === 'string') ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
       return res.status(200).json({ ok: true, count: subs.length });
     }
 
@@ -92,7 +100,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ ok: false, error: validationError });
       }
       const raw = await kvGet(KV_KEY);
-      const subs = raw ? JSON.parse(raw) : [];
+      const subs = (raw && typeof raw === 'string') ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
       const exists = subs.some(s => s.endpoint === sub.endpoint);
       if (!exists) {
         subs.push(sub);
