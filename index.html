@@ -92,7 +92,7 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .inq-chip.active { background:var(--amber); border-color:var(--amber); color:#000; }
 .inq-chip:hover:not(.active) { border-color:var(--amber); color:var(--amber); }
 .pipeline-inq-group-hdr { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); padding:14px 16px 6px; }
-.inq-src-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+.inq-src-badge { font-size:12px; font-weight:700; padding:2px 7px; border-radius:10px; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
 .src-wix { background:#4f46e520; color:#818cf8; border:1px solid #4f46e540; }
 .src-ezcater { background:#d9770630; color:#fb923c; border:1px solid #d9770640; }
 .src-direct { background:#05966920; color:#34d399; border:1px solid #05966940; }
@@ -160,7 +160,7 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .k-card.urgent { border-color: var(--red-border); }
 .k-name { font-weight: 500; font-size: 13px; margin-bottom: 2px; }
 .k-meta { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
-.k-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; letter-spacing: 0.04em; }
+.k-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 99px; letter-spacing: 0.04em; }
 .badge-new { background: var(--blue-bg); color: #80b4e8; border: 1px solid var(--blue-border); }
 .badge-quoted { background: var(--amber-bg); color: #e0a060; border: 1px solid var(--amber-border); }
 .badge-followup { background: var(--red-bg); color: #e09090; border: 1px solid var(--red-border); }
@@ -507,7 +507,8 @@ tr:hover td { background: var(--surface2); }
   .history-card-body{flex:1;min-width:0;}
   .history-card-title{font-size:12px;color:var(--text);font-weight:500;word-break:break-word;line-height:1.4;}
   .history-card-meta{font-size:10px;color:var(--text3);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-  .history-sha-badge{font-family:monospace;background:var(--surface2);padding:1px 4px;border-radius:3px;font-size:9px;}
+  .history-sha-badge{font-family:monospace;background:var(--surface2);padding:1px 4px;border-radius:3px;font-size:9px;color:var(--text2);text-decoration:none;cursor:pointer;}
+  .history-sha-badge:hover{background:var(--amber-bg);color:var(--amber);}
   </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" crossorigin="anonymous"></script>
 <script>
@@ -1432,7 +1433,7 @@ function renderKanban() {
       var isEmpty = !cards;
       return '<div class="pip-col' + (isEmpty ? ' pip-col-empty' : '') + '">'
         + '<div class="pip-col-hdr"><span>' + (INQ_STATUS_LABELS[s] || s) + '</span><span>' + (groups[s] ? groups[s].length : 0) + '</span></div>'
-        + '<div class="pip-col-body">' + (cards || '<p style="font-size:11px;color:var(--text3);padding:8px">Empty</p>') + '</div>'
+        + '<div class="pip-col-body">' + (cards || '<p style="font-size:11px;color:var(--text3);padding:8px;line-height:1.5">No leads here yet.<br>Approve an inquiry to populate this column.</p>') + '</div>'
       + '</div>';
     }).join('')
   + '</div>';
@@ -2504,6 +2505,9 @@ async function runAiGeneration(sourceHtml, prompt, systemPrompt, statusEl, setPr
 async function confirmModify() {
   const prompt = document.getElementById('modify-prompt').value.trim();
   if (!prompt) return;
+  // B7: confirmation gate before kicking off the rewrite pipeline
+  const preview = prompt.length > 120 ? prompt.slice(0, 120) + '…' : prompt;
+  if (!window.confirm('Apply this change to the live dashboard?\n\n"' + preview + '"\n\nThis will rewrite and redeploy the app.')) return;
   showPhaseError(1, null); showPhaseError(2, null); showPhaseError(3, null);
   document.getElementById('modify-progress-wrap').style.display = 'none';
   document.getElementById('modify-progress-fill').style.width = '0%';
@@ -2714,12 +2718,15 @@ function renderInqCardHTML(inq) {
   const tid = inq.threadId;
   const isArchived = inq.status === 'archived';
   const isApproved = inq.approved === true;
-  const archiveBtn = isArchived
-    ? '<button class="btn" style="font-size:11px;padding:4px 10px;flex:1;color:var(--text2)" onclick="unarchiveInq(event,\'' + tid + '\')">↩ Unarchive</button>'
-    : '<button class="btn" style="font-size:11px;padding:4px 10px;flex:1" onclick="archiveInq(event,\'' + tid + '\')">🗄 Archive</button>';
-  const approveBtn = isApproved
-    ? '<button class="btn" style="font-size:11px;padding:4px 10px;flex:1;color:var(--text3)" disabled>✓ In Pipeline</button>'
-    : '<button class="btn btn-primary" style="font-size:11px;padding:4px 10px;flex:1" onclick="approveInq(event,\'' + tid + '\')">✓ Approve</button>';
+  // B11: one-line body preview
+  const bodyPreview = (inq.body || '').slice(0, 110).replace(/[\n\r]+/g, ' ').trim();
+  // B5: compact icon buttons (44×44 touch targets) in top-right column
+  const archiveIcon = isArchived
+    ? '<button title="Unarchive" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:16px;color:var(--text2)" onclick="unarchiveInq(event,\'' + tid + '\')">↩</button>'
+    : '<button title="Archive" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:16px;color:var(--text2)" onclick="archiveInq(event,\'' + tid + '\')">🗄</button>';
+  const approveIcon = isApproved
+    ? '<button title="In Pipeline" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--green-bg);border:1px solid var(--green-border);border-radius:8px;cursor:default;font-size:16px;color:#80c898" disabled>✓</button>'
+    : '<button title="Approve → Pipeline" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:8px;cursor:pointer;font-size:16px;color:var(--amber)" onclick="approveInq(event,\'' + tid + '\')">✓</button>';
   const updateDot = inq.has_unreviewed_update ? '<span class="inq-update-dot" title="Customer replied — needs review"></span>' : '';
   return '<div class="inq-card">'
     + '<div class="inq-card-top">'
@@ -2727,14 +2734,17 @@ function renderInqCardHTML(inq) {
         + '<div class="inq-card-name">' + updateDot + name + '</div>'
         + '<div class="inq-card-meta">' + date + guests + '</div>'
         + '<div class="inq-card-meta" style="color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (inq.subject || '') + '</div>'
+        + (bodyPreview ? '<div class="inq-card-meta" style="color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic">' + bodyPreview + '</div>' : '')
       + '</div>'
-      + '<span class="inq-src-badge ' + srcCls + '">' + srcLabel + '</span>'
+      + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">'
+        + '<span class="inq-src-badge ' + srcCls + '">' + srcLabel + '</span>'
+        + '<div style="display:flex;gap:5px">' + archiveIcon + approveIcon + '</div>'
+      + '</div>'
     + '</div>'
     + '<div class="inq-card-bottom" style="margin-top:6px">'
       + '<span class="k-badge ' + badge + '">' + label + '</span>'
       + '<span style="font-size:11px;color:var(--text3)">' + eDate + '</span>'
     + '</div>'
-    + '<div class="inq-card-actions">' + archiveBtn + approveBtn + '</div>'
     + '</div>';
 }
 
@@ -3027,7 +3037,7 @@ function renderPipelineInquiries() {
         const cards = (groups[s] || []).map(pipCard).join('');
         return '<div class="pip-col">'
           + '<div class="pip-col-hdr"><span>' + (INQ_STATUS_LABELS[s] || s) + '</span><span>' + (groups[s] ? groups[s].length : 0) + '</span></div>'
-          + '<div class="pip-col-body">' + (cards || '<p style="font-size:11px;color:var(--text3);padding:8px">Empty</p>') + '</div>'
+          + '<div class="pip-col-body">' + (cards || '<p style="font-size:11px;color:var(--text3);padding:8px;line-height:1.5">No leads here yet.<br>Approve an inquiry to populate this column.</p>') + '</div>'
         + '</div>';
       }).join('') + '</div>';
   } else {
@@ -3133,7 +3143,7 @@ function renderInquiryDetail(inq) {
     document.getElementById('inq-quote-lines').innerHTML = q.line_items.map((li, i) =>
       '<div class="inq-quote-line">' +
         '<span style="flex:2;font-size:13px">' + li.name + '</span>' +
-        '<input type="number" min="0" step="0.5" class="form-input" id="inq-li-qty-' + i + '" value="' + li.qty + '" style="width:60px;text-align:center" onchange="recalcQuoteLine(' + i + ')">' +
+        '<input type="number" min="0" step="0.5" class="form-input" id="inq-li-qty-' + i + '" value="' + li.qty + '" style="width:68px;text-align:center" onchange="recalcQuoteLine(' + i + ')">' +
         '<span style="color:var(--text3);font-size:12px">×</span>' +
         '<input type="number" min="0" step="0.01" class="form-input" id="inq-li-price-' + i + '" value="' + li.unit_price + '" style="width:80px;text-align:right" onchange="recalcQuoteLine(' + i + ')">' +
         '<span style="width:80px;text-align:right;font-size:13px;font-weight:600" id="inq-li-sub-' + i + '">$' + li.subtotal.toFixed(2) + '</span>' +
@@ -3230,8 +3240,13 @@ function viewInquiryEmail() {
 function recalcQuoteLine(idx) {
   if (!currentInquiry || !currentInquiry.quote) return;
   const li = currentInquiry.quote.line_items[idx];
-  const qty   = parseFloat(document.getElementById('inq-li-qty-' + idx).value)   || 0;
-  const price = parseFloat(document.getElementById('inq-li-price-' + idx).value) || 0;
+  // B10: clamp negatives / non-numeric to 0
+  const qtyRaw   = parseFloat(document.getElementById('inq-li-qty-' + idx).value);
+  const priceRaw = parseFloat(document.getElementById('inq-li-price-' + idx).value);
+  const qty   = isNaN(qtyRaw)   || qtyRaw   < 0 ? 0 : qtyRaw;
+  const price = isNaN(priceRaw) || priceRaw < 0 ? 0 : priceRaw;
+  if (qty   !== qtyRaw)   document.getElementById('inq-li-qty-' + idx).value   = qty;
+  if (price !== priceRaw) document.getElementById('inq-li-price-' + idx).value = price;
   li.qty = qty; li.unit_price = price;
   li.subtotal = Math.round(qty * price * 100) / 100;
   document.getElementById('inq-li-sub-' + idx).textContent = '$' + li.subtotal.toFixed(2);
@@ -3531,7 +3546,7 @@ async function loadModHistory() {
     listEl.innerHTML = items.map(e => {
       const dt = new Date(e.timestamp || e.ts).toLocaleString();
       const sha = e.sha || e.commitSha || '';
-      const shaBadge = sha ? '<span class="history-sha-badge">' + sha.slice(0,7) + '</span>' : '';
+      const shaBadge = sha ? '<a class="history-sha-badge" href="https://github.com/zak9494/blus-bbq/commit/' + sha + '" target="_blank" rel="noopener noreferrer">' + sha.slice(0,7) + '</a>' : '';
       const dur = e.duration ? ' · ' + e.duration + 's' : '';
       const errHtml = e.error ? '<div style="color:#ef4444;font-size:11px;margin-top:4px;">' + (e.phase ? '['+e.phase+'] ' : '') + e.error + '</div>' : '';
       return '<div class="history-card ' + (e.status || '') + '"><div class="history-card-icon">' + icon(e.status) + '</div><div class="history-card-body"><div class="history-card-title">' + (e.prompt || e.title || 'Modification').slice(0,100) + '</div><div class="history-card-meta">' + dt + dur + ' ' + shaBadge + '</div>' + errHtml + '</div></div>';
@@ -3554,7 +3569,7 @@ async function renderModifyHistory() {
     el.innerHTML = hist.slice(0,10).map(function(e){
       const icon = e.status==='done' ? '\u2705' : (e.status==='failed' || e.status==='error') ? '\u274c' : '\u23f3';
       const dt = new Date(e.timestamp).toLocaleString();
-      const sha = e.sha ? '<span class="history-sha-badge">' + esc(e.sha.slice(0,7)) + '</span>' : '';
+      const sha = e.sha ? '<a class="history-sha-badge" href="https://github.com/zak9494/blus-bbq/commit/' + esc(e.sha) + '" target="_blank" rel="noopener noreferrer">' + esc(e.sha.slice(0,7)) + '</a>' : '';
       const dur = (e.duration != null) ? ' &middot; ' + e.duration + 's' : '';
       const phaseTag = e.phase ? '<span style="opacity:0.7">[' + esc(e.phase) + ']</span> ' : '';
       const errHtml = e.error
