@@ -2800,9 +2800,9 @@ async function loadPipelineInquiries() {
   try {
     const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
     const d = await r.json();
-    // Show all non-archived, non-test inquiries regardless of approved flag
+    // Stage 2: only approved, non-archived, non-test inquiries
     pipelineInqCache = (d.inquiries || []).filter(i =>
-      i.status !== 'archived' && !i.threadId.startsWith('test-'));
+      i.approved === true && i.status !== 'archived' && !i.threadId.startsWith('test-'));
     renderKanban(); renderTable(); updateStats();
     // Update Recent Replies dashboard widget
     const replies = (d.inquiries || []).filter(i => i.has_unreviewed_update && i.status !== 'archived').slice(0, 3);
