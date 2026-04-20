@@ -2,7 +2,8 @@
  * POST /api/inquiries/approve
  * Two-stage system — Approve an inquiry from Stage 1 → Stage 2 (Pipeline).
  *
- * Sets approved: true. Triggers AI quote gen if not already present and canQuote.
+ * Sets approved: true immediately (before AI quote gen so a timeout can't lose it).
+ * Then attempts AI quote gen if not already present and canQuote.
  *
  * Body: { threadId }
  * Returns: { ok, threadId, quote_generated }
@@ -69,33 +70,52 @@ module.exports = async (req, res) => {
   if (!raw) return res.status(404).json({ error: 'Inquiry not found', threadId });
   const inq = typeof raw === 'string' ? JSON.parse(raw) : raw;
 
-  // Try AI quote gen if not already present and we have enough info
-  let quote = inq.quote || null;
+  // ── STEP 1: Save approved:true immediately ──────────────────────────────
+  // This must happen before AI quote gen so a timeout can't lose the approval.
+  const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_sent','booked','declined','completed'];
+  const initialStatus = inq.quote ? 'quote_drafted'
+    : (PIPELINE_STATUSES.includes(inq.status) ? inq.status : 'needs_info');
+
+  const approveResp = await callInternal('/api/inquiries/save', 'POST', {
+    threadId,
+    approved: true,
+    status: initialStatus,
+    history_entry: { action: 'approved_to_pipeline', actor: 'user' }
+  });
+  if (approveResp.status >= 300) {
+    return res.status(500).json({ error: 'Approve save failed', detail: approveResp.body });
+  }
+
+  // ── STEP 2: Optionally generate AI quote ───────────────────────────────
   let quoteGenerated = false;
-  if (!quote) {
+  if (!inq.quote) {
     const ef = inq.extracted_fields || {};
     const canQuote = ef.guest_count && ef.menu_preferences && ef.menu_preferences.length;
     if (canQuote) {
-      const serviceType = /delivery.*setup|setup.*delivery|full.service/i.test(ef.special_requests || '')
-        ? 'delivery_setup' : /delivery/i.test(ef.special_requests || '') ? 'delivery' : 'pickup';
-      const qr = await callInternal('/api/quotes/ai-generate', 'POST', { ...ef, service_type: serviceType });
-      if (qr.status < 300 && qr.body.ok) { quote = qr.body.quote; quoteGenerated = true; }
+      try {
+        const serviceType = /delivery.*setup|setup.*delivery|full.service/i.test(ef.special_requests || '')
+          ? 'delivery_setup' : /delivery/i.test(ef.special_requests || '') ? 'delivery' : 'pickup';
+        const qr = await callInternal('/api/quotes/ai-generate', 'POST', { ...ef, service_type: serviceType });
+        if (qr.status < 300 && qr.body.ok) {
+          // Save quote in a second call — approval is already persisted above
+          await callInternal('/api/inquiries/save', 'POST', {
+            threadId,
+            status: 'quote_drafted',
+            quote: qr.body.quote,
+            history_entry: { action: 'quote_auto_generated', actor: 'system' }
+          });
+          quoteGenerated = true;
+        }
+      } catch (e) {
+        // Quote gen failed/timed out — approval is already saved, so this is non-fatal
+        console.error('Auto quote gen failed (approval already saved):', e.message);
+      }
     }
   }
 
-  // Determine pipeline status
-  const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_sent','booked','declined'];
-  const newStatus = quote ? 'quote_drafted' : (PIPELINE_STATUSES.includes(inq.status) ? inq.status : 'needs_info');
-
-  // Save: set approved:true + new status + quote if generated
-  const saveResp = await callInternal('/api/inquiries/save', 'POST', {
-    threadId,
-    approved: true,
-    status: newStatus,
-    ...(quoteGenerated ? { quote } : {}),
-    history_entry: { action: 'approved_to_pipeline' + (quoteGenerated ? '_with_quote' : ''), actor: 'user' }
+  return res.status(200).json({
+    ok: true, threadId,
+    quote_generated: quoteGenerated,
+    status: quoteGenerated ? 'quote_drafted' : initialStatus
   });
-  if (saveResp.status >= 300) return res.status(500).json({ error: 'Save failed', detail: saveResp.body });
-
-  return res.status(200).json({ ok: true, threadId, quote_generated: quoteGenerated, status: newStatus });
 };
