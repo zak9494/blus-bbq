@@ -230,8 +230,8 @@
   margin-bottom: 8px;
 }
 .cal-panel-event-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.cal-btn-danger { color: #f87171; border-color: #f87171; }
-.cal-btn-danger:hover { background: #f87171; color: #000; }
+.cal-btn-danger { color: var(--error-light); border-color: var(--error-light); }
+.cal-btn-danger:hover { background: var(--error-light); color: #000; }
 .cal-panel-footer { padding: 10px 16px; border-top: 1px solid var(--border); }
 
 /* ── New Event modal ──────────────────────────── */
@@ -289,7 +289,7 @@
 .cal-modal-row input:focus,
 .cal-modal-row textarea:focus { border-color: var(--amber); }
 .cal-modal-row-half { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-.cal-modal-error { color: #f87171; font-size: 12px; margin-top: 8px; min-height: 16px; }
+.cal-modal-error { color: var(--error-light); font-size: 12px; margin-top: 8px; min-height: 16px; }
 .cal-modal-footer {
   display: flex;
   gap: 8px;
@@ -330,7 +330,7 @@
   display: none;
   padding: 10px 20px;
   font-size: 13px;
-  color: #f87171;
+  color: var(--error-light);
   border-bottom: 1px solid var(--border);
 }
 .cal-loading-state {

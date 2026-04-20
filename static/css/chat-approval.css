@@ -94,7 +94,7 @@
 }
 
 .approval-status.error {
-  color: #ff5555;
+  color: var(--error-light);
 }
 
 .approval-sent {

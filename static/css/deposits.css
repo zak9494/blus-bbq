@@ -38,7 +38,7 @@
   font-weight: 700;
   color: var(--text);
 }
-.dep-summary-value.dep-paid   { color: #6ee7b7; }
+.dep-summary-value.dep-paid   { color: var(--emerald); }
 .dep-summary-value.dep-due    { color: var(--amber); }
 .dep-summary-value.dep-zeroed { color: var(--text3); font-weight: 500; }
 
@@ -55,7 +55,7 @@
 .dep-item:last-child { border-bottom: none; }
 .dep-item-amount {
   font-weight: 700;
-  color: #6ee7b7;
+  color: var(--emerald);
   min-width: 62px;
 }
 .dep-item-meta {
@@ -78,7 +78,7 @@
   line-height: 1;
   transition: color 0.15s;
 }
-.dep-item-del:hover { color: #f87171; }
+.dep-item-del:hover { color: var(--error-light); }
 
 /* ── Add deposit form ────────────────────────── */
 .dep-form {
