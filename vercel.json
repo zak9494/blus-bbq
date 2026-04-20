@@ -21,7 +21,8 @@
     { "source": "/api/inquiries/by-email", "destination": "/api/inquiries/by-email.js" },
     { "source": "/api/pipeline/alerts", "destination": "/api/pipeline/alerts.js" },
     { "source": "/api/inquiries/save", "destination": "/api/inquiries/save.js" },
-    { "source": "/api/chat/history", "destination": "/api/chat/history.js" }
+    { "source": "/api/chat/history", "destination": "/api/chat/history.js" },
+    { "source": "/api/chat/approval", "destination": "/api/chat/approval.js" }
   ],
   "crons": [
     {

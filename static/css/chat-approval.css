@@ -1,0 +1,180 @@
+/* ===== MODULE: CHAT APPROVAL GATE (D24) =====
+   Styles for the email draft approval card rendered in AI chat.
+   ===================================================== */
+
+.approval-msg {
+  align-self: stretch;
+  max-width: 100%;
+}
+
+.approval-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--red);
+  border-radius: 8px;
+  padding: 14px 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.approval-card-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--red);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.approval-card-field {
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+
+.approval-label {
+  font-weight: 600;
+  color: var(--text);
+  display: inline-block;
+  min-width: 54px;
+}
+
+.approval-val {
+  color: var(--text2);
+}
+
+.approval-card-body {
+  font-size: 13px;
+  color: var(--text2);
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 10px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 160px;
+  overflow-y: auto;
+  line-height: 1.55;
+}
+
+.approval-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.approval-approve {
+  background: var(--red) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.approval-schedule,
+.approval-edit {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+}
+
+.approval-reject {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text2) !important;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+}
+
+.approval-status {
+  font-size: 13px;
+  color: var(--text2);
+  font-style: italic;
+}
+
+.approval-status.error {
+  color: #ff5555;
+}
+
+.approval-sent {
+  font-size: 14px;
+  color: var(--text2);
+  padding: 6px 0;
+}
+
+/* Schedule row */
+.approval-schedule-row {
+  display: none;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.approval-dt {
+  flex: 1;
+  min-width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.approval-send-scheduled {
+  background: var(--red) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  white-space: nowrap;
+}
+
+/* Edit form */
+.approval-edit-form label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin: 10px 0 4px;
+}
+
+.approval-edit-form label:first-child {
+  margin-top: 0;
+}
+
+.approval-edit-form .edit-to,
+.approval-edit-form .edit-subject,
+.approval-edit-form .edit-body {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.approval-edit-form .edit-body {
+  resize: vertical;
+  line-height: 1.55;
+  min-height: 120px;
+}
+
+.approval-save-edit {
+  background: var(--red) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.approval-cancel-edit {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text2) !important;
+  font-size: 12px !important;
+}

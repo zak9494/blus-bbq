@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/calendar.css">
 <link rel="stylesheet" href="/static/css/deposits.css">
+<link rel="stylesheet" href="/static/css/chat-approval.css">
 <style>
 :root {
   --bg: #0f0e0d;
@@ -1446,7 +1447,7 @@ function showPage(page) {
   if (page === 'inquiries') loadInquiries();
   else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
   if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); }
-  if (page === 'ai') loadChatHistory(); // C21: load persistent history
+  if (page === 'ai') { loadChatHistory(); if (typeof chatApprovalInit === 'function') chatApprovalInit(); } // C21 + D24
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
   });
@@ -4372,5 +4373,6 @@ function closeMobileSidebar() {
 <script defer src="/static/js/repeat-customer.js"></script>
 <script defer src="/static/js/pipeline-alerts.js"></script>
 <script defer src="/static/js/quote-revise.js"></script>
+<script defer src="/static/js/chat-approval.js"></script>
 </body>
 </html>

@@ -37,6 +37,9 @@ const STATIC_MODULE_FILES = [
   'api/inquiries/by-email.js',
   'api/inquiries/save.js',
   'api/chat/history.js',
+  'api/chat/approval.js',
+  'static/js/chat-approval.js',
+  'static/css/chat-approval.css',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
