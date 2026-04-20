@@ -1,0 +1,84 @@
+/* ===== MODULE: PUSH NOTIFICATIONS UI (push-notifications feature) ===== */
+
+/* ── Notification bell in sidebar footer ────────────────────────────── */
+.notif-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 2px;
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+}
+
+.notif-toggle-label {
+  font-size: 11px;
+  color: var(--text3);
+  flex: 1;
+  letter-spacing: 0.03em;
+}
+
+.notif-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text2);
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.notif-toggle-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.notif-toggle-btn.notif-enabled {
+  border-color: var(--green-border);
+  color: var(--success-light);
+}
+
+.notif-toggle-btn.notif-denied {
+  border-color: var(--error-border);
+  color: var(--error-light);
+  cursor: not-allowed;
+}
+
+/* ── Notification status line ───────────────────────────────────────── */
+.notif-status-line {
+  font-size: 10px;
+  color: var(--text3);
+  padding: 2px 0 6px;
+  line-height: 1.4;
+  min-height: 14px;
+}
+
+/* ── Test push button ───────────────────────────────────────────────── */
+.notif-test-btn {
+  font-size: 10px;
+  color: var(--text3);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: underline;
+}
+
+.notif-test-btn:hover {
+  color: var(--text2);
+}
+
+/* ── iOS install hint ───────────────────────────────────────────────── */
+.notif-ios-hint {
+  font-size: 10px;
+  color: var(--amber);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  margin-top: 6px;
+  line-height: 1.45;
+}

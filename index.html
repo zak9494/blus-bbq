@@ -6,9 +6,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blu's BBQ — Operations Dashboard</title> <!-- sm:2026-04-18T18:42:54 -->
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ff8800">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Blu's BBQ">
 <link rel="stylesheet" href="/static/css/calendar.css">
 <link rel="stylesheet" href="/static/css/deposits.css">
 <link rel="stylesheet" href="/static/css/chat-approval.css">
+<link rel="stylesheet" href="/static/css/notifications.css">
 <style>
 :root {
   --bg: #0f0e0d;
@@ -604,7 +610,9 @@ if (typeof marked !== 'undefined') {
         <div id="cal-watch-status" style="font-size:10px;color:var(--text3);margin-bottom:4px;"></div>
         <button id="cal-webhook-btn" onclick="registerCalendarWebhook()" class="btn btn-sm" style="width:100%;font-size:11px;">Register Push Webhook</button>
       </div>
-      <div class="sidebar-footer-version">v2.1</div>
+      <!-- Push notification prefs widget (push-notifications feature) -->
+      <div id="notif-prefs-widget" style="margin-top:6px;"></div>
+      <div class="sidebar-footer-version">v2.2</div>
       <div class="sidebar-footer-copyright">&copy; 2026 Blu's Barbeque</div>
     </div>
   </aside>
@@ -4372,6 +4380,8 @@ setInterval(() => { loadScheduled(); renderScheduled(); }, 60000);
 loadLeads();
 loadScheduled();
 checkGmailStatus();
+// push-notifications: init after defer scripts have loaded
+window.addEventListener('load', function() { if (typeof notifInit === 'function') notifInit(); });
 // focus listener removed — visibilitychange below is sufficient and avoids
 // spurious Gmail-status toasts appearing after PDF download dialogs
 document.addEventListener('visibilitychange', () => {
@@ -4396,5 +4406,6 @@ function closeMobileSidebar() {
 <script defer src="/static/js/pipeline-alerts.js"></script>
 <script defer src="/static/js/quote-revise.js"></script>
 <script defer src="/static/js/chat-approval.js"></script>
+<script defer src="/static/js/notifications.js"></script>
 </body>
 </html>

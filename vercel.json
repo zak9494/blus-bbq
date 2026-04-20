@@ -22,7 +22,10 @@
     { "source": "/api/pipeline/alerts", "destination": "/api/pipeline/alerts.js" },
     { "source": "/api/inquiries/save", "destination": "/api/inquiries/save.js" },
     { "source": "/api/chat/history", "destination": "/api/chat/history.js" },
-    { "source": "/api/chat/approval", "destination": "/api/chat/approval.js" }
+    { "source": "/api/chat/approval", "destination": "/api/chat/approval.js" },
+    { "source": "/api/notifications/subscribe", "destination": "/api/notifications/subscribe.js" },
+    { "source": "/api/notifications/send", "destination": "/api/notifications/send.js" },
+    { "source": "/api/notifications/vapid-key", "destination": "/api/notifications/vapid-key.js" }
   ],
   "crons": [
     {

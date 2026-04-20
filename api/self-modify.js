@@ -40,6 +40,11 @@ const STATIC_MODULE_FILES = [
   'api/chat/approval.js',
   'static/js/chat-approval.js',
   'static/css/chat-approval.css',
+  'api/notifications/subscribe.js',
+  'api/notifications/send.js',
+  'api/notifications/vapid-key.js',
+  'static/js/notifications.js',
+  'static/css/notifications.css',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
