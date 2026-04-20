@@ -32,6 +32,8 @@ const STATIC_MODULE_FILES = [
   'api/cron/renew-calendar-watch.js',
   'api/deposits/list.js',
   'api/deposits/save.js',
+  'api/pipeline/alerts.js',
+  'api/inquiries/by-email.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

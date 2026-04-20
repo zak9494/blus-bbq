@@ -1472,7 +1472,7 @@ function showPage(page) {
   if (window.innerWidth <= 768) closeMobileSidebar();
   if (page === 'scheduled') renderScheduled();
   if (page === 'inquiries') loadInquiries();
-  if (page === 'pipeline') loadPipelineInquiries();
+  if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); }
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
   });
@@ -4077,5 +4077,6 @@ function closeMobileSidebar() {
 <script defer src="/static/js/calendar.js"></script>
 <script defer src="/static/js/deposits.js"></script>
 <script defer src="/static/js/repeat-customer.js"></script>
+<script defer src="/static/js/pipeline-alerts.js"></script>
 </body>
 </html>
