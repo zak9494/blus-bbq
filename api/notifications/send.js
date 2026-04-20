@@ -3,14 +3,13 @@
    Body: { secret, title, body, url?, tag? }
    Sends a Web Push notification to all stored subscriptions using VAPID.
 
-   Required Vercel env vars (set once):
-     VAPID_PUBLIC_KEY â base64url-encoded P-256 public key
-     VAPID_PRIVATE_KEY â base64url-encoded P-256 private key
-     VAPID_SUBJECT     â xmailto: or https: URL (default: mailto:info@blusbarbeque.com)
+   Required Vercel env vars:
+     VAPID_PUBLIC_KEY  - base64url-encoded P-256 public key
+     VAPID_PRIVATE_KEY - base64url-encoded P-256 private key
+     VAPID_SUBJECT     - mailto: or https: URL (default: mailto:info@blusbarbeque.com)
 
    To generate VAPID keys:
      npx web-push generate-vapid-keys
-   Then paste them into Vercel â Settings â Environment Variables.
    ===== */
 'use strict';
 
@@ -52,7 +51,7 @@ async function kvSet(key, value) {
   });
 }
 
-/* ââ VAPID JWT signing (no external deps â uses built-in Node crypto) âââââ */
+/* -- VAPID JWT signing (fallback only - used when web-push package unavailable) */
 function base64urlEncode(buf) {
   return (Buffer.isBuffer(buf) ? buf : Buffer.from(buf))
     .toString('base64')
@@ -64,7 +63,6 @@ async function makeVapidJWT(audience, subject, vapidPrivateKeyB64) {
   const header  = base64urlEncode(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
   const payload = base64urlEncode(JSON.stringify({ aud: audience, exp: now + 43200, sub: subject }));
   const sigInput = Buffer.from(header + '.' + payload);
-  // Import P-256 private key from raw base64url bytes
   const keyBytes = Buffer.from(vapidPrivateKeyB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
   const privateKey = crypto.createPrivateKey({
     key: Buffer.concat([
@@ -77,55 +75,61 @@ async function makeVapidJWT(audience, subject, vapidPrivateKeyB64) {
   return header + '.' + payload + '.' + base64urlEncode(sigBuf);
 }
 
+/* -- Determine if an error means the subscription should be permanently removed */
+function isPermanentError(err) {
+  if (!err) return false;
+  // 410 Gone / 404 Not Found = subscription deleted at push service
+  if (err.statusCode === 410 || err.statusCode === 404) return true;
+  // 400 with body indicating the subscription record itself is invalid
+  if (err.statusCode === 400 && err.body &&
+      /p256dh|invalid|bad|malformed/i.test(String(err.body))) return true;
+  // Encryption failure before HTTP: bad p256dh/auth keys stored in KV
+  if (!err.statusCode && err.message &&
+      /p256dh|65 bytes|16 bytes|bytes long/i.test(err.message)) return true;
+  return false;
+}
+
 async function sendPushToSubscription(sub, payloadStr, vapidPublicKey, vapidPrivateKey, vapidSubject) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const endpoint = new URL(sub.endpoint);
-      const audience  = endpoint.protocol + '//' + endpoint.host;
-      const jwt = await makeVapidJWT(audience, vapidSubject, vapidPrivateKey);
-      const auth = 'vapid t=' + jwt + ',k=' + vapidPublicKey;
+  // -- Use web-push when available: handles ECDH payload encryption + VAPID JWT --
+  let webpush;
+  try { webpush = require('web-push'); } catch(e) { webpush = null; }
 
-      // Encrypt payload using ECDH + AES-GCM (aesgcm / RFC 8291 draft)
-      // For simplicity, send an unencrypted push if keys not available.
-      // If sub has keys (auth + p256dh), we must encrypt. Use RFC 8188 / draft-ietf-webpush-encryption.
-      // Full RFC 8291 encryption is complex â use the web-push package if available,
-      // otherwise fallback to empty push (client shows notification via push event data).
+  if (webpush) {
+    webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+    const result = await webpush.sendNotification(sub, payloadStr);
+    return { ok: true, status: result.statusCode };
+  }
 
-      let webpush;
-      try { webpush = require('web-push'); } catch(e) { webpush = null; }
+  // -- Fallback: manual VAPID JWT + raw HTTPS (no payload encryption) -----------
+  // NOTE: Chrome/Firefox require payload encryption; this path is a last resort
+  // that works only when the push service accepts empty-body pushes.
+  const endpoint = new URL(sub.endpoint);
+  const audience = endpoint.protocol + '//' + endpoint.host;
+  const jwt  = await makeVapidJWT(audience, vapidSubject, vapidPrivateKey);
+  const auth = 'vapid t=' + jwt + ',k=' + vapidPublicKey;
 
-      if (webpush) {
-        webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
-        const result = await webpush.sendNotification(sub, payloadStr);
-        resolve({ ok: true, status: result.statusCode });
-        return;
-      }
-
-      // Fallback: raw HTTPS request without payload encryption (works if sub has no keys,
-      // or push service accepts empty body â browser will fire 'push' event with no data)
-      const bodyBuf = Buffer.from(payloadStr, 'utf-8');
-      const headers = {
-        'Authorization': auth,
-        'Content-Type': 'application/octet-stream',
+  return new Promise((resolve, reject) => {
+    const bodyBuf = Buffer.from(payloadStr, 'utf-8');
+    const req = https.request({
+      hostname: endpoint.hostname,
+      path:     endpoint.pathname + endpoint.search,
+      method:   'POST',
+      headers: {
+        'Authorization':  auth,
+        'Content-Type':   'application/octet-stream',
         'Content-Length': bodyBuf.length,
-        'TTL': '86400',
-      };
-      const req = https.request({
-        hostname: endpoint.hostname,
-        path: endpoint.pathname + endpoint.search,
-        method: 'POST',
-        headers,
-      }, r => {
-        let d = ''; r.on('data', c => d += c);
-        r.on('end', () => {
-          if (r.statusCode >= 400) reject({ statusCode: r.statusCode, body: d });
-          else resolve({ ok: true, status: r.statusCode });
-        });
+        'TTL':            '86400',
+      },
+    }, r => {
+      let d = ''; r.on('data', c => d += c);
+      r.on('end', () => {
+        if (r.statusCode >= 400) reject({ statusCode: r.statusCode, body: d });
+        else resolve({ ok: true, status: r.statusCode });
       });
-      req.on('error', reject);
-      req.write(bodyBuf);
-      req.end();
-    } catch(e) { reject(e); }
+    });
+    req.on('error', reject);
+    req.write(bodyBuf);
+    req.end();
   });
 }
 
@@ -166,22 +170,31 @@ module.exports = async (req, res) => {
       subs.map(sub => sendPushToSubscription(sub, payload, vapidPublicKey, vapidPrivateKey, vapidSubject))
     );
 
-    // Collect expired endpoints (410/404 â subscription gone)
-    const expired = new Set();
+    // Collect endpoints to purge (expired OR permanently invalid)
+    const toRemove = new Set();
+    const errorDetails = [];
     results.forEach((r, i) => {
       if (r.status === 'rejected') {
-        const sc = r.reason && r.reason.statusCode;
-        console.error("[push-fail] idx=" + i + " sc=" + sc + " err=" + JSON.stringify(r.reason && (r.reason.body || r.reason.message || String(r.reason))));
-        if (sc === 410 || sc === 404) expired.add(subs[i].endpoint);
+        const sc  = r.reason && r.reason.statusCode;
+        const msg = r.reason && (r.reason.body || r.reason.message || String(r.reason));
+        console.error('[push-fail] idx=' + i + ' sc=' + sc + ' err=' + JSON.stringify(msg));
+        errorDetails.push({ idx: i, sc, err: String(msg).slice(0, 200) });
+        if (isPermanentError(r.reason)) toRemove.add(subs[i].endpoint);
       }
     });
-    if (expired.size > 0) {
-      const cleaned = subs.filter(s => !expired.has(s.endpoint));
+
+    if (toRemove.size > 0) {
+      console.log('[push-cleanup] removing ' + toRemove.size + ' permanently-failed subscription(s)');
+      const cleaned = subs.filter(s => !toRemove.has(s.endpoint));
       await kvSet(KV_KEY, JSON.stringify(cleaned));
     }
 
     const sent   = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.filter(r => r.status === 'rejected').length;
-    return res.status(200).json({ ok: true, sent, failed, total: subs.length, expired: expired.size });
+    return res.status(200).json({
+      ok: true, sent, failed, total: subs.length,
+      removed: toRemove.size,
+      ...(failed > 0 ? { errors: errorDetails } : {}),
+    });
   } catch(err) { return res.status(500).json({ error: err && err.message || String(err) }); }
 };
