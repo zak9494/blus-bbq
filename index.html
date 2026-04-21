@@ -2980,6 +2980,8 @@ const INQ_STATUS_BADGE = {
 
 let currentInqFilter = 'all';
 let currentInqDateFilter = 'all'; // C17: date-range filter
+let inqCustomStart = null; // Date (local midnight) or null
+let inqCustomEnd   = null;
 let inqSearchTerm = '';
 let inqSearchTimer = null;
 let inquiriesCache   = null; // cached full list for re-filtering without refetch
@@ -3139,6 +3141,7 @@ function renderInqChips() {
 
 /* C17: date-range filter ------------------------------------------------- */
 function setInqDateFilter(key) {
+  if (key !== 'custom') { inqCustomStart = null; inqCustomEnd = null; }
   currentInqDateFilter = key;
   renderInqDateChips();
   renderInqCards();
@@ -3171,23 +3174,75 @@ function inqEventDateInRange(inq, key) {
   if (key === 'month') {
     return received.getFullYear() === today.getFullYear() && received.getMonth() === today.getMonth();
   }
+  if (key === 'custom') {
+    if (!inqCustomStart && !inqCustomEnd) return true;
+    if (inqCustomStart && rDay < inqCustomStart) return false;
+    if (inqCustomEnd   && rDay > inqCustomEnd)   return false;
+    return true;
+  }
   return true;
+}
+
+function toDateInputValue(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+
+function applyInqCustomRange() {
+  function parseLocalDate(str) {
+    if (!str) return null;
+    const parts = str.split('-').map(Number);
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+  const startEl = document.getElementById('inq-custom-start');
+  const endEl   = document.getElementById('inq-custom-end');
+  inqCustomStart = parseLocalDate(startEl && startEl.value);
+  inqCustomEnd   = parseLocalDate(endEl   && endEl.value);
+  currentInqDateFilter = 'custom';
+  renderInqDateChips();
+  renderInqCards();
+}
+
+function clearInqCustomRange() {
+  inqCustomStart = null;
+  inqCustomEnd   = null;
+  setInqDateFilter('all');
 }
 
 function renderInqDateChips() {
   const el = document.getElementById('inq-date-chips');
   if (!el) return;
+  function fmtPill(d) {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  const customLabel = currentInqDateFilter === 'custom' && (inqCustomStart || inqCustomEnd)
+    ? 'Custom: ' + (inqCustomStart ? fmtPill(inqCustomStart) : '…') + ' – ' + (inqCustomEnd ? fmtPill(inqCustomEnd) : '…')
+    : 'Custom';
   const defs = [
-    { key: 'all',   label: 'All Dates' },
-    { key: 'today', label: 'Today' },
+    { key: 'all',       label: 'All Dates' },
+    { key: 'today',     label: 'Today' },
     { key: 'week',      label: 'This Week' },
     { key: 'last-week', label: 'Last Week' },
     { key: 'month',     label: 'This Month' },
+    { key: 'custom',    label: customLabel },
   ];
-  el.innerHTML = defs.map(function(c) {
+  const chips = defs.map(function(c) {
     const active = currentInqDateFilter === c.key ? ' active' : '';
     return '<button class="inq-chip' + active + '" onclick="setInqDateFilter(\'' + c.key + '\')">' + c.label + '</button>';
   }).join('');
+  const inputStyle = 'border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);padding:4px 8px;font-size:13px;font-family:inherit';
+  const customUI = currentInqDateFilter === 'custom'
+    ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 16px 4px;flex-wrap:wrap">' +
+        '<input type="date" id="inq-custom-start" style="' + inputStyle + '" value="' + (inqCustomStart ? toDateInputValue(inqCustomStart) : '') + '">' +
+        '<span style="color:var(--text3)">–</span>' +
+        '<input type="date" id="inq-custom-end"   style="' + inputStyle + '" value="' + (inqCustomEnd   ? toDateInputValue(inqCustomEnd)   : '') + '">' +
+        '<button class="btn" style="font-size:12px;padding:4px 12px" onclick="applyInqCustomRange()">Apply</button>' +
+        '<button class="btn" style="font-size:12px;padding:4px 10px;background:transparent;border-color:transparent;color:var(--text2)" onclick="clearInqCustomRange()">Clear</button>' +
+      '</div>'
+    : '';
+  el.innerHTML = chips + customUI;
 }
 /* end C17 ---------------------------------------------------------------- */
 
