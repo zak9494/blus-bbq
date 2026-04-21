@@ -4,8 +4,12 @@
   "dependencies": {
     "web-push": "^3.6.7"
   },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  },
   "scripts": {
     "lint": "node scripts/lint.js",
-    "install-hooks": "cp scripts/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit && echo 'Pre-commit hook installed.'"
+    "install-hooks": "cp scripts/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit && echo 'Pre-commit hook installed.'",
+    "test": "node --test static/js/inquiries-filters.test.js static/js/quote-engine.test.js api/notifications/send.test.js"
   }
 }
