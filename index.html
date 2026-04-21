@@ -3162,6 +3162,12 @@ function inqEventDateInRange(inq, key) {
     const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
     return rDay >= mon && rDay <= sun;
   }
+  if (key === 'last-week') {
+    const dow = today.getDay(); // 0=Sun
+    const startOfThisWeek = new Date(today); startOfThisWeek.setDate(today.getDate() - ((dow + 6) % 7));
+    const startOfLastWeek = new Date(startOfThisWeek); startOfLastWeek.setDate(startOfThisWeek.getDate() - 7);
+    return rDay >= startOfLastWeek && rDay < startOfThisWeek;
+  }
   if (key === 'month') {
     return received.getFullYear() === today.getFullYear() && received.getMonth() === today.getMonth();
   }
@@ -3174,8 +3180,9 @@ function renderInqDateChips() {
   const defs = [
     { key: 'all',   label: 'All Dates' },
     { key: 'today', label: 'Today' },
-    { key: 'week',  label: 'This Week' },
-    { key: 'month', label: 'This Month' },
+    { key: 'week',      label: 'This Week' },
+    { key: 'last-week', label: 'Last Week' },
+    { key: 'month',     label: 'This Month' },
   ];
   el.innerHTML = defs.map(function(c) {
     const active = currentInqDateFilter === c.key ? ' active' : '';
