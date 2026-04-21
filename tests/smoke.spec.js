@@ -1,0 +1,41 @@
+// @ts-check
+const { test, expect } = require('@playwright/test');
+
+const BASE_URL = process.env.SMOKE_BASE_URL || 'https://blus-bbq.vercel.app';
+
+test('homepage loads (HTTP 200)', async ({ request }) => {
+  const res = await request.get(BASE_URL);
+  expect(res.status()).toBe(200);
+});
+
+test('Inquiries nav button is present', async ({ page }) => {
+  await page.goto(BASE_URL);
+  const inqBtn = page.locator('.nav-item', { hasText: 'Inquiries' });
+  await expect(inqBtn).toBeVisible();
+});
+
+test('Quote Builder nav button is present', async ({ page }) => {
+  await page.goto(BASE_URL);
+  const quoteBtn = page.locator('.nav-item', { hasText: 'Quote Builder' });
+  await expect(quoteBtn).toBeVisible();
+});
+
+test('Calendar nav button is present', async ({ page }) => {
+  await page.goto(BASE_URL);
+  const calBtn = page.locator('.nav-item', { hasText: 'Calendar' });
+  await expect(calBtn).toBeVisible();
+});
+
+test('Calendar page has Day/Week/Month view switchers', async ({ page }) => {
+  await page.goto(BASE_URL);
+  await page.locator('.nav-item', { hasText: 'Calendar' }).click();
+  await expect(page.locator('#page-calendar')).toBeVisible();
+  await expect(page.locator('button', { hasText: 'Day' })).toBeVisible();
+  await expect(page.locator('button', { hasText: 'Week' })).toBeVisible();
+  await expect(page.locator('button', { hasText: 'Month' })).toBeVisible();
+});
+
+test('Pipeline page is active on load', async ({ page }) => {
+  await page.goto(BASE_URL);
+  await expect(page.locator('#page-pipeline')).toBeVisible();
+});

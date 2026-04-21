@@ -3081,7 +3081,7 @@ function renderInqCards() {
   let filtered = getFilteredInquiries(currentInqFilter);
   // C17: apply date-range filter after status filter
   if (currentInqDateFilter !== 'all') {
-    filtered = filtered.filter(i => inqEventDateInRange(i, currentInqDateFilter));
+    filtered = filtered.filter(i => inqEventDateInRange(currentInqDateFilter, i, null, inqCustomStart, inqCustomEnd));
   }
   // Apply search within the already-filtered set (chip filter wins first)
   if (inqSearchTerm) {
@@ -3147,41 +3147,7 @@ function setInqDateFilter(key) {
   renderInqCards();
 }
 
-function inqEventDateInRange(inq, key) {
-  if (key === 'all') return true;
-  // Filter by received date (email_date = Gmail Date: header; updated_at = ISO fallback)
-  const ts = inq.email_date || inq.updated_at || '';
-  if (!ts) return true; // no timestamp → always include
-  const received = new Date(ts);
-  if (isNaN(received.getTime())) return true;
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // local midnight
-  // Build local calendar day for the received timestamp (avoids UTC-vs-local skew)
-  const rDay = new Date(received.getFullYear(), received.getMonth(), received.getDate());
-  if (key === 'today') return rDay.getTime() === today.getTime();
-  if (key === 'week') {
-    const dow = today.getDay(); // 0=Sun
-    const mon = new Date(today); mon.setDate(today.getDate() - ((dow + 6) % 7));
-    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-    return rDay >= mon && rDay <= sun;
-  }
-  if (key === 'last-week') {
-    const dow = today.getDay(); // 0=Sun
-    const startOfThisWeek = new Date(today); startOfThisWeek.setDate(today.getDate() - ((dow + 6) % 7));
-    const startOfLastWeek = new Date(startOfThisWeek); startOfLastWeek.setDate(startOfThisWeek.getDate() - 7);
-    return rDay >= startOfLastWeek && rDay < startOfThisWeek;
-  }
-  if (key === 'month') {
-    return received.getFullYear() === today.getFullYear() && received.getMonth() === today.getMonth();
-  }
-  if (key === 'custom') {
-    if (!inqCustomStart && !inqCustomEnd) return true;
-    if (inqCustomStart && rDay < inqCustomStart) return false;
-    if (inqCustomEnd   && rDay > inqCustomEnd)   return false;
-    return true;
-  }
-  return true;
-}
+// inqEventDateInRange lives in static/js/inquiries-filters.js
 
 function toDateInputValue(d) {
   const y = d.getFullYear();
@@ -4628,5 +4594,6 @@ function closeMobileSidebar() {
 <script defer src="/static/js/quote-revise.js"></script>
 <script defer src="/static/js/chat-approval.js"></script>
 <script defer src="/static/js/notifications.js"></script>
+<script defer src="/static/js/inquiries-filters.js"></script>
 </body>
 </html>
