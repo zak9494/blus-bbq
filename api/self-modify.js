@@ -47,6 +47,11 @@ const STATIC_MODULE_FILES = [
   'api/notifications/vapid-key.js',
   'static/js/notifications.js',
   'static/css/notifications.css',
+  'api/_lib/flags.js',
+  'api/flags.js',
+  'api/inquiries/test.js',
+  'static/js/flags.js',
+  'static/js/test-mode.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

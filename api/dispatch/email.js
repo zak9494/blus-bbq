@@ -102,6 +102,18 @@ async function refreshToken(refreshTok) {
   return httpsPost('oauth2.googleapis.com', '/token', { 'Content-Type': 'application/x-www-form-urlencoded' }, body);
 }
 
+// Test-mode safety rail — redirects recipient to Zak's address for any test inquiry.
+// NEVER modifies the sender (CANONICAL_SENDER lockdown is untouched).
+// Exported for unit testing.
+function resolveRecipient(to, context) {
+  var inq = (context && context.inquiry) || {};
+  if (inq.test === true || context.testOverride === true ||
+      (typeof inq.threadId === 'string' && inq.threadId.startsWith('test-'))) {
+    return 'zak9494@gmail.com';
+  }
+  return to;
+}
+
 async function sendEmail(tok, to, subject, htmlBody) {
   const mime = [
     'From: ' + CANONICAL_SENDER,
@@ -192,7 +204,8 @@ module.exports = async (req, res) => {
   const ep = task.payload || directPayload || {};
   if (!ep.to) return fail('payload.to is required');
 
-  const result = await sendEmail(atk, ep.to, ep.subject || '(no subject)', ep.body || '');
+  const to = resolveRecipient(ep.to, { inquiry: ep.inquiry, testOverride: ep.testOverride });
+  const result = await sendEmail(atk, to, ep.subject || '(no subject)', ep.body || '');
   if (result.status >= 300) return fail('Gmail API ' + result.status + ': ' + JSON.stringify(result.body).slice(0, 200));
 
   await kvSet('task:' + taskId, JSON.stringify({
@@ -205,3 +218,5 @@ module.exports = async (req, res) => {
   }));
   return res.status(200).json({ ok: true, taskId, gmailMessageId: result.body.id, sentFrom: CANONICAL_SENDER });
 };
+
+module.exports.resolveRecipient = resolveRecipient;
