@@ -1167,18 +1167,41 @@ if (typeof marked !== 'undefined') {
         <div id="cal-error" class="cal-error-state"></div>
         <div id="cal-loading" class="cal-loading-state">Loading events&hellip;</div>
         <div class="cal-header">
-          <button class="cal-nav-btn" onclick="calPrev()" aria-label="Previous month">&#x2039;</button>
-          <span class="cal-month-label" id="cal-month-label">&mdash;</span>
           <div class="cal-nav-group">
-            <button class="cal-nav-btn today-btn" onclick="calToday()">Today</button>
-            <button class="cal-nav-btn" onclick="calNext()" aria-label="Next month">&#x203a;</button>
+            <button class="cal-nav-btn" onclick="calPrev()" aria-label="Previous">&#x2039;</button>
+            <button class="cal-nav-btn cal-today-btn" onclick="calToday()">Today</button>
+            <button class="cal-nav-btn" onclick="calNext()" aria-label="Next">&#x203a;</button>
+          </div>
+          <span class="cal-range-label" id="cal-range-label">&mdash;</span>
+          <div class="cal-view-switcher">
+            <button class="cal-view-btn" id="cal-view-day" onclick="calSetView('day')">Day</button>
+            <button class="cal-view-btn" id="cal-view-week" onclick="calSetView('week')">Week</button>
+            <button class="cal-view-btn cal-view-btn-active" id="cal-view-month" onclick="calSetView('month')">Month</button>
           </div>
         </div>
-        <div class="cal-body">
-          <div class="cal-grid-wrap">
-            <div id="cal-grid"></div>
+        <div id="cal-view-container"></div>
+      </div>
+
+      <!-- Event Detail Modal -->
+      <div id="cal-event-modal" class="cal-modal-overlay" onclick="if(event.target===this)window._calCloseEventModal()">
+        <div class="cal-modal">
+          <div class="cal-modal-header">
+            <span class="cal-modal-title cal-em-title-text" id="cal-em-title">Event</span>
+            <button class="cal-modal-close" onclick="window._calCloseEventModal()" aria-label="Close">&times;</button>
           </div>
-          <div id="cal-day-panel" class="cal-day-panel"></div>
+          <div class="cal-modal-body">
+            <div class="cal-em-field">
+              <span class="cal-em-field-label">Time</span>
+              <span id="cal-em-time"></span>
+            </div>
+            <div class="cal-em-field" id="cal-em-loc"></div>
+            <div class="cal-em-field cal-em-desc" id="cal-em-desc"></div>
+            <div class="cal-em-actions">
+              <button id="cal-em-inq-btn" class="btn btn-sm btn-primary">Open Inquiry</button>
+              <a id="cal-em-gcal-link" class="btn btn-sm" target="_blank" rel="noopener">View in Google Calendar</a>
+              <button id="cal-em-del-btn" class="btn btn-sm cal-btn-danger">Delete</button>
+            </div>
+          </div>
         </div>
       </div>
 
