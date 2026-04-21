@@ -57,6 +57,4 @@ jobs:
         run: npx playwright test tests/smoke.spec.js --reporter=line
         env:
           SMOKE_BASE_URL: ${{ steps.vercel-preview.outputs.url }}
-          # If Vercel deployment protection is on, add VERCEL_AUTOMATION_BYPASS_SECRET
-          # to repo secrets and uncomment:
-          # VERCEL_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
