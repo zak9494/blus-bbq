@@ -243,3 +243,5 @@ Unit test files live next to their source:
 - `static/js/inquiries-filters.test.js`
 - `static/js/quote-engine.test.js`
 - `api/notifications/send.test.js`
+
+<!-- smoke-ci test: 2026-04-21 -->
