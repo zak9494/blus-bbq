@@ -30,9 +30,9 @@ test('Calendar page has Day/Week/Month view switchers', async ({ page }) => {
   await page.goto(BASE_URL);
   await page.locator('.nav-item', { hasText: 'Calendar' }).click();
   await expect(page.locator('#page-calendar')).toBeVisible();
-  await expect(page.locator('button', { hasText: 'Day' })).toBeVisible();
-  await expect(page.locator('button', { hasText: 'Week' })).toBeVisible();
-  await expect(page.locator('button', { hasText: 'Month' })).toBeVisible();
+  await expect(page.locator('#cal-view-day')).toBeVisible();
+  await expect(page.locator('#cal-view-week')).toBeVisible();
+  await expect(page.locator('#cal-view-month')).toBeVisible();
 });
 
 test('Pipeline page is active on load', async ({ page }) => {
