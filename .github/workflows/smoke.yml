@@ -25,12 +25,30 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install chromium --with-deps
 
-      - name: Wait for Vercel preview deployment
+      - name: Get Vercel preview URL from GitHub deployments API
         id: vercel-preview
-        uses: patrickedqvist/wait-for-vercel-preview@v1.3.2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          max_timeout: 300
+        run: |
+          SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Looking for preview deployment for SHA $SHA"
+          for i in $(seq 1 24); do
+            DATA=$(gh api "repos/${{ github.repository }}/deployments?sha=$SHA" 2>/dev/null || echo "[]")
+            DEP_ID=$(echo "$DATA" | jq -r '[.[] | select(.environment | ascii_downcase | test("preview"))][0].id // empty')
+            if [ -n "$DEP_ID" ]; then
+              ENV_URL=$(gh api "repos/${{ github.repository }}/deployments/$DEP_ID/statuses" \
+                --jq '[.[] | select(.state == "success")][0].environment_url // empty' 2>/dev/null)
+              if [ -n "$ENV_URL" ] && [ "$ENV_URL" != "null" ]; then
+                echo "url=$ENV_URL" >> "$GITHUB_OUTPUT"
+                echo "Preview URL: $ENV_URL"
+                exit 0
+              fi
+            fi
+            echo "Attempt $i/24: waiting for Vercel deployment status..."
+            sleep 15
+          done
+          echo "##[error]Timed out waiting for Vercel preview deployment status"
+          exit 1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run unit tests
         run: npm test
@@ -39,3 +57,6 @@ jobs:
         run: npx playwright test tests/smoke.spec.js --reporter=line
         env:
           SMOKE_BASE_URL: ${{ steps.vercel-preview.outputs.url }}
+          # If Vercel deployment protection is on, add VERCEL_AUTOMATION_BYPASS_SECRET
+          # to repo secrets and uncomment:
+          # VERCEL_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
