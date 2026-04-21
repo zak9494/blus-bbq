@@ -3122,23 +3122,25 @@ function setInqDateFilter(key) {
 }
 
 function inqEventDateInRange(inq, key) {
-  const ds = inq.event_date || inq.eventDate || '';
-  if (!ds) return key === 'all'; // no event date → only show under "All Dates"
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const parts = ds.split('-').map(Number);
-  if (parts.length < 3) return key === 'all';
-  const ed = new Date(parts[0], parts[1] - 1, parts[2]);
   if (key === 'all') return true;
-  if (key === 'today') return ed.getTime() === today.getTime();
+  // Filter by received date (email_date = Gmail Date: header; updated_at = ISO fallback)
+  const ts = inq.email_date || inq.updated_at || '';
+  if (!ts) return true; // no timestamp → always include
+  const received = new Date(ts);
+  if (isNaN(received.getTime())) return true;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // local midnight
+  // Build local calendar day for the received timestamp (avoids UTC-vs-local skew)
+  const rDay = new Date(received.getFullYear(), received.getMonth(), received.getDate());
+  if (key === 'today') return rDay.getTime() === today.getTime();
   if (key === 'week') {
     const dow = today.getDay(); // 0=Sun
     const mon = new Date(today); mon.setDate(today.getDate() - ((dow + 6) % 7));
     const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-    return ed >= mon && ed <= sun;
+    return rDay >= mon && rDay <= sun;
   }
   if (key === 'month') {
-    return ed.getFullYear() === today.getFullYear() && ed.getMonth() === today.getMonth();
+    return received.getFullYear() === today.getFullYear() && received.getMonth() === today.getMonth();
   }
   return true;
 }
