@@ -3112,7 +3112,7 @@ function getFilteredInquiries(filter) {
   if (filter === 'ezcater')  return real.filter(i => i.source === 'ezcater');
   if (filter === 'direct')   return real.filter(i => i.source === 'direct' && i.status !== 'archived');
   if (filter === 'archived') return real.filter(i => i.status === 'archived');
-  if (filter === 'needs_review') return real.filter(i => i.has_unreviewed_update && i.status !== 'archived');
+  if (filter === 'needs_review') return real.filter(i => i.status !== 'archived' && !i.approved);
   return real.filter(i => i.status !== 'archived');
 }
 
