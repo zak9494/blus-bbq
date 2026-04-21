@@ -1,0 +1,143 @@
+/* ===== MODULE: THEME TOKENS (light/dark)
+   Loaded from: /static/css/theme.css
+   Light mode is the :root default.
+   Dark mode overrides via [data-theme="dark"] on <html>.
+   FOUC prevention: an inline <script> in <head> reads localStorage('theme')
+   and sets the attribute before any CSS is applied.
+   ===== */
+
+/* ───────── LIGHT THEME (default) ──────────────────── */
+:root {
+  /* surfaces */
+  --bg: #faf9f7;
+  --surface: #ffffff;
+  --surface2: #f5f2ee;
+  --surface3: #ece8e2;
+  /* borders */
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  /* text */
+  --text: #1c1916;
+  --text2: #5a5450;
+  --text3: #8a8480;
+  /* status — darker for light-bg contrast */
+  --red: #b83025;
+  --red-light: #d43424;
+  --red-bg: rgba(185,48,37,0.08);
+  --red-border: rgba(185,48,37,0.2);
+  --amber: #b86820;
+  --amber-bg: rgba(185,104,32,0.10);
+  --amber-border: rgba(185,104,32,0.25);
+  --green: #267a48;
+  --green-bg: rgba(38,122,72,0.10);
+  --green-border: rgba(38,122,72,0.25);
+  --blue: #2060a0;
+  --blue-bg: rgba(32,96,160,0.10);
+  --blue-border: rgba(32,96,160,0.25);
+  /* radii */
+  --radius: 10px;
+  --radius-sm: 6px;
+  /* brand orange — darkened for light-bg readability */
+  --orange: #cc6e00;
+  --orange-dark: #aa5500;
+  --orange-light: #e07800;
+  --orange-bg: rgba(204,110,0,0.10);
+  --orange-glow: rgba(204,110,0,0.2);
+  /* error */
+  --error: #dc2626;
+  --error-light: #ef4444;
+  --error-bg: rgba(220,38,38,0.06);
+  --error-bg2: rgba(220,38,38,0.12);
+  --error-border: rgba(220,38,38,0.20);
+  /* success */
+  --success: #16a34a;
+  --success-light: #22c55e;
+  --success-bg: rgba(22,163,74,0.12);
+  /* emerald */
+  --emerald: #059669;
+  --emerald-bg: #ecfdf5;
+  --emerald-border: #a7f3d0;
+  /* warn */
+  --warn: #d97706;
+  --warn-bg: rgba(217,119,6,0.12);
+  /* semantic display tokens */
+  --badge-new: #1e6fa8;
+  --badge-quoted: #a06828;
+  --badge-followup: #b03c3c;
+  --badge-booked: #207040;
+  --on-color-text: #000;
+  --overlay-bg: rgba(0,0,0,0.45);
+  --overlay-heavy: rgba(0,0,0,0.6);
+  --logo-filter: none;
+  --logo-opacity: 1;
+  --card-inset-bg: rgba(0,0,0,0.04);
+  --topbar-text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+
+/* ───────── DARK THEME ──────────────────────────────── */
+[data-theme="dark"] {
+  /* surfaces */
+  --bg: #0f0e0d;
+  --surface: #1a1816;
+  --surface2: #242220;
+  --surface3: #2e2b28;
+  /* borders */
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  /* text */
+  --text: #f0ede8;
+  --text2: #9a9490;
+  --text3: #5e5a56;
+  /* status */
+  --red: #c0392b;
+  --red-light: #e74c3c;
+  --red-bg: rgba(192,57,43,0.15);
+  --red-border: rgba(192,57,43,0.3);
+  --amber: #d4823a;
+  --amber-bg: rgba(212,130,58,0.12);
+  --amber-border: rgba(212,130,58,0.3);
+  --green: #4a9e6b;
+  --green-bg: rgba(74,158,107,0.12);
+  --green-border: rgba(74,158,107,0.3);
+  --blue: #4a7fb5;
+  --blue-bg: rgba(74,127,181,0.12);
+  --blue-border: rgba(74,127,181,0.3);
+  /* radii */
+  --radius: 10px;
+  --radius-sm: 6px;
+  /* brand orange */
+  --orange: #ff8800;
+  --orange-dark: #ff6b00;
+  --orange-light: #ff9933;
+  --orange-bg: rgba(255,136,0,0.12);
+  --orange-glow: rgba(255,136,0,0.3);
+  /* error */
+  --error: #ef4444;
+  --error-light: #f87171;
+  --error-bg: rgba(239,68,68,0.08);
+  --error-bg2: rgba(239,68,68,0.15);
+  --error-border: rgba(239,68,68,0.25);
+  /* success */
+  --success: #22c55e;
+  --success-light: #34d399;
+  --success-bg: rgba(52,211,153,0.15);
+  /* emerald */
+  --emerald: #6ee7b7;
+  --emerald-bg: #1a2a1a;
+  --emerald-border: #2a4a2a;
+  /* warn */
+  --warn: #fbbf24;
+  --warn-bg: rgba(251,191,36,0.15);
+  /* semantic display tokens */
+  --badge-new: #80b4e8;
+  --badge-quoted: #e0a060;
+  --badge-followup: #e09090;
+  --badge-booked: #80c898;
+  --on-color-text: #000;
+  --overlay-bg: rgba(0,0,0,0.55);
+  --overlay-heavy: rgba(0,0,0,0.7);
+  --logo-filter: invert(1);
+  --logo-opacity: 0.9;
+  --card-inset-bg: rgba(0,0,0,0.25);
+  --topbar-text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
