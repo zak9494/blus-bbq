@@ -14,6 +14,8 @@ const TARGET_BRANCH = 'main';
    Update this array whenever a new module file is added under /static/.
    ────────────────────────────────────────────────────────────────────────── */
 const STATIC_MODULE_FILES = [
+  'static/css/theme.css',
+  'static/js/theme.js',
   'static/js/menu.js',
   'static/js/calendar.js',
   'static/css/calendar.css',

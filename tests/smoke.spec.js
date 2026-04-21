@@ -39,3 +39,21 @@ test('Pipeline page is active on load', async ({ page }) => {
   await page.goto(BASE_URL);
   await expect(page.locator('#page-pipeline')).toBeVisible();
 });
+
+test('theme toggle switches from light to dark', async ({ page }) => {
+  await page.goto(BASE_URL);
+  // Default is light
+  const html = page.locator('html');
+  await expect(html).toHaveAttribute('data-theme', 'light');
+  // Click toggle
+  await page.locator('#theme-toggle-btn').click();
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+});
+
+test('theme preference persists across page reload', async ({ page }) => {
+  await page.goto(BASE_URL);
+  await page.locator('#theme-toggle-btn').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+});
