@@ -48,10 +48,13 @@ const STATIC_MODULE_FILES = [
   'static/js/notifications.js',
   'static/css/notifications.css',
   'api/_lib/flags.js',
+  'api/_lib/settings.js',
   'api/flags.js',
+  'api/settings/test-mode-email.js',
   'api/inquiries/test.js',
   'static/js/flags.js',
   'static/js/test-mode.js',
+  'static/js/test-mode-email.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

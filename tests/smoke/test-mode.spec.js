@@ -41,3 +41,12 @@ test('POST /api/inquiries/test requires auth', async ({ request }) => {
   });
   expect(res.status()).toBe(401);
 });
+
+test('GET /api/settings/test-mode-email returns expected shape', async ({ request }) => {
+  const res = await request.get(BASE_URL + '/api/settings/test-mode-email');
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body).toHaveProperty('email');
+  // email is either null or a non-empty string
+  expect(body.email === null || typeof body.email === 'string').toBe(true);
+});
