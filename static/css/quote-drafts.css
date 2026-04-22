@@ -1,0 +1,182 @@
+/* ===== QUOTE BUILDER DRAFTS (Group 7 — quote_builder_v2) ===== */
+
+.qb-drafts-modal-overlay,
+.qb-save-draft-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.qb-drafts-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: min(460px, 92vw);
+  max-height: 72vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.qb-drafts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.qb-drafts-header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.qb-modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text3);
+  line-height: 1;
+  padding: 0 4px;
+}
+.qb-modal-close:hover { color: var(--text); }
+
+.qb-drafts-list-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.qb-draft-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  gap: 12px;
+  transition: background 0.1s;
+}
+.qb-draft-item:hover { background: var(--surface2); }
+
+.qb-draft-item-body {
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.qb-draft-autosave {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.qb-draft-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qb-draft-meta {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+.qb-draft-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(251,191,36,0.15);
+  color: #fbbf24;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.qb-draft-del-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--text3);
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.qb-draft-del-btn:hover { background: var(--surface3); color: var(--red); }
+
+.qb-drafts-empty {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Save-draft name modal */
+.qb-save-draft-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  width: min(360px, 90vw);
+}
+
+.qb-save-draft-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+.qb-save-draft-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
+/* Auto-save indicator badge */
+#qb-autosave-badge {
+  font-size: 11px;
+  color: var(--text3);
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+
+/* Topbar Drafts button */
+.qb-drafts-topbar-btn {
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+}
+.qb-drafts-topbar-btn:hover { background: var(--surface3); color: var(--text); }
+
+/* Save Draft button in preview panel */
+.qb-save-draft-preview-btn {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(147,197,253,0.3);
+  background: none;
+  color: #93c5fd;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+}
+.qb-save-draft-preview-btn:hover { background: rgba(147,197,253,0.08); }

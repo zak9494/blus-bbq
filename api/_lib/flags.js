@@ -60,6 +60,8 @@ const SEED_FLAGS = [
   { name: 'completed_eom_hide',     description: 'Kanban: DISABLE EOM hide on Completed column (EOM hide is default-on; enable flag to show all months)' },
   // Group 8 — Calendar enhancements (default OFF)
   { name: 'calendar_v2',            description: 'Calendar v2: status color-coding, monthly totals dropdown, period selector chips' },
+  // Group 7 — Quote Builder extensions (default OFF)
+  { name: 'quote_builder_v2',       description: 'Quote Builder v2: Save as Draft, Load Draft, auto-save (localStorage)' },
 ];
 
 async function getFlag(name, defaultValue = false) {

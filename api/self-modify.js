@@ -100,6 +100,9 @@ const STATIC_MODULE_FILES = [
   'static/js/event-day.js',
   'static/css/event-day.css',
   'api/events/today.js',
+  // Group 7 — Quote Builder extensions
+  'static/js/quote-drafts.js',
+  'static/css/quote-drafts.css',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
