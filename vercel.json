@@ -23,6 +23,7 @@
     { "source": "/api/pipeline/alerts", "destination": "/api/pipeline/alerts.js" },
     { "source": "/api/pipeline/customer-history", "destination": "/api/pipeline/customer-history.js" },
     { "source": "/api/inquiries/save", "destination": "/api/inquiries/save.js" },
+    { "source": "/api/inquiries/completed", "destination": "/api/inquiries/completed.js" },
     { "source": "/api/chat/history", "destination": "/api/chat/history.js" },
     { "source": "/api/chat/approval", "destination": "/api/chat/approval.js" },
     { "source": "/api/notifications/subscribe", "destination": "/api/notifications/subscribe.js" },
@@ -36,7 +37,15 @@
     { "source": "/api/ai/quote-updates", "destination": "/api/ai/quote-updates.js" },
     { "source": "/api/ai/thank-you-draft", "destination": "/api/ai/thank-you-draft.js" },
     { "source": "/api/cron/post-event-archive", "destination": "/api/cron/post-event-archive.js" },
-    { "source": "/api/settings/guest-count-lockin", "destination": "/api/settings/guest-count-lockin.js" }
+    { "source": "/api/settings/guest-count-lockin", "destination": "/api/settings/guest-count-lockin.js" },
+    { "source": "/api/settings/digest-recipient", "destination": "/api/settings/digest-recipient.js" },
+    { "source": "/api/customer/profile", "destination": "/api/customer/profile.js" },
+    { "source": "/api/customer/notes", "destination": "/api/customer/notes.js" },
+    { "source": "/api/pipeline/overdue", "destination": "/api/pipeline/overdue.js" },
+    { "source": "/api/quotes/duplicate", "destination": "/api/quotes/duplicate.js" },
+    { "source": "/api/quotes/templates", "destination": "/api/quotes/templates.js" },
+    { "source": "/api/quotes/templates/:id", "destination": "/api/quotes/templates.js" },
+    { "source": "/api/cron/weekly-digest", "destination": "/api/cron/weekly-digest.js" }
   ],
   "crons": [
     {
@@ -50,6 +59,14 @@
     {
       "path": "/api/cron/post-event-archive",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/mark-completed",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-digest",
+      "schedule": "0 14 * * 1"
     }
   ]
 }

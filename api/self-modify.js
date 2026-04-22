@@ -62,6 +62,9 @@ const STATIC_MODULE_FILES = [
   'api/notifications/mark-all-read.js',
   'api/notifications/types.js',
   'api/notifications/cadence-tick.js',
+  'api/notifications/counts.js',
+  'static/js/notifications-panel.js',
+  'static/css/notifications-panel.css',
   'static/js/flags.js',
   'static/js/test-mode.js',
   'static/js/test-mode-email.js',
@@ -84,6 +87,25 @@ const STATIC_MODULE_FILES = [
   'static/css/kanban.css',
   'api/_lib/repeat-customer.js',
   'api/pipeline/customer-history.js',
+  // Group 7 — Quote Builder extensions
+  'api/quotes/changelog.js',
+  'api/settings/delivery-origin.js',
+  'api/settings/tax.js',
+  'api/_lib/pdf-gen.js',
+  'static/js/quote-engine.js',
+  'static/js/quote-engine.test.js',
+  // Group 9 — Customer profile + widgets
+  'static/js/customer-profile.js',
+  'static/js/overdue-widget.js',
+  'static/js/quote-templates.js',
+  'static/css/customer-profile.css',
+  'api/customer/profile.js',
+  'api/customer/notes.js',
+  'api/pipeline/overdue.js',
+  'api/quotes/duplicate.js',
+  'api/quotes/templates.js',
+  'api/settings/digest-recipient.js',
+  'api/cron/weekly-digest.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

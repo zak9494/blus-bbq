@@ -52,6 +52,12 @@ const SEED_FLAGS = [
   { name: 'deposit_tracking',       description: 'Deposit tracking panel on inquiry cards' },
   { name: 'ai_dessert_trigger',     description: 'Auto-notify Zach to offer dessert when customer replies to a sent quote' },
   { name: 'ai_post_event_archive',  description: 'Daily auto-archive of non-booked past-event inquiries with hope-to-serve draft' },
+  { name: 'ezcater_integration',    description: 'Show ezCater source filter chip — enable once ezCater account is connected and sending leads' },
+  { name: 'overdue_widget',         description: 'Dashboard widget: unanswered quotes, overdue deposits, events missing headcount' },
+  { name: 'weekly_digest',          description: 'Monday 8 AM digest email: week events, outstanding quotes, overdue follow-ups' },
+  // Group 4 — Completed Orders Handling
+  { name: 'completed_orders_view',  description: 'Completed Orders tab in Inquiries — period totals + revenue table (Group 4; OFF on merge, Zach flips)' },
+  { name: 'completed_eom_hide',     description: 'Kanban: DISABLE EOM hide on Completed column (EOM hide on by default; enable flag to show all months)' },
 ];
 
 async function getFlag(name, defaultValue = false) {
