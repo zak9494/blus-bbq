@@ -58,6 +58,9 @@ const SEED_FLAGS = [
   // Group 4 — Completed Orders Handling
   { name: 'completed_orders_view',  description: 'Completed Orders tab in Inquiries — period totals + revenue table (Group 4; OFF on merge, Zach flips)' },
   { name: 'completed_eom_hide',     description: 'Kanban: DISABLE EOM hide on Completed column (EOM hide on by default; enable flag to show all months)' },
+  // Group 9 — Customer Profile + Widgets
+  { name: 'customer_profile',       description: 'Customer profile page — lifetime value, event history, freeform notes, duplicate-quote button' },
+  { name: 'quote_templates',        description: 'Quote template library — save/load canned setups in Quote Builder' },
 ];
 
 async function getFlag(name, defaultValue = false) {

@@ -115,15 +115,19 @@
         <div class="cp-stats">
           <div class="cp-stat">
             <div class="cp-stat-val">${c.totalEvents}</div>
-            <div class="cp-stat-label">Events</div>
+            <div class="cp-stat-label">Visits</div>
           </div>
           <div class="cp-stat">
             <div class="cp-stat-val">${totalBilled}</div>
-            <div class="cp-stat-label">Total Billed</div>
+            <div class="cp-stat-label">Lifetime Value</div>
           </div>
           <div class="cp-stat">
             <div class="cp-stat-val">${c.events.filter(e => e.status === 'booked' || e.status === 'completed').length}</div>
             <div class="cp-stat-label">Booked</div>
+          </div>
+          <div class="cp-stat">
+            <div class="cp-stat-val">${c.events.length ? fmtDate(c.events[0].storedAt || c.events[0].eventDate) : '—'}</div>
+            <div class="cp-stat-label">Last Visit</div>
           </div>
         </div>
 
