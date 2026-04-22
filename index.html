@@ -1600,16 +1600,24 @@ function renderKanban() {
   board.innerHTML = '<div class="pipeline-kanban">' +
     PIPELINE_STATUSES.map(function(s) {
       var cards = (groups[s] || []).map(function(inq) {
-        var name = inq.customer_name || inq.from || 'Unknown';
-        var ev   = inq.event_date || 'Date TBD';
-        var g    = inq.guest_count ? inq.guest_count + ' guests \u00b7 ' : '';
-        var dot  = inq.has_unreviewed_update ? ' <span class="inq-update-dot"></span>' : '';
+        var name   = inq.customer_name || inq.from || 'Unknown';
+        var ev     = inq.event_date || 'Date TBD';
+        var g      = inq.guest_count ? inq.guest_count + ' guests \u00b7 ' : '';
+        var dot    = inq.has_unreviewed_update ? ' <span class="inq-update-dot"></span>' : '';
+        var phone  = inq.customer_phone
+          ? '<div class="pip-card-meta" style="color:var(--text2)"><a href="tel:' + inq.customer_phone + '" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none">' + inq.customer_phone + '</a></div>'
+          : '';
+        var budget = inq.budget && parseFloat(inq.budget) > 0
+          ? '<div class="pip-card-meta" style="color:var(--text2)">$' + parseFloat(inq.budget).toLocaleString() + '</div>'
+          : '';
         var opts = PIPELINE_STATUSES.map(function(ps) {
           return '<option value="' + ps + '"' + (inq.status === ps ? ' selected' : '') + '>' + (INQ_STATUS_LABELS[ps] || ps) + '</option>';
         }).join('');
         return '<div class="pip-card" onclick="showPage(\'inquiries\');openInquiry(\'' + inq.threadId + '\')" style="position:relative">'
           + '<div class="pip-card-name">' + name + dot + '</div>'
           + '<div class="pip-card-meta">' + g + ev + '</div>'
+          + phone
+          + budget
           + '<div class="pip-card-footer">'
             + '<select class="pip-status-sel" onclick="event.stopPropagation()" onchange="updateInquiryStatus(\'' + inq.threadId + '\',this.value).then(function(){loadPipelineInquiries()})">' + opts + '</select>'
           + '</div>'
