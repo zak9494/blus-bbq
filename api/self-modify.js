@@ -15,6 +15,8 @@ const TARGET_BRANCH = 'main';
    ────────────────────────────────────────────────────────────────────────── */
 const STATIC_MODULE_FILES = [
   'static/css/theme.css',
+  'static/css/time-picker.css',
+  'static/js/time-picker.js',
   'static/js/theme.js',
   'static/js/menu.js',
   'static/js/calendar.js',
