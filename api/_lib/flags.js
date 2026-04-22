@@ -52,6 +52,7 @@ const SEED_FLAGS = [
   { name: 'deposit_tracking',       description: 'Deposit tracking panel on inquiry cards' },
   { name: 'ai_dessert_trigger',     description: 'Auto-notify Zach to offer dessert when customer replies to a sent quote' },
   { name: 'ai_post_event_archive',  description: 'Daily auto-archive of non-booked past-event inquiries with hope-to-serve draft' },
+  { name: 'event_day_view',         description: 'Today tab — field-ops event-day view (Group 10)' },
 ];
 
 async function getFlag(name, defaultValue = false) {
