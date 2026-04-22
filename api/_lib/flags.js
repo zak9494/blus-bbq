@@ -44,12 +44,14 @@ function kvSet(key, value) {
 // Seed flags — these appear in listFlags() even if never written to KV.
 // Enabling a flag for the first time writes it to KV.
 const SEED_FLAGS = [
-  { name: 'kanban_restructure',   description: 'Restructured kanban board layout' },
-  { name: 'notifications_center', description: 'Unified notifications center panel' },
-  { name: 'ai_quote_updates',     description: 'AI-generated quote revision suggestions' },
-  { name: 'test_customer_mode',   description: 'Test customer mode — create fake inquiries for QA' },
-  { name: 'sms_channel',          description: 'SMS outreach channel (Twilio)' },
-  { name: 'deposit_tracking',     description: 'Deposit tracking panel on inquiry cards' },
+  { name: 'kanban_restructure',     description: 'Restructured kanban board layout' },
+  { name: 'notifications_center',   description: 'Unified notifications center panel' },
+  { name: 'ai_quote_updates',       description: 'AI-generated quote revision suggestions (scan + queue)' },
+  { name: 'test_customer_mode',     description: 'Test customer mode — create fake inquiries for QA' },
+  { name: 'sms_channel',            description: 'SMS outreach channel (Twilio)' },
+  { name: 'deposit_tracking',       description: 'Deposit tracking panel on inquiry cards' },
+  { name: 'ai_dessert_trigger',     description: 'Auto-notify Zach to offer dessert when customer replies to a sent quote' },
+  { name: 'ai_post_event_archive',  description: 'Daily auto-archive of non-booked past-event inquiries with hope-to-serve draft' },
 ];
 
 async function getFlag(name, defaultValue = false) {

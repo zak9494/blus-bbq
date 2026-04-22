@@ -79,8 +79,8 @@ function clearStore() {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('SEED_FLAGS', () => {
-  it('contains exactly 6 entries', () => {
-    assert.equal(SEED_FLAGS.length, 6);
+  it('contains exactly 8 entries', () => {
+    assert.equal(SEED_FLAGS.length, 8);
   });
   it('contains test_customer_mode', () => {
     assert.ok(SEED_FLAGS.some(f => f.name === 'test_customer_mode'));
@@ -189,7 +189,7 @@ describe('listFlags', () => {
     clearStore();
     const flags = await listFlags();
     assert.ok(Array.isArray(flags));
-    assert.ok(flags.length >= 6);
+    assert.ok(flags.length >= 8);
     const names = flags.map(f => f.name);
     SEED_FLAGS.forEach(s => assert.ok(names.includes(s.name), 'missing seed: ' + s.name));
   });

@@ -137,6 +137,7 @@ Tone: friendly, personal, confident. Keep it under 200 words.
 Rules:
 - Open with "Hi [FirstName]," (use first name only)
 - Thank them for reaching out
+- Do not re-include answers the customer has already received in the thread. Focus only on new or unaddressed items.
 - Present the quote line items clearly (you will receive them already formatted — just include them as-is)
 - Show the total prominently
 - Invite them to stop by Wed–Sun after 1 PM to try samples — "just ask for Raul!"
@@ -153,6 +154,7 @@ Tone: helpful, brief, not pushy. Keep it under 150 words.
 Rules:
 - Open with "Hi [FirstName]," (use first name only)
 - Thank them for their interest
+- Do not re-include answers the customer has already provided in the thread. Focus only on new or unaddressed items.
 - Explain you just need a few more details to prepare their quote
 - List each missing field naturally in a sentence or short list (you will receive them)
 - Promise a quick turnaround once you have the info
