@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="/static/css/chat-approval.css">
 <link rel="stylesheet" href="/static/css/notifications.css">
 <link rel="stylesheet" href="/static/css/kanban.css">
+<link rel="stylesheet" href="/static/css/event-day.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -545,6 +546,7 @@ if (typeof marked !== 'undefined') {
     <div class="nav-item" onclick="showPage('quotes')"><span class="nav-dot dot-amber"></span>Quote Builder</div>
     <div class="nav-item" onclick="showPage('inquiries')"><span class="nav-dot dot-blue"></span>Inquiries <span class="notif-badge" id="inq-badge" style="display:none">0</span></div>
     <div class="nav-item" onclick="showPage('calendar');calInit()"><span class="nav-dot dot-green"></span>Calendar</div>
+    <div class="nav-item" id="nav-today" style="display:none" onclick="showPage('today')"><span class="nav-dot dot-orange"></span>Today's Gigs</div>
     <button class="sidebar-close-btn" onclick="closeMobileSidebar()">✕</button>
     <div class="nav-item disabled"><span class="nav-dot dot-green"></span>Invoices</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Outbound Leads</div>
@@ -1285,6 +1287,18 @@ if (typeof marked !== 'undefined') {
       </div>
     </div>
 
+    <div id="page-today" class="page">
+      <div class="topbar">
+        <div class="topbar-title">Today's Gigs</div>
+        <div class="topbar-sub" id="ed-date-label">Loading…</div>
+        <button class="ed-refresh-btn" onclick="loadEventDayView()">&#8635; Refresh</button>
+      </div>
+      <div class="content">
+        <div id="ed-loading" style="display:none;justify-content:center;padding:48px"><span class="ed-spinner"></span></div>
+        <div id="ed-cards"></div>
+      </div>
+    </div>
+
 </div>
 </div>
 
@@ -1520,6 +1534,7 @@ function showPage(page) {
   if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); }
   if (page === 'ai') { loadChatHistory(); if (typeof chatApprovalInit === 'function') chatApprovalInit(); } // C21 + D24
   if (page === 'flags') loadFlagsPage();
+  if (page === 'today') { if (typeof loadEventDayView === 'function') loadEventDayView(); }
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
   });
@@ -4734,6 +4749,8 @@ window.addEventListener('load', function() {
   if (typeof notifInit === 'function') notifInit();
   if (window.flags) window.flags.load().then(function() {
     if (window.testMode) window.testMode.init();
+    var navToday = document.getElementById('nav-today');
+    if (navToday && window.flags.isEnabled('event_day_view')) navToday.style.display = '';
   });
 });
 // focus listener removed — visibilitychange below is sufficient and avoids
@@ -4765,6 +4782,7 @@ function closeMobileSidebar() {
 <script defer src="/static/js/inquiries-filters.js"></script>
 <script defer src="/static/js/theme.js"></script>
 <script defer src="/static/js/flags.js"></script>
+<script defer src="/static/js/event-day.js"></script>
 <script defer src="/static/js/test-mode.js"></script>
 <script defer src="/static/js/test-mode-email.js"></script>
 <script defer src="/static/js/time-picker.js"></script>

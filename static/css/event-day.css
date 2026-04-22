@@ -1,0 +1,210 @@
+/* ===== Event-Day Operations View (Group 10) ===================================
+   Mobile-first (375×812 primary). One-handed truck/venue use.
+   ============================================================================= */
+
+/* ── Page layout ── */
+#page-today .content {
+  padding: 12px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* ── Topbar additions ── */
+#page-today .topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#page-today .topbar-title { flex: 1; }
+#page-today .topbar-sub   { color: var(--text3); font-size: 13px; }
+.ed-refresh-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ed-refresh-btn:hover { background: var(--surface2); }
+
+/* ── Card ── */
+.ed-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+/* ── Card header row ── */
+.ed-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ed-card-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.ed-card-time {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--orange);
+  white-space: nowrap;
+}
+
+/* ── Status badge ── */
+.ed-status-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+.ed-status-booked      { background: var(--green-bg,  #d1fae5); color: var(--green,  #047857); }
+.ed-status-in_progress { background: var(--amber-bg,  #fef3c7); color: var(--amber,  #b45309); }
+.ed-status-completed   { background: var(--surface2); color: var(--text3); }
+
+/* ── Info rows ── */
+.ed-info-row {
+  display: flex;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text2);
+  margin-bottom: 6px;
+  align-items: flex-start;
+}
+.ed-info-label {
+  font-weight: 600;
+  color: var(--text3);
+  min-width: 64px;
+  flex-shrink: 0;
+}
+
+/* ── Address link ── */
+.ed-address-link {
+  color: var(--orange);
+  text-decoration: underline;
+  font-weight: 500;
+  word-break: break-word;
+}
+.ed-address-link:hover { opacity: 0.8; }
+
+/* ── Menu items list ── */
+.ed-menu-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+.ed-menu-chip {
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+/* ── Special requests ── */
+.ed-notes {
+  font-size: 13px;
+  color: var(--text2);
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+/* ── Phone buttons row ── */
+.ed-phone-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.ed-phone-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  flex: 1;
+  white-space: nowrap;
+}
+.ed-phone-btn:hover { background: var(--surface3, var(--surface2)); }
+
+/* ── Action buttons ── */
+.ed-action-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ed-action-btn {
+  flex: 1;
+  min-height: 48px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  padding: 0 12px;
+  transition: opacity 0.15s;
+}
+.ed-action-btn:hover { opacity: 0.85; }
+.ed-action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ed-action-primary   { background: var(--orange); color: #fff; }
+.ed-action-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+/* ── Spinner / loading ── */
+.ed-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  animation: ed-spin 0.7s linear infinite;
+}
+@keyframes ed-spin { to { transform: rotate(360deg); } }
+
+/* ── Empty state ── */
+.ed-empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--text3);
+  font-size: 15px;
+}
+.ed-empty-icon {
+  font-size: 40px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+/* ── dot for nav ── */
+.dot-orange { background: var(--orange, #e85d26); }
+
+/* ── Desktop widening ── */
+@media (min-width: 769px) {
+  #page-today .content { max-width: 680px; }
+  .ed-card { padding: 20px 24px; }
+  .ed-action-row { max-width: 400px; }
+}
