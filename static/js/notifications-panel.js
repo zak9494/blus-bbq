@@ -350,8 +350,9 @@
     loadSettings();
 
     try {
-      var fd = await fetch('/api/flags/notifications_center').then(function (r) { return r.json(); });
-      if (!fd || !fd.enabled) return;
+      if (!window.flags) return;
+      await window.flags.load();
+      if (!window.flags.isEnabled('notifications_center')) return;
     } catch (_) { return; }
 
     try {
