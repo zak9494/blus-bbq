@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="/static/css/deposits.css">
 <link rel="stylesheet" href="/static/css/chat-approval.css">
 <link rel="stylesheet" href="/static/css/notifications.css">
+<link rel="stylesheet" href="/static/css/kanban.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -107,6 +108,7 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .inq-bulk-toolbar { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--surface); border:1px solid var(--amber); border-radius:12px; padding:10px 18px; display:flex; align-items:center; gap:12px; z-index:300; box-shadow:0 4px 24px rgba(0,0,0,0.45); white-space:nowrap; }
 .inq-bulk-count { font-size:13px; font-weight:600; color:var(--text); }
 .inq-bulk-btn { font-size:12px; font-weight:600; padding:6px 14px; border-radius:7px; border:none; cursor:pointer; }
+.inq-bulk-approve { background:var(--green); color:#000; }
 .inq-bulk-archive { background:var(--amber); color:var(--on-color-text); }
 .inq-bulk-clear   { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
 .inq-section { margin-bottom:24px; }
@@ -693,6 +695,9 @@ if (typeof marked !== 'undefined') {
               <span id="quote-number" style="font-size:12px;color:var(--text3)">#QT-1043</span>
             </div>
 
+            <!-- Repeat-customer banner (Group 3) -->
+            <div id="qb-repeat-banner" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600"></div>
+
             <div class="form-row-2">
               <div class="form-group">
                 <label class="form-label">Customer Name</label>
@@ -700,7 +705,7 @@ if (typeof marked !== 'undefined') {
               </div>
               <div class="form-group">
                 <label class="form-label">Email</label>
-                <input class="form-input" id="q-email" placeholder="email@example.com">
+                <input class="form-input" id="q-email" placeholder="email@example.com" onblur="qbCheckRepeatCustomer(this.value)">
               </div>
             </div>
             <div class="form-row-3">
@@ -1118,6 +1123,7 @@ if (typeof marked !== 'undefined') {
       <!-- C18: floating bulk action toolbar -->
       <div id="inq-bulk-toolbar" class="inq-bulk-toolbar" style="display:none">
         <span class="inq-bulk-count" id="inq-bulk-count">0 selected</span>
+        <button class="inq-bulk-btn inq-bulk-approve" onclick="bulkApproveInq()">✓ Approve Selected</button>
         <button class="inq-bulk-btn inq-bulk-archive" onclick="bulkArchiveInq()">🗄 Archive Selected</button>
         <button class="inq-bulk-btn inq-bulk-clear" onclick="clearInqSelection()">✕ Clear</button>
       </div>
@@ -1476,6 +1482,9 @@ if (typeof marked !== 'undefined') {
 
 <!-- D22: canonical menu data — loaded before main script block -->
 <script src="/static/js/menu.js"></script>
+<script src="/static/js/status-sync.js"></script>
+<script src="/static/js/kanban-view.js"></script>
+<script src="/static/js/list-view.js"></script>
 <script>
 /* ===== MODULE: CONSTANTS & STATIC DATA ===== */
 // D22: MENU is now loaded from /static/js/menu.js (window.MENU).
@@ -1576,8 +1585,16 @@ async function toggleFlag(name, enabled, description) {
 function switchTab(tab, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('view-kanban').style.display = tab === 'kanban' ? 'block' : 'none';
-  document.getElementById('view-list').style.display = tab === 'list' ? 'block' : 'none';
+  const kbEl = document.getElementById('view-kanban');
+  const lvEl = document.getElementById('view-list');
+  if (kbEl) kbEl.style.display = tab === 'kanban' ? 'block' : 'none';
+  if (lvEl) lvEl.style.display = tab === 'list'   ? 'block' : 'none';
+  // When flag is on, render the active view on tab switch
+  const useNewKanban = window.flags && window.flags.isEnabled('kanban_restructure');
+  if (useNewKanban && pipelineInqCache) {
+    if (tab === 'kanban' && kbEl && window.kanbanView) window.kanbanView.render(kbEl);
+    if (tab === 'list'   && lvEl && window.listView)  window.listView.render(lvEl);
+  }
 }
 
 /* ===== MODULE: PIPELINE KANBAN ===== */
@@ -1906,8 +1923,36 @@ function updateChargeSuggestion() {
   updatePreview();
 }
 
+async function qbCheckRepeatCustomer(email) {
+  const banner = document.getElementById('qb-repeat-banner');
+  if (!banner) return;
+  email = (email || '').trim().toLowerCase();
+  if (!email) { banner.style.display = 'none'; return; }
+  try {
+    const r = await fetch('/api/pipeline/customer-history?secret=' + INQ_SECRET + '&email=' + encodeURIComponent(email), { cache: 'no-store' });
+    const d = await r.json();
+    if (d.status === 'booked_and_paid') {
+      banner.style.display = 'block';
+      banner.style.background = 'rgba(74,222,128,0.12)';
+      banner.style.border = '1px solid rgba(74,222,128,0.3)';
+      banner.style.color = 'var(--green)';
+      banner.textContent = '⭐ Repeat customer — booked & paid ' + d.bookedCount + 'x' + (d.lastEventDate ? ' · last event: ' + d.lastEventDate : '');
+    } else if (d.status === 'prior_inquiry') {
+      banner.style.display = 'block';
+      banner.style.background = 'rgba(251,191,36,0.1)';
+      banner.style.border = '1px solid rgba(251,191,36,0.3)';
+      banner.style.color = 'var(--amber)';
+      banner.textContent = '⚠️ Prior inquiry — didn\'t book (' + d.count + ' previous)';
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch(_) { banner.style.display = 'none'; }
+}
+
 function newQuote() {
   currentQuoteNumber++;
+  const qbBanner = document.getElementById('qb-repeat-banner');
+  if (qbBanner) qbBanner.style.display = 'none';
   document.getElementById('quote-number').textContent = `#QT-${currentQuoteNumber}`;
   selectedItems = {};
   document.querySelectorAll('#page-quotes input[type=checkbox]').forEach(cb => cb.checked = false);
@@ -3358,6 +3403,36 @@ async function bulkArchiveInq() {
   if (btn) { btn.disabled = false; btn.textContent = '🗄 Archive Selected'; }
   showToast(ok + ' archived' + (fail ? ', ' + fail + ' failed' : '') + ' ✓');
 }
+
+async function bulkApproveInq() {
+  const ids = Array.from(inqSelectedIds);
+  if (!ids.length) return;
+  if (!confirm('Approve ' + ids.length + ' selected inquiries and move them to the Pipeline?')) return;
+  const btn = document.querySelector('.inq-bulk-approve');
+  if (btn) { btn.disabled = true; btn.textContent = 'Approving…'; }
+  let ok = 0, fail = 0;
+  for (const threadId of ids) {
+    try {
+      const r = await fetch('/api/inquiries/approve?secret=' + INQ_SECRET, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId })
+      });
+      const d = await r.json();
+      if (d.ok) {
+        if (inquiriesCache) {
+          const idx = inquiriesCache.findIndex(function(i) { return i.threadId === threadId; });
+          if (idx >= 0) { inquiriesCache[idx].approved = true; inquiriesCache[idx].status = d.status || 'needs_info'; }
+        }
+        ok++;
+      } else { fail++; }
+    } catch(e) { fail++; }
+  }
+  clearInqSelection();
+  renderInqChips();
+  renderInqCards();
+  if (btn) { btn.disabled = false; btn.textContent = '✓ Approve Selected'; }
+  showToast(ok + ' approved' + (fail ? ', ' + fail + ' failed' : '') + ' ✓');
+}
 /* end C18 ---------------------------------------------------------------- */
 
 async function archiveInq(event, threadId) {
@@ -3551,7 +3626,16 @@ async function loadPipelineInquiries() {
     pipelineInqCache = (d.inquiries || []).filter(i =>
       i.approved === true && i.status !== 'archived' &&
       (window.showTestData || !i.threadId.startsWith('test-')));
-    renderKanban(); renderTable(); updateStats();
+    const useNewKanban = window.flags && window.flags.isEnabled('kanban_restructure');
+    if (useNewKanban) {
+      const kbContainer = document.getElementById('view-kanban');
+      const lvContainer = document.getElementById('view-list');
+      if (kbContainer && window.kanbanView) window.kanbanView.render(kbContainer);
+      if (lvContainer  && window.listView)  window.listView.render(lvContainer);
+    } else {
+      renderKanban(); renderTable();
+    }
+    updateStats();
     // Update Recent Replies dashboard widget
     const replies = (d.inquiries || []).filter(i => i.has_unreviewed_update && i.status !== 'archived').slice(0, 3);
     const rrSec = document.getElementById('recent-replies-section');
