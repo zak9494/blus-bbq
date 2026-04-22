@@ -37,6 +37,7 @@
     { "source": "/api/ai/thank-you-draft", "destination": "/api/ai/thank-you-draft.js" },
     { "source": "/api/cron/post-event-archive", "destination": "/api/cron/post-event-archive.js" },
     { "source": "/api/settings/guest-count-lockin", "destination": "/api/settings/guest-count-lockin.js" },
+    { "source": "/api/events/today", "destination": "/api/events/today.js" },
     { "source": "/api/inquiries/completed", "destination": "/api/inquiries/completed.js" },
     { "source": "/api/cron/mark-completed",  "destination": "/api/cron/mark-completed.js" }
   ],

@@ -22,6 +22,18 @@ module.exports = async (req, res) => {
     const token      = await getAccessToken();
     const calendarId = await getOrCreateCalendarId();
 
+    /* ── Never-delete guarantee: fetch event and check start date ── */
+    const getPath = '/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events/' + encodeURIComponent(eventId);
+    const evResp  = await gcalRequest('GET', getPath, null, token);
+    if (evResp.status === 200 && evResp.body) {
+      const startDt  = evResp.body.start && (evResp.body.start.dateTime || evResp.body.start.date);
+      const evDate   = startDt ? String(startDt).slice(0, 10) : null; // YYYY-MM-DD
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+      if (evDate && evDate < todayStr) {
+        return res.status(403).json({ error: 'Cannot delete past events — they are preserved for records' });
+      }
+    }
+
     const calPath = '/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events/' + encodeURIComponent(eventId);
     const r = await gcalRequest('DELETE', calPath, null, token);
 

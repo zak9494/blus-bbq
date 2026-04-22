@@ -89,6 +89,17 @@ const STATIC_MODULE_FILES = [
   'static/css/completed-orders.css',
   'api/inquiries/completed.js',
   'api/cron/mark-completed.js',
+  // Nav v2
+  'static/css/nav-v2.css',
+  'static/js/nav-v2.js',
+  // Group 5 — Notification Center frontend
+  'api/notifications/counts.js',
+  'static/js/notifications-panel.js',
+  'static/css/notifications-panel.css',
+  // Group 10 — Event-day operations view
+  'static/js/event-day.js',
+  'static/css/event-day.css',
+  'api/events/today.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
