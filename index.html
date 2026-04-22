@@ -3243,11 +3243,12 @@ function getFilteredInquiries(filter) {
 function renderInqChips() {
   const chipsEl = document.getElementById('inq-chips');
   if (!chipsEl || !inquiriesCache) return;
+  const ezCaterEnabled = window.flags && window.flags.isEnabled('ezcater_integration');
   const defs = [
     { key:'all',      label:'All' },
     { key:'new',      label:'New' },
     { key:'wix',      label:'Wix Form' },
-    { key:'ezcater',  label:'ezCater' },
+    ...(ezCaterEnabled ? [{ key:'ezcater', label:'ezCater' }] : []),
     { key:'direct',   label:'Direct Email' },
     { key:'needs_review', label:'Needs Review' },
     { key:'archived', label:'Archived' },
