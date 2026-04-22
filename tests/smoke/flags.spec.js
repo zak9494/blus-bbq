@@ -53,3 +53,32 @@ test('Feature Flags page renders flag list on navigation', async ({ page }) => {
   // Wait for async load — flags-list should become visible
   await expect(page.locator('#flags-list')).toBeVisible({ timeout: 8000 });
 });
+
+// Secret is the same hardcoded value used in index.html (not an actual secret).
+const FLAG_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
+
+test('POST /api/flags/:name returns 200 (routing fix regression guard)', async ({ request }) => {
+  // Write kanban_restructure=false (no-op: it was already false). Verifies the route exists.
+  const res = await request.post(BASE_URL + '/api/flags/kanban_restructure', {
+    data: { secret: FLAG_SECRET, enabled: false, description: 'Restructured kanban board layout' },
+  });
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body).toHaveProperty('ok', true);
+  expect(body.name).toBe('kanban_restructure');
+  expect(body.enabled).toBe(false);
+});
+
+test('POST /api/flags/:name rejects wrong secret with 401', async ({ request }) => {
+  const res = await request.post(BASE_URL + '/api/flags/kanban_restructure', {
+    data: { secret: 'wrong', enabled: false },
+  });
+  expect(res.status()).toBe(401);
+});
+
+test('POST /api/flags/:name rejects missing enabled with 400', async ({ request }) => {
+  const res = await request.post(BASE_URL + '/api/flags/kanban_restructure', {
+    data: { secret: FLAG_SECRET },
+  });
+  expect(res.status()).toBe(400);
+});
