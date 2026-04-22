@@ -2,14 +2,18 @@
    Given an inquiry where the customer just replied AND status === 'quote_sent',
    emit a notification prompting Zach to consider a dessert add-on offer.
    Does NOT send any email — notification surfaces the suggestion for human review.
+   Gated behind ai_dessert_trigger feature flag (default off).
 
    Exports: maybeTriggerDessertOffer
    ===== */
 'use strict';
+const { getFlag } = require('./flags.js');
 const { createNotification } = require('./notifications.js');
 
 async function maybeTriggerDessertOffer(inquiry) {
   if (!inquiry) return null;
+  const enabled = await getFlag('ai_dessert_trigger', false);
+  if (!enabled) return null;
   if (inquiry.status !== 'quote_sent') return null;
 
   const ef = inquiry.extracted_fields || {};

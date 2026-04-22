@@ -8,6 +8,7 @@
    ===== */
 'use strict';
 const https = require('https');
+const { getFlag } = require('./flags.js');
 const { createNotification } = require('./notifications.js');
 
 const MODEL     = 'claude-sonnet-4-6';
@@ -109,6 +110,9 @@ Rules:
 }
 
 async function runPostEventArchive({ dryRun = false } = {}) {
+  const enabled = await getFlag('ai_post_event_archive', false);
+  if (!enabled && !dryRun) return { ok: true, skipped: 'flag_off', yesterday: yesterdayCT(), scanned: 0, archived: 0, errors: [] };
+
   const yesterday = yesterdayCT();
   const now = new Date().toISOString();
   const errors = [];
