@@ -175,18 +175,20 @@ async function handlePipelineSave(req, res, body) {
     const ef = record.extracted_fields || {};
     index.push({
       threadId,
-      from:          record.from || '',
-      subject:       record.subject || '',
-      customer_name: ef.customer_name || body.customer_name || null,
-      event_date:    ef.event_date    || null,
-      guest_count:   ef.guest_count   || null,
-      status:        record.status,
-      source:        record.source   || 'direct',
-      approved:      record.approved || false,
+      from:            record.from || '',
+      subject:         record.subject || '',
+      customer_name:   ef.customer_name || body.customer_name || null,
+      customer_phone:  ef.customer_phone || body.phone || null,
+      event_date:      ef.event_date    || null,
+      guest_count:     ef.guest_count   || null,
+      budget:          ef.budget        != null ? ef.budget : (body.budget != null ? body.budget : null),
+      status:          record.status,
+      source:          record.source   || 'direct',
+      approved:        record.approved || false,
       has_unreviewed_update: record.has_unreviewed_update || false,
-      email_date:    record.date || null,
-      quote_total:   record.quote_total || null,
-      updated_at:    now,
+      email_date:      record.date || null,
+      quote_total:     record.quote_total || null,
+      updated_at:      now,
     });
     index.sort((a, b) => {
       const da = a.email_date ? new Date(a.email_date).getTime() : 0;
@@ -209,6 +211,8 @@ async function handleQuoteBuilderSave(req, res, body) {
     customer_name, email, event_date, event_time, guest_count,
     service_type, delivery_address, quote,
   } = body;
+  const phone            = (body.phone || '').trim();
+  const budget           = body.budget != null ? parseFloat(body.budget) || null : null;
   const special_requests = (body.special_requests || body.notes || '').trim();
 
   const now      = new Date().toISOString();
@@ -227,12 +231,14 @@ async function handleQuoteBuilderSave(req, res, body) {
   const indexEntry = {
     threadId,
     customer_name,
+    customer_phone: phone || null,
     from:      fromAddr,
     email:     email || '',
     source:    'direct',
     status:    quote && quote.line_items && quote.line_items.length ? 'quote_drafted' : 'new',
     event_date: event_date || '',
     guest_count: guest_count || null,
+    budget:    budget,
     subject,
     storedAt:  now,
     approved:  false,
@@ -250,11 +256,13 @@ async function handleQuoteBuilderSave(req, res, body) {
     special_requests: special_requests || '',
     extracted_fields: {
       customer_name,
-      customer_email: email || '',
-      event_date:    event_date || '',
-      event_time:    event_time || '',
-      guest_count:   guest_count || null,
-      service_type:  service_type || 'pickup',
+      customer_email:  email || '',
+      customer_phone:  phone || null,
+      event_date:      event_date || '',
+      event_time:      event_time || '',
+      guest_count:     guest_count || null,
+      budget:          budget,
+      service_type:    service_type || 'pickup',
       delivery_address: delivery_address || '',
       special_requests: special_requests || '',
     },
