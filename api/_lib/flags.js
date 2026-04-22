@@ -62,6 +62,8 @@ const SEED_FLAGS = [
   { name: 'calendar_v2',            description: 'Calendar v2: status color-coding, monthly totals dropdown, period selector chips' },
   // Group 7 — Quote Builder extensions (default OFF)
   { name: 'quote_builder_v2',       description: 'Quote Builder v2: Save as Draft, Load Draft, auto-save (localStorage)' },
+  // Group 9 — Customer Profile + Widgets (default OFF)
+  { name: 'customer_profile_v2',    description: 'Customer profile page: stats widgets, inquiry history, notes — drill-down from inquiry detail' },
 ];
 
 async function getFlag(name, defaultValue = false) {
