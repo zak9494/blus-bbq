@@ -3,6 +3,7 @@ module.exports.config = { api: { bodyParser: false } };
 
 const https = require('https');
 const crypto = require('crypto');
+const { getTestModeEmail } = require('../_lib/settings.js');
 
 const CANONICAL_SENDER = 'info@blusbarbeque.com';
 const KV_TOKENS_KEY = `gmail:${CANONICAL_SENDER}`;
@@ -102,16 +103,20 @@ async function refreshToken(refreshTok) {
   return httpsPost('oauth2.googleapis.com', '/token', { 'Content-Type': 'application/x-www-form-urlencoded' }, body);
 }
 
-// Test-mode safety rail — redirects recipient to Zak's address for any test inquiry.
+// Test-mode safety rail — redirects recipient to the configured test email address.
+// Throws if inquiry is a test but no target is configured (fail-loud; prevents accidental send).
 // NEVER modifies the sender (CANONICAL_SENDER lockdown is untouched).
 // Exported for unit testing.
-function resolveRecipient(to, context) {
+async function resolveRecipient(to, context) {
   var inq = (context && context.inquiry) || {};
-  if (inq.test === true || context.testOverride === true ||
-      (typeof inq.threadId === 'string' && inq.threadId.startsWith('test-'))) {
-    return 'zak9494@gmail.com';
+  var isTest = inq.test === true || context.testOverride === true ||
+      (typeof inq.threadId === 'string' && inq.threadId.startsWith('test-'));
+  if (!isTest) return to;
+  const testEmail = await getTestModeEmail();
+  if (!testEmail) {
+    throw new Error('Test mode email target not configured. Go to Settings \u2192 Feature Flags and set the target.');
   }
-  return to;
+  return testEmail;
 }
 
 async function sendEmail(tok, to, subject, htmlBody) {
@@ -204,7 +209,12 @@ module.exports = async (req, res) => {
   const ep = task.payload || directPayload || {};
   if (!ep.to) return fail('payload.to is required');
 
-  const to = resolveRecipient(ep.to, { inquiry: ep.inquiry, testOverride: ep.testOverride });
+  let to;
+  try {
+    to = await resolveRecipient(ep.to, { inquiry: ep.inquiry, testOverride: ep.testOverride });
+  } catch (e) {
+    return fail(e.message);
+  }
   const result = await sendEmail(atk, to, ep.subject || '(no subject)', ep.body || '');
   if (result.status >= 300) return fail('Gmail API ' + result.status + ': ' + JSON.stringify(result.body).slice(0, 200));
 

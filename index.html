@@ -1257,6 +1257,8 @@ if (typeof marked !== 'undefined') {
       <div class="content" style="max-width:640px">
         <div id="flags-loading" style="padding:32px;text-align:center;color:var(--text3)">Loading flags…</div>
         <div id="flags-list" style="display:none"></div>
+        <!-- Test mode email target — rendered by test-mode-email.js, always visible -->
+        <div id="test-email-panel" style="margin-top:16px"></div>
         <!-- Test-mode settings panel — rendered by test-mode.js when flag is on -->
         <div id="tm-settings-panel" style="display:none;margin-top:24px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px"></div>
       </div>
@@ -1528,6 +1530,7 @@ async function loadFlagsPage() {
     listEl.style.display = 'block';
     if (typeof testModeInit === 'function') testModeInit();
     else if (window.testMode) window.testMode.init();
+    if (window.testModeEmail) window.testModeEmail.init();
   } catch (e) {
     if (loadingEl) loadingEl.textContent = 'Failed to load flags: ' + e.message;
   }
@@ -4643,5 +4646,6 @@ function closeMobileSidebar() {
 <script defer src="/static/js/theme.js"></script>
 <script defer src="/static/js/flags.js"></script>
 <script defer src="/static/js/test-mode.js"></script>
+<script defer src="/static/js/test-mode-email.js"></script>
 </body>
 </html>
