@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="/static/css/nav-v2.css">
 <link rel="stylesheet" href="/static/css/completed-orders.css">
 <link rel="stylesheet" href="/static/css/quote-drafts.css">
+<link rel="stylesheet" href="/static/css/customer-profile.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -1175,6 +1176,9 @@ if (typeof marked !== 'undefined') {
       </div>
     </div><!-- /page-inquiries -->
 
+    <!-- CUSTOMER PROFILE PAGE (Group 9, flag: customer_profile_v2) -->
+    <div id="page-customer" class="page"></div><!-- /page-customer -->
+
     <!-- CALENDAR PAGE -->
     <div id="page-calendar" class="page">
       <div class="topbar">
@@ -1660,6 +1664,7 @@ if (typeof marked !== 'undefined') {
 
 <!-- D22: canonical menu data — loaded before main script block -->
 <script src="/static/js/menu.js"></script>
+<script src="/static/js/customer-profile.js"></script>
 <script src="/static/js/status-sync.js"></script>
 <script src="/static/js/kanban-view.js"></script>
 <script src="/static/js/list-view.js"></script>
@@ -1700,6 +1705,7 @@ function showPage(page) {
   if (page === 'flags') loadFlagsPage();
   if (page === 'notifications' && typeof notifPanelRenderPage === 'function') notifPanelRenderPage();
   if (page === 'today') { if (typeof loadEventDayView === 'function') loadEventDayView(); }
+  // customer profile is rendered on-demand by openCustomerProfile(); no init needed here
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
   });
@@ -3955,6 +3961,7 @@ async function openInquiry(threadId) {
     renderInquiryDetail(d.inquiry);
     if (typeof depositsInit === 'function') depositsInit(d.inquiry);
     if (typeof repeatCustomerInit === 'function') repeatCustomerInit(d.inquiry);
+    if (typeof customerProfileInit === 'function') customerProfileInit(d.inquiry);
     document.getElementById('inq-list-view').style.display = 'none';
     document.getElementById('inq-list-topbar').style.display = 'none';
     document.getElementById('inq-detail-view').style.display = 'block';

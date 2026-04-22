@@ -103,6 +103,10 @@ const STATIC_MODULE_FILES = [
   // Group 7 — Quote Builder extensions
   'static/js/quote-drafts.js',
   'static/css/quote-drafts.css',
+  // Group 9 — Customer Profile + Widgets
+  'static/js/customer-profile.js',
+  'static/css/customer-profile.css',
+  'api/customer/profile.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
