@@ -10,6 +10,14 @@ const { test, expect } = require('@playwright/test');
 const BASE_URL = process.env.SMOKE_BASE_URL || 'https://blus-bbq.vercel.app';
 const GMAIL_SECRET = process.env.SMOKE_GMAIL_SECRET || '';
 const SELF_MODIFY_SECRET = process.env.SMOKE_SELF_MODIFY_SECRET || '';
+const FLAG_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
+
+// Ensure ai_quote_updates flag is off before flag-off assertions (guards against stale dev KV state)
+test.beforeAll(async ({ request }) => {
+  await request.post(`${BASE_URL}/api/flags/ai_quote_updates`, {
+    data: { secret: FLAG_SECRET, enabled: false },
+  }).catch(() => {});
+});
 
 // ── /api/ai/quote-updates (flag-gated) ─────────────────────────────────────
 

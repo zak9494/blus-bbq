@@ -23,6 +23,32 @@
   var calDate         = new Date();   // anchor: always local-midnight via new Date(y,m,d)
   var calEventsCache  = {};           // 'YYYY-M' (0-indexed month) → events[]
   var calPendingLoads = {};           // 'YYYY-M' → Promise (dedup in-flight fetches)
+  /* calendar_v2 state */
+  var calPeriod       = null;         // active period chip: null | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'last_year' | 'ytd' | 'custom'
+  var calPeriodStart  = null;         // {year,month,day} — start of aggregate/custom range
+  var calPeriodEnd    = null;         // {year,month,day} — end of aggregate/custom range
+  var calTotalsOpen   = false;        // monthly totals dropdown visible
+  var calInqStatusMap = {};           // threadId → inquiry status string (for color-coding)
+
+  /* ── Status colors (calendar_v2) ─────────────── */
+  var STATUS_COLORS = {
+    new:            '#94a3b8',
+    needs_info:     '#f59e0b',
+    quote_drafted:  '#f59e0b',
+    quote_approved: '#3b82f6',
+    quote_sent:     '#3b82f6',
+    booked:         '#22c55e',
+    declined:       '#ef4444',
+    completed:      '#8b5cf6',
+    archived:       '#9ca3af',
+    '__default__':  '#f59e0b',
+  };
+  var STATUS_ORDER  = ['booked','quote_sent','quote_approved','quote_drafted','needs_info','new','completed','declined','archived'];
+  var STATUS_LABELS = {
+    new: 'New', needs_info: 'Needs Info', quote_drafted: 'Quote Drafted',
+    quote_approved: 'Approved', quote_sent: 'Quote Sent',
+    booked: 'Booked', declined: 'Declined', completed: 'Completed', archived: 'Archived',
+  };
 
   /* ── Helpers ─────────────────────────────────── */
   function getSecret() {
@@ -77,6 +103,50 @@
 
   function sameDay(a, b) {
     return a && b && a.year === b.year && a.month === b.month && a.day === b.day;
+  }
+
+  /* calendar_v2 helpers */
+  function isPastEvent(ev) {
+    var s = eventStart(ev);
+    if (!s) return false;
+    var t = todayChi();
+    return (s.year * 10000 + s.month * 100 + s.day) < (t.year * 10000 + t.month * 100 + t.day);
+  }
+
+  function eventStatusColor(ev) {
+    var tid = bbqThreadId(ev);
+    var st = (tid && calInqStatusMap[tid]) || '__default__';
+    return STATUS_COLORS[st] || STATUS_COLORS['__default__'];
+  }
+
+  function computePeriodRange(period) {
+    var t = todayChi();
+    if (period === 'last_year') {
+      return { start: { year: t.year - 1, month: 0, day: 1 }, end: { year: t.year - 1, month: 11, day: 31 } };
+    }
+    if (period === 'ytd') {
+      return { start: { year: t.year, month: 0, day: 1 }, end: t };
+    }
+    return null;
+  }
+
+  async function loadInqStatuses() {
+    var threadIds = [];
+    Object.keys(calEventsCache).forEach(function (k) {
+      calEventsCache[k].forEach(function (ev) {
+        var tid = bbqThreadId(ev);
+        if (tid && threadIds.indexOf(tid) === -1) threadIds.push(tid);
+      });
+    });
+    if (!threadIds.length) return;
+    await Promise.all(threadIds.map(async function (tid) {
+      try {
+        var r = await fetch('/api/inquiries/get?threadId=' + encodeURIComponent(tid));
+        if (!r.ok) return;
+        var d = await r.json();
+        if (d.inquiry && d.inquiry.status) calInqStatusMap[tid] = d.inquiry.status;
+      } catch {}
+    }));
   }
 
   /* The 7 days (Sun–Sat) of the week containing `date` */
@@ -169,6 +239,9 @@
     if (calView === 'month')      renderMonth(container);
     else if (calView === 'week')  renderWeek(container);
     else                          renderDay(container);
+    renderPeriodChips();
+    renderTotalsBtn();
+    if (window.flags && window.flags.isEnabled('calendar_v2')) renderLegend();
   }
 
   /* ── Header title ────────────────────────────── */

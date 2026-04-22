@@ -10,7 +10,7 @@
   padding: 10px 18px;
   border-bottom: 1px solid var(--border);
   position: sticky;
-  top: var(--cal-topbar-h, 68px);
+  top: var(--cal-topbar-h, 82px);
   background: var(--bg);
   z-index: 10;
   flex-wrap: wrap;
@@ -270,7 +270,7 @@
   display: flex;
   border-bottom: 2px solid var(--border);
   position: sticky;
-  top: calc(var(--cal-topbar-h, 68px) + 44px); /* below page topbar + cal-header */
+  top: calc(var(--cal-topbar-h, 82px) + var(--cal-header-h, 52px)); /* below page topbar + cal-header */
   background: var(--bg);
   z-index: 5;
 }
@@ -529,6 +529,10 @@
   .cal-nav-btn { padding: 4px 8px; font-size: 13px; }
   .cal-view-btn { padding: 4px 9px; font-size: 11px; }
   .cal-week-view { min-width: 380px; }
+  /* N-01: Month-grid day cells 44px touch target (was 22px visual circle) */
+  .cal-day { min-height: 44px; }
+  /* N-01: Mobile week-view rows 44px tap height */
+  .cal-mobile-day-row { min-height: 44px; }
 }
 
 @media (max-width: 480px) {

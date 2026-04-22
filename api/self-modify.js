@@ -92,6 +92,10 @@ const STATIC_MODULE_FILES = [
   // Nav v2
   'static/css/nav-v2.css',
   'static/js/nav-v2.js',
+  // Group 5 — Notification Center frontend
+  'api/notifications/counts.js',
+  'static/js/notifications-panel.js',
+  'static/css/notifications-panel.css',
   // Group 10 — Event-day operations view
   'static/js/event-day.js',
   'static/css/event-day.css',

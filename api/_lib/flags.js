@@ -53,6 +53,7 @@ const SEED_FLAGS = [
   { name: 'ai_dessert_trigger',     description: 'Auto-notify Zach to offer dessert when customer replies to a sent quote' },
   { name: 'ai_post_event_archive',  description: 'Daily auto-archive of non-booked past-event inquiries with hope-to-serve draft' },
   { name: 'nav_v2',                 description: 'Nav v2 — bottom tab bar (mobile) + collapsed sidebar (tablet/desktop); replaces hamburger' },
+  { name: 'ezcater_integration',    description: 'Show ezCater source filter chip — enable once ezCater account is connected and sending leads' },
   { name: 'event_day_view',         description: 'Today tab — field-ops event-day view (Group 10)' },
   // Group 4 — Completed Orders Handling
   { name: 'completed_orders_view',  description: 'Completed Orders tab in Inquiries — period totals + revenue table (OFF on merge, Zach flips)' },

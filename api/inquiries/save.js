@@ -82,7 +82,7 @@ function isAuthorized(req) {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const VALID_STATUSES = ['new','needs_info','quote_drafted','quote_approved','quote_sent','booked','declined','archived'];
+const VALID_STATUSES = ['new','needs_info','quote_drafted','quote_approved','quote_sent','booked','in_progress','completed','declined','archived'];
 const INDEX_KEY = 'inquiries:index';
 const MAX_INDEX = 500;
 

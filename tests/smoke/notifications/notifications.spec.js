@@ -7,6 +7,14 @@ const { test, expect } = require('@playwright/test');
 const BASE_URL = process.env.SMOKE_BASE_URL || 'https://blus-bbq.vercel.app';
 const SECRET   = process.env.SMOKE_SECRET   || '';
 const FLAGS_URL = BASE_URL + '/api/flags/notifications_center';
+const FLAG_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
+
+// Ensure flag is off before flag-off assertions (guards against stale dev KV state)
+test.beforeAll(async ({ request }) => {
+  await request.post(FLAGS_URL, {
+    data: { secret: FLAG_SECRET, enabled: false },
+  }).catch(() => {});
+});
 
 // ── flag-off (always run, no auth needed) ─────────────────────────────────────
 
