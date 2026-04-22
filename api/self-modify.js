@@ -84,6 +84,14 @@ const STATIC_MODULE_FILES = [
   'static/css/kanban.css',
   'api/_lib/repeat-customer.js',
   'api/pipeline/customer-history.js',
+  // Group 4 — Completed Orders Handling
+  'static/js/completed-orders.js',
+  'static/css/completed-orders.css',
+  'api/inquiries/completed.js',
+  'api/cron/mark-completed.js',
+  // Nav v2
+  'static/css/nav-v2.css',
+  'static/js/nav-v2.js',
   // Group 5 — Notification Center frontend
   'api/notifications/counts.js',
   'static/js/notifications-panel.js',

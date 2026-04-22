@@ -52,8 +52,12 @@ const SEED_FLAGS = [
   { name: 'deposit_tracking',       description: 'Deposit tracking panel on inquiry cards' },
   { name: 'ai_dessert_trigger',     description: 'Auto-notify Zach to offer dessert when customer replies to a sent quote' },
   { name: 'ai_post_event_archive',  description: 'Daily auto-archive of non-booked past-event inquiries with hope-to-serve draft' },
+  { name: 'nav_v2',                 description: 'Nav v2 — bottom tab bar (mobile) + collapsed sidebar (tablet/desktop); replaces hamburger' },
   { name: 'ezcater_integration',    description: 'Show ezCater source filter chip — enable once ezCater account is connected and sending leads' },
   { name: 'event_day_view',         description: 'Today tab — field-ops event-day view (Group 10)' },
+  // Group 4 — Completed Orders Handling
+  { name: 'completed_orders_view',  description: 'Completed Orders tab in Inquiries — period totals + revenue table (OFF on merge, Zach flips)' },
+  { name: 'completed_eom_hide',     description: 'Kanban: DISABLE EOM hide on Completed column (EOM hide is default-on; enable flag to show all months)' },
   // Group 8 — Calendar enhancements (default OFF)
   { name: 'calendar_v2',            description: 'Calendar v2: status color-coding, monthly totals dropdown, period selector chips' },
 ];
