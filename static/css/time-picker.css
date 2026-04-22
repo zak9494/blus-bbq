@@ -1,0 +1,98 @@
+/* ===== MODULE: MOBILE SCROLL-WHEEL TIME PICKER
+   Loaded from: /static/css/time-picker.css
+   Shown only on mobile/tablet (<768px). Desktop uses native input[type="time"].
+   ===== */
+
+/* Wrapper sits where the native input was */
+.tw-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* The drum-roll wheel — flex shown on mobile only (JS toggles display) */
+.tw-wheel {
+  display: none; /* JS sets to flex on mobile */
+  height: 120px;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  align-items: center;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Center-row highlight */
+.tw-wheel::before {
+  content: '';
+  position: absolute;
+  left: 4px; right: 4px;
+  top: 50%;
+  height: 40px;
+  transform: translateY(-50%);
+  background: var(--surface3);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Top/bottom fade */
+.tw-wheel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--surface2) 0%,
+    transparent 28%,
+    transparent 72%,
+    var(--surface2) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Scrollable columns */
+.tw-col {
+  flex: 1;
+  height: 100%;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+.tw-col::-webkit-scrollbar { display: none; }
+
+/* AM/PM column is narrower */
+.tw-col-ap { flex: none; width: 64px; }
+
+/* Each option row */
+.tw-item {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text2);
+  scroll-snap-align: center;
+  position: relative;
+  z-index: 3;
+  cursor: pointer;
+}
+/* Ghost padding rows — no snap */
+.tw-pad { scroll-snap-align: none; }
+
+/* Colon separator */
+.tw-sep {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  padding: 0 2px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 3;
+  pointer-events: none;
+}

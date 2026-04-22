@@ -640,7 +640,19 @@
   }
 
   /* ── Init / Refresh ──────────────────────────── */
+  /* Sync CSS sticky offsets to actual topbar height each time calendar opens */
+  function syncStickyOffsets() {
+    var calPage = document.getElementById('page-calendar');
+    var tb = calPage && calPage.querySelector('.topbar');
+    if (!tb) return;
+    var h = tb.offsetHeight;
+    if (!h) return;
+    document.documentElement.style.setProperty('--cal-topbar-h', h + 'px');
+    document.documentElement.style.setProperty('--cal-header-top', h + 'px');
+  }
+
   async function init() {
+    syncStickyOffsets();
     setError('');
     setLoading(true);
     try {

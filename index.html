@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Blu's BBQ">
 <link rel="stylesheet" href="/static/css/theme.css">
+<link rel="stylesheet" href="/static/css/time-picker.css">
 <link rel="stylesheet" href="/static/css/calendar.css">
 <link rel="stylesheet" href="/static/css/deposits.css">
 <link rel="stylesheet" href="/static/css/chat-approval.css">
@@ -186,8 +187,9 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .quote-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
 .quote-preview { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
 .form-group { margin-bottom: 14px; }
-.form-label { display: block; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
+.form-label { display: block; font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
 .form-input { width: 100%; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; transition: border 0.15s; }
+.form-input::placeholder { color: var(--text2); opacity: 1; }
 .form-input:focus { outline: none; border-color: var(--red); }
 .form-select { width: 100%; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -604,7 +606,6 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
         <div class="topbar-actions">
-          <button class="btn" onclick="openImport()">⬆ Import</button>
           <button class="btn" onclick="showPage('ai')">AI Assistant</button>
           <button class="btn btn-primary" onclick="openNewLead()">+ New Lead</button>
         </div>
@@ -735,6 +736,16 @@ if (typeof marked !== 'undefined') {
                 </select>
               </div>
             </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">Phone</label>
+                <input class="form-input" id="q-phone" placeholder="214-xxx-xxxx">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Budget ($)</label>
+                <input class="form-input" type="number" id="q-budget-amt" placeholder="e.g. 1500" min="0" step="1">
+              </div>
+            </div>
             <div class="form-group">
               <label class="form-label">Delivery Address (if applicable)</label>
               <input class="form-input" id="q-address" placeholder="Full delivery address">
@@ -804,11 +815,15 @@ if (typeof marked !== 'undefined') {
               <div style="display:flex; align-items:center; gap:6px;">
                 <input type="number" class="charge-pct-input" id="charge-pct" value="0" min="0" max="30" oninput="updatePreview()">
                 <span style="font-size:12px; color:var(--text3);">%</span>
+                <span style="font-size:12px; color:var(--text2);" id="charge-pct-amt"></span>
               </div>
             </div>
             <div class="charge-row" id="delivery-row" style="display:none;">
               <span style="font-size:12px; color:var(--text2);">Delivery fee</span>
-              <span style="font-size:12px; color:var(--text);" id="delivery-fee-display">$50.00</span>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span style="font-size:12px; color:var(--text2);">$</span>
+                <input type="number" class="charge-pct-input" id="delivery-fee-input" value="50" min="0" step="1" style="width:56px" oninput="updatePreview()">
+              </div>
             </div>
             <div class="charge-row" id="qb-tax-row">
               <span style="font-size:12px; color:var(--text2);" id="qb-tax-label">TX Sales Tax (8.25%)</span>
@@ -1836,8 +1851,12 @@ function updatePreview() {
 
   const pct = parseFloat(document.getElementById('charge-pct').value) || 0;
   const service = document.getElementById('q-service').value;
-  const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? window.QB_DELIVERY_FEE : 0;
+  const dfInput = document.getElementById('delivery-fee-input');
+  const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? (dfInput ? (parseFloat(dfInput.value) || 0) : window.QB_DELIVERY_FEE) : 0;
   const { serviceCharge: charge, baseTax, displayTax: tax, total } = window.calcQuoteTotals(subtotal, pct, deliveryFee, qbTaxExempt);
+
+  const amtEl = document.getElementById('charge-pct-amt');
+  if (amtEl) amtEl.textContent = pct && subtotal ? '($' + charge.toFixed(2) + ')' : '';
 
   document.getElementById('preview-total').textContent = '$' + total.toFixed(2);
   if (qbTaxExempt) {
@@ -1892,11 +1911,13 @@ function newQuote() {
   document.getElementById('quote-number').textContent = `#QT-${currentQuoteNumber}`;
   selectedItems = {};
   document.querySelectorAll('#page-quotes input[type=checkbox]').forEach(cb => cb.checked = false);
-  ['q-name','q-email','q-date','q-time','q-address','q-special-requests'].forEach(id => document.getElementById(id).value = '');
+  ['q-name','q-email','q-date','q-time','q-address','q-special-requests','q-phone','q-budget-amt'].forEach(id => document.getElementById(id) && (document.getElementById(id).value = ''));
   document.getElementById('q-guests').value = '';
   document.getElementById('q-service').value = 'pickup';
   document.getElementById('q-budget').value = 'unknown';
   document.getElementById('charge-pct').value = '0';
+  const dfReset = document.getElementById('delivery-fee-input');
+  if (dfReset) dfReset.value = window.QB_DELIVERY_FEE || 50;
   document.getElementById('ai-suggestion-box').classList.remove('show');
   // Reset tax-exempt state
   qbTaxExempt = false;
@@ -2314,13 +2335,17 @@ async function saveQuoteAsInquiry() {
 
   if (!name) { showToast('Enter a customer name first.'); return; }
 
+  const phone   = (document.getElementById('q-phone') ? document.getElementById('q-phone').value.trim() : '');
+  const budgetAmt = document.getElementById('q-budget-amt') ? (parseFloat(document.getElementById('q-budget-amt').value) || null) : null;
+
   const items = Object.entries(selectedItems).map(function([id, item]) {
     const qty = getItemQty(id);
     return { name: item.name, unit: item.unit, unit_price: item.price, qty, subtotal: parseFloat((item.price * qty).toFixed(2)) };
   });
 
   const subtotal    = items.reduce(function(s, i) { return s + i.subtotal; }, 0);
-  const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? window.QB_DELIVERY_FEE : 0;
+  const dfInpSave   = document.getElementById('delivery-fee-input');
+  const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? (dfInpSave ? (parseFloat(dfInpSave.value) || 0) : window.QB_DELIVERY_FEE) : 0;
   const { serviceCharge, baseTax, displayTax: tax, total: grandTotal } = window.calcQuoteTotals(subtotal, pct, deliveryFee, qbTaxExempt);
 
   const quote = items.length ? {
@@ -2346,6 +2371,8 @@ async function saveQuoteAsInquiry() {
         secret: INQ_SECRET,
         customer_name: name,
         email,
+        phone: phone || null,
+        budget: budgetAmt,
         event_date:    dateVal,
         event_time:    timeVal,
         guest_count:   guests ? parseInt(guests, 10) : null,
@@ -3579,6 +3606,7 @@ function renderPipelineInquiries() {
     const name  = inq.customer_name || inq.from || 'Unknown';
     const ev    = inq.event_date ? '📅 ' + inq.event_date : 'Date TBD';
     const guests = inq.guest_count ? ' · 👥 ' + inq.guest_count : '';
+    const budget = inq.budget ? ' · 💰 $' + parseFloat(inq.budget).toLocaleString() : '';
     const src   = inq.source || 'direct';
     const sLabel = SRC_LABELS[src] || src;
     const sCls   = SRC_CLASS[src] || 'src-direct';
@@ -3586,7 +3614,7 @@ function renderPipelineInquiries() {
       '<option value="' + s + '"' + (inq.status === s ? ' selected' : '') + '>' + (INQ_STATUS_LABELS[s] || s) + '</option>').join('');
     return '<div class="pip-card" onclick="showPage(\'inquiries\');openInquiry(\'' + inq.threadId + '\')" style="position:relative">'
       + '<div class="pip-card-name">' + name + '</div>'
-      + '<div class="pip-card-meta">' + ev + guests + '</div>'
+      + '<div class="pip-card-meta">' + ev + guests + budget + '</div>'
       + '<div class="pip-card-footer">'
         + '<span class="inq-src-badge ' + sCls + '">' + sLabel + '</span>'
         + '<select class="pip-status-sel" onclick="event.stopPropagation()" onchange="updateInquiryStatus(\'' + inq.threadId + '\',this.value).then(()=>loadPipelineInquiries())">' + opts + '</select>'
@@ -4647,5 +4675,16 @@ function closeMobileSidebar() {
 <script defer src="/static/js/flags.js"></script>
 <script defer src="/static/js/test-mode.js"></script>
 <script defer src="/static/js/test-mode-email.js"></script>
+<script defer src="/static/js/time-picker.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof twInit === 'function') twInit('input[type="time"]');
+    else document.addEventListener('tw-ready', function() { twInit('input[type="time"]'); });
+  });
+  // Fallback: if defer fires after DOMContentLoaded
+  window.addEventListener('load', function() {
+    if (typeof twInit === 'function' && !document.querySelector('input[type="time"]._twDone')) twInit('input[type="time"]');
+  });
+</script>
 </body>
 </html>

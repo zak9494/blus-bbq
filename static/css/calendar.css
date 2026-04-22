@@ -10,7 +10,7 @@
   padding: 10px 18px;
   border-bottom: 1px solid var(--border);
   position: sticky;
-  top: 52px;
+  top: var(--cal-topbar-h, 68px);
   background: var(--bg);
   z-index: 10;
   flex-wrap: wrap;
@@ -270,7 +270,7 @@
   display: flex;
   border-bottom: 2px solid var(--border);
   position: sticky;
-  top: 104px;               /* below page topbar + cal-header */
+  top: calc(var(--cal-topbar-h, 68px) + 44px); /* below page topbar + cal-header */
   background: var(--bg);
   z-index: 5;
 }
@@ -524,7 +524,7 @@
    MOBILE BREAKPOINTS
    ════════════════════════════════════════════════ */
 @media (max-width: 640px) {
-  .cal-header { top: 48px; padding: 8px 12px; gap: 6px; }
+  .cal-header { top: var(--cal-topbar-h, 52px); padding: 8px 12px; gap: 6px; }
   .cal-range-label { font-size: 14px; }
   .cal-nav-btn { padding: 4px 8px; font-size: 13px; }
   .cal-view-btn { padding: 4px 9px; font-size: 11px; }
