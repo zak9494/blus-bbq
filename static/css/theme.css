@@ -8,6 +8,7 @@
 
 /* ───────── LIGHT THEME (default) ──────────────────── */
 :root {
+  color-scheme: light;
   /* surfaces */
   --bg: #faf9f7;
   --surface: #ffffff;
@@ -76,6 +77,7 @@
 
 /* ───────── DARK THEME ──────────────────────────────── */
 [data-theme="dark"] {
+  color-scheme: dark;
   /* surfaces */
   --bg: #0f0e0d;
   --surface: #1a1816;
@@ -140,4 +142,24 @@
   --logo-opacity: 0.9;
   --card-inset-bg: rgba(0,0,0,0.25);
   --topbar-text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+/* ───────── NATIVE FORM CONTROLS — DARK MODE ───────────
+   WebKit overrides background/color on <select>, <input type="date/time/number">
+   with the system appearance unless color-scheme is explicitly set.
+   color-scheme on :root and [data-theme="dark"] (above) handles most cases;
+   these rules are belt-and-suspenders for elements that still slip through.
+   ──────────────────────────────────────────────────── */
+[data-theme="dark"] select,
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="time"],
+[data-theme="dark"] input[type="number"] {
+  background: var(--surface2);
+  color: var(--text);
+  color-scheme: dark;
+}
+
+[data-theme="dark"] option {
+  background: var(--surface2);
+  color: var(--text);
 }
