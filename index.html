@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="/static/css/event-day.css">
 <link rel="stylesheet" href="/static/css/nav-v2.css">
 <link rel="stylesheet" href="/static/css/completed-orders.css">
+<link rel="stylesheet" href="/static/css/quote-drafts.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -689,6 +690,8 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
         <div class="topbar-actions">
+          <span id="qb-autosave-badge">Saved</span>
+          <button id="qb-drafts-btn" class="qb-drafts-topbar-btn" style="display:none" onclick="window._qbDrafts && window._qbDrafts.openDraftsModal()">Drafts</button>
           <button class="btn btn-primary" onclick="newQuote()">+ New Quote</button>
         </div>
       </div>
@@ -876,7 +879,35 @@ if (typeof marked !== 'undefined') {
             <button class="pdf-btn" id="qb-save-inq-btn" onclick="saveQuoteAsInquiry()" style="margin-top:4px; color:#6ee7b7; border-color:rgba(110,231,183,0.3);">
               📁 Save as Inquiry
             </button>
+            <button id="qb-save-draft-btn" class="qb-save-draft-preview-btn" style="display:none" onclick="window._qbDrafts && window._qbDrafts.saveDraftPrompt()">
+              💾 Save Draft
+            </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUOTE DRAFTS MODALS (Group 7 — quote_builder_v2) -->
+    <div id="qb-drafts-modal" class="qb-drafts-modal-overlay">
+      <div class="qb-drafts-panel">
+        <div class="qb-drafts-header">
+          <div class="qb-drafts-header-title">Saved Drafts</div>
+          <button class="qb-modal-close" onclick="document.getElementById('qb-drafts-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="qb-drafts-list-wrap">
+          <div id="qb-drafts-list"></div>
+        </div>
+      </div>
+    </div>
+    <div id="qb-save-draft-modal" class="qb-save-draft-modal-overlay">
+      <div class="qb-save-draft-panel">
+        <div class="qb-save-draft-title">Save Draft</div>
+        <label class="form-label" style="font-size:12px;margin-bottom:6px;display:block">Draft name</label>
+        <input class="form-input" id="qb-draft-name-input" placeholder="e.g. Smith Wedding · 2026-06-15"
+          onkeydown="if(event.key==='Enter') window._qbDrafts && window._qbDrafts.confirmSaveDraft()">
+        <div class="qb-save-draft-actions">
+          <button class="btn" onclick="document.getElementById('qb-save-draft-modal').style.display='none'">Cancel</button>
+          <button class="btn btn-primary" onclick="window._qbDrafts && window._qbDrafts.confirmSaveDraft()">Save</button>
         </div>
       </div>
     </div>
@@ -4913,6 +4944,13 @@ window.addEventListener('load', function() {
     var navToday = document.getElementById('nav-today');
     if (navToday && window.flags.isEnabled('event_day_view')) navToday.style.display = '';
     initCompletedOrdersToggle();
+    if (window.flags.isEnabled('quote_builder_v2')) {
+      var qbDraftsBtn     = document.getElementById('qb-drafts-btn');
+      var qbSaveDraftBtn  = document.getElementById('qb-save-draft-btn');
+      if (qbDraftsBtn)    qbDraftsBtn.style.display    = '';
+      if (qbSaveDraftBtn) qbSaveDraftBtn.style.display = '';
+      if (typeof window.quoteDraftsInit === 'function') window.quoteDraftsInit();
+    }
   });
 });
 // focus listener removed — visibilitychange below is sufficient and avoids
@@ -4951,6 +4989,7 @@ function closeMobileSidebar() {
 <script defer src="/static/js/time-picker.js"></script>
 <script defer src="/static/js/nav-v2.js"></script>
 <script defer src="/static/js/completed-orders.js"></script>
+<script defer src="/static/js/quote-drafts.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof twInit === 'function') twInit('input[type="time"]');
