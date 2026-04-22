@@ -26,7 +26,9 @@
     { "source": "/api/chat/approval", "destination": "/api/chat/approval.js" },
     { "source": "/api/notifications/subscribe", "destination": "/api/notifications/subscribe.js" },
     { "source": "/api/notifications/send", "destination": "/api/notifications/send.js" },
-    { "source": "/api/notifications/vapid-key", "destination": "/api/notifications/vapid-key.js" }
+    { "source": "/api/notifications/vapid-key", "destination": "/api/notifications/vapid-key.js" },
+    { "source": "/api/flags",      "destination": "/api/flags.js" },
+    { "source": "/api/flags/:name", "destination": "/api/flags.js" }
   ],
   "crons": [
     {
