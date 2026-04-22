@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="/static/css/notifications-panel.css">
 <link rel="stylesheet" href="/static/css/event-day.css">
 <link rel="stylesheet" href="/static/css/nav-v2.css">
+<link rel="stylesheet" href="/static/css/completed-orders.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -1007,6 +1008,15 @@ if (typeof marked !== 'undefined') {
           <button class="btn" onclick="loadInquiries()" style="font-size:12px;padding:6px 12px">🔄 Refresh</button>
         </div>
       </div>
+
+      <!-- COMPLETED ORDERS TOGGLE (Group 4) -->
+      <div id="inq-view-toggle-bar" style="display:none;padding:8px 16px 0;background:var(--surface)">
+        <div class="inq-view-toggle">
+          <button class="inq-view-toggle-btn active" id="inq-toggle-active" onclick="showInqActiveView()">Active Inquiries</button>
+          <button class="inq-view-toggle-btn" id="inq-toggle-completed" onclick="showInqCompletedView()">Completed Orders</button>
+        </div>
+      </div>
+      <div id="co-view" style="display:none"></div>
 
       <!-- LIST VIEW -->
       <div id="inq-list-view">
@@ -3920,6 +3930,30 @@ async function openInquiry(threadId) {
   } catch(e) { showToast('Error: ' + e.message); }
 }
 
+function showInqActiveView() {
+  var coView = document.getElementById('co-view'), listView = document.getElementById('inq-list-view');
+  if (coView) coView.style.display = 'none';
+  if (listView) listView.style.display = 'block';
+  var btnA = document.getElementById('inq-toggle-active'), btnC = document.getElementById('inq-toggle-completed');
+  if (btnA) btnA.classList.add('active');
+  if (btnC) btnC.classList.remove('active');
+  if (window.completedOrders) window.completedOrders.hide();
+}
+function showInqCompletedView() {
+  var coView = document.getElementById('co-view'), listView = document.getElementById('inq-list-view');
+  if (listView) listView.style.display = 'none';
+  if (coView) coView.style.display = 'block';
+  var btnA = document.getElementById('inq-toggle-active'), btnC = document.getElementById('inq-toggle-completed');
+  if (btnA) btnA.classList.remove('active');
+  if (btnC) btnC.classList.add('active');
+  if (window.completedOrders) window.completedOrders.show(coView);
+}
+function initCompletedOrdersToggle() {
+  if (!window.flags || !window.flags.isEnabled('completed_orders_view')) return;
+  var bar = document.getElementById('inq-view-toggle-bar');
+  if (bar) bar.style.display = '';
+}
+
 function showInquiryList() {
   currentInquiry = null;
   document.getElementById('inq-list-view').style.display = 'block';
@@ -4878,6 +4912,7 @@ window.addEventListener('load', function() {
     if (window.navV2) window.navV2.init();
     var navToday = document.getElementById('nav-today');
     if (navToday && window.flags.isEnabled('event_day_view')) navToday.style.display = '';
+    initCompletedOrdersToggle();
   });
 });
 // focus listener removed — visibilitychange below is sufficient and avoids
@@ -4915,6 +4950,7 @@ function closeMobileSidebar() {
 <script defer src="/static/js/test-mode-email.js"></script>
 <script defer src="/static/js/time-picker.js"></script>
 <script defer src="/static/js/nav-v2.js"></script>
+<script defer src="/static/js/completed-orders.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof twInit === 'function') twInit('input[type="time"]');
