@@ -6,6 +6,7 @@
  */
 module.exports.config = { maxDuration: 30 };
 const https = require('https');
+const { maybeTriggerDessertOffer } = require('../_lib/dessert-trigger.js');
 
 function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
 function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
@@ -256,6 +257,10 @@ module.exports = async (req, res) => {
   if (newQuote !== rec.quote) saveBody.quote = newQuote;
 
   await callInternal('/api/inquiries/save', 'POST', saveBody);
+
+  // Dessert add-on prompt: if customer replied to a quote_sent inquiry, notify Zach
+  const updatedInquiry = { ...rec, status: newStatus, extracted_fields: mergedFields };
+  maybeTriggerDessertOffer(updatedInquiry).catch(() => {});
 
   return res.status(200).json({
     ok: true, has_new_messages: true, new_messages: newMessages.length,

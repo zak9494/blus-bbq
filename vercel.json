@@ -28,7 +28,14 @@
     { "source": "/api/notifications/send", "destination": "/api/notifications/send.js" },
     { "source": "/api/notifications/vapid-key", "destination": "/api/notifications/vapid-key.js" },
     { "source": "/api/flags",      "destination": "/api/flags.js" },
-    { "source": "/api/flags/:name", "destination": "/api/flags.js" }
+    { "source": "/api/flags/:name", "destination": "/api/flags.js" },
+    { "source": "/api/ai/regenerate", "destination": "/api/ai/regenerate.js" },
+    { "source": "/api/ai/add-details", "destination": "/api/ai/add-details.js" },
+    { "source": "/api/ai/quote-update-scan", "destination": "/api/ai/quote-update-scan.js" },
+    { "source": "/api/ai/quote-updates", "destination": "/api/ai/quote-updates.js" },
+    { "source": "/api/ai/thank-you-draft", "destination": "/api/ai/thank-you-draft.js" },
+    { "source": "/api/cron/post-event-archive", "destination": "/api/cron/post-event-archive.js" },
+    { "source": "/api/settings/guest-count-lockin", "destination": "/api/settings/guest-count-lockin.js" }
   ],
   "crons": [
     {
@@ -38,6 +45,10 @@
     {
       "path": "/api/cron/poll-inquiries",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/post-event-archive",
+      "schedule": "0 13 * * *"
     }
   ]
 }
