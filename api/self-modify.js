@@ -84,10 +84,14 @@ const STATIC_MODULE_FILES = [
   'static/css/kanban.css',
   'api/_lib/repeat-customer.js',
   'api/pipeline/customer-history.js',
-// Group 5 -- Notification Center frontend
+  // Group 5 — Notification Center frontend
   'api/notifications/counts.js',
   'static/js/notifications-panel.js',
   'static/css/notifications-panel.css',
+  // Group 10 — Event-day operations view
+  'static/js/event-day.js',
+  'static/css/event-day.css',
+  'api/events/today.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

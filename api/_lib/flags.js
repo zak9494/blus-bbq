@@ -53,6 +53,9 @@ const SEED_FLAGS = [
   { name: 'ai_dessert_trigger',     description: 'Auto-notify Zach to offer dessert when customer replies to a sent quote' },
   { name: 'ai_post_event_archive',  description: 'Daily auto-archive of non-booked past-event inquiries with hope-to-serve draft' },
   { name: 'ezcater_integration',    description: 'Show ezCater source filter chip — enable once ezCater account is connected and sending leads' },
+  { name: 'event_day_view',         description: 'Today tab — field-ops event-day view (Group 10)' },
+  // Group 8 — Calendar enhancements (default OFF)
+  { name: 'calendar_v2',            description: 'Calendar v2: status color-coding, monthly totals dropdown, period selector chips' },
 ];
 
 async function getFlag(name, defaultValue = false) {
