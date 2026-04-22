@@ -52,6 +52,9 @@ const SEED_FLAGS = [
   { name: 'deposit_tracking',       description: 'Deposit tracking panel on inquiry cards' },
   { name: 'ai_dessert_trigger',     description: 'Auto-notify Zach to offer dessert when customer replies to a sent quote' },
   { name: 'ai_post_event_archive',  description: 'Daily auto-archive of non-booked past-event inquiries with hope-to-serve draft' },
+  // Group 4 — Completed Orders Handling
+  { name: 'completed_orders_view',  description: 'Completed Orders tab in Inquiries — period totals + revenue table (OFF on merge, Zach flips)' },
+  { name: 'completed_eom_hide',     description: 'Kanban: DISABLE EOM hide on Completed column (EOM hide is default-on; enable flag to show all months)' },
 ];
 
 async function getFlag(name, defaultValue = false) {

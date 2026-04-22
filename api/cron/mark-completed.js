@@ -96,27 +96,28 @@ module.exports = async (req, res) => {
 
       const ef = record.extracted_fields || {};
       const eventDate = ef.event_date; // YYYY-MM-DD or null
-      if (!eventDate || eventDate > todayStr) continue; // future or unknown — skip
+      if (!eventDate || eventDate >= todayStr) continue; // today or future → skip (day AFTER only)
 
-      // Event is today or in the past → mark completed
+      const completedAt = now.toISOString();
       const updatedRecord = {
         ...record,
         status: 'completed',
-        updatedAt: now.toISOString(),
+        completed_at: completedAt,
+        updatedAt: completedAt,
         activity_log: [
           ...(record.activity_log || []),
           {
             type: 'status_change',
             summary: 'Marked completed (event date passed)',
-            timestamp: now.toISOString(),
+            timestamp: completedAt,
             acknowledged: false,
             diff: [{ field: 'status', old: status, new: 'completed' }]
           }
         ]
       };
 
-      // Update index entry status
-      const updatedEntry = { ...entry, status: 'completed', updatedAt: now.toISOString() };
+      // Update index entry — include completed_at so kanban EOM filter works without N+1 fetches
+      const updatedEntry = { ...entry, status: 'completed', completed_at: completedAt, updatedAt: completedAt };
       const updatedIndex = index.map(e => e.threadId === threadId ? updatedEntry : e);
 
       try {

@@ -84,6 +84,11 @@ const STATIC_MODULE_FILES = [
   'static/css/kanban.css',
   'api/_lib/repeat-customer.js',
   'api/pipeline/customer-history.js',
+  // Group 4 — Completed Orders Handling
+  'static/js/completed-orders.js',
+  'static/css/completed-orders.css',
+  'api/inquiries/completed.js',
+  'api/cron/mark-completed.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

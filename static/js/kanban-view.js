@@ -344,6 +344,23 @@
       groups[s].push(inq);
     });
 
+    // EOM hide: filter Completed column to current-month completions by default.
+    // Flag 'completed_eom_hide' DISABLES this filter (flag OFF = EOM hide active).
+    var skipEomHide = window.flags && typeof window.flags.isEnabled === 'function'
+      && window.flags.isEnabled('completed_eom_hide');
+    if (!skipEomHide) {
+      var nowKey = (function () {
+        var n = new Date(); return n.getFullYear() * 100 + n.getMonth();
+      }());
+      groups['completed'] = (groups['completed'] || []).filter(function (inq) {
+        var ts = inq.completed_at || null;
+        if (!ts) return true; // pre-Group4 records: show them
+        var d = new Date(ts);
+        if (isNaN(d.getTime())) return true;
+        return d.getFullYear() * 100 + d.getMonth() === nowKey;
+      });
+    }
+
     var board = document.createElement('div');
     board.className = 'kb-board';
     board.id = 'kb-board-inner';

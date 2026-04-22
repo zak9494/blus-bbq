@@ -36,7 +36,9 @@
     { "source": "/api/ai/quote-updates", "destination": "/api/ai/quote-updates.js" },
     { "source": "/api/ai/thank-you-draft", "destination": "/api/ai/thank-you-draft.js" },
     { "source": "/api/cron/post-event-archive", "destination": "/api/cron/post-event-archive.js" },
-    { "source": "/api/settings/guest-count-lockin", "destination": "/api/settings/guest-count-lockin.js" }
+    { "source": "/api/settings/guest-count-lockin", "destination": "/api/settings/guest-count-lockin.js" },
+    { "source": "/api/inquiries/completed", "destination": "/api/inquiries/completed.js" },
+    { "source": "/api/cron/mark-completed",  "destination": "/api/cron/mark-completed.js" }
   ],
   "crons": [
     {
@@ -50,6 +52,10 @@
     {
       "path": "/api/cron/post-event-archive",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/mark-completed",
+      "schedule": "0 12 * * *"
     }
   ]
 }
