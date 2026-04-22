@@ -564,6 +564,20 @@
 
   /* ── Delete ──────────────────────────────────── */
   async function deleteEvent(eventId) {
+    /* Never-delete guarantee: block deletion of past events */
+    var ev = null;
+    Object.keys(calEventsCache).forEach(function (k) {
+      calEventsCache[k].forEach(function (e) { if (e.id === eventId) ev = e; });
+    });
+    if (ev && isPastEvent(ev)) {
+      if (typeof window.showToast === 'function') {
+        window.showToast('Cannot delete past events — preserved for records');
+      } else {
+        window.alert('Cannot delete past events — they are preserved for records.');
+      }
+      return;
+    }
+
     if (!window.confirm('Delete this event from Google Calendar?')) return;
     try {
       var r = await fetch(
@@ -649,6 +663,12 @@
     if (!h) return;
     document.documentElement.style.setProperty('--cal-topbar-h', h + 'px');
     document.documentElement.style.setProperty('--cal-header-top', h + 'px');
+    requestAnimationFrame(function () {
+      var ch = calPage.querySelector('.cal-header');
+      if (ch && ch.offsetHeight) {
+        document.documentElement.style.setProperty('--cal-header-h', ch.offsetHeight + 'px');
+      }
+    });
   }
 
   async function init() {
@@ -656,7 +676,11 @@
     setError('');
     setLoading(true);
     try {
-      await ensureLoaded();
+      var tasks = [ensureLoaded()];
+      if (window.flags && window.flags.isEnabled('calendar_v2')) {
+        tasks.push(loadInqStatuses());
+      }
+      await Promise.all(tasks);
     } catch (e) {
       setError('Could not load calendar: ' + e.message);
     }
@@ -667,6 +691,306 @@
   async function refresh() {
     calEventsCache = {};
     await init();
+  }
+
+  /* ── Agenda view (calendar_v2: last_year / ytd / custom) ─── */
+  function renderAgenda(container) {
+    if (!calPeriodStart || !calPeriodEnd) {
+      container.innerHTML = '<div class="cal-agenda-empty">No period selected.</div>';
+      container.className = '';
+      return;
+    }
+    var evs = eventsInRange(calPeriodStart, calPeriodEnd);
+    if (evs.length === 0) {
+      container.innerHTML = '<div class="cal-agenda-empty">No events in this period.</div>';
+      container.className = '';
+      return;
+    }
+    /* group by YYYY-M key (sort order preserved by month-key sort) */
+    var groups = {};
+    evs.forEach(function (ev) {
+      var s = eventStart(ev);
+      if (!s) return;
+      var k = s.year + '-' + pad2(s.month);
+      if (!groups[k]) groups[k] = { year: s.year, month: s.month, evs: [] };
+      groups[k].evs.push(ev);
+    });
+    var html = '<div class="cal-agenda-view">';
+    Object.keys(groups).sort().forEach(function (k) {
+      var g = groups[k];
+      html += '<div class="cal-agenda-month-group">' +
+              '<div class="cal-agenda-month-label">' + MONTH_NAMES[g.month] + '\u00a0' + g.year + '</div>';
+      g.evs.forEach(function (ev) {
+        var s = eventStart(ev), e = eventEnd(ev);
+        if (!s) return;
+        var t1  = formatTime12(s.hour, s.minute);
+        var t2  = e ? formatTime12(e.hour, e.minute) : '';
+        var tid = bbqThreadId(ev);
+        var clr = eventStatusColor(ev);
+        html += '<div class="cal-agenda-event" style="border-left-color:' + clr + '"' +
+                ' onclick="calEventClick(' + JSON.stringify(ev.id) + ',' + JSON.stringify(tid) + ')">' +
+                '<div class="cal-agenda-event-date">' +
+                '<span class="cal-agenda-dow">' + DOW_SHORT[new Date(s.year, s.month, s.day).getDay()] + '</span>' +
+                '<span class="cal-agenda-day">' + s.day + '</span>' +
+                '</div>' +
+                '<div class="cal-agenda-event-info">' +
+                '<div class="cal-agenda-event-name">' + escHtml(eventName(ev)) + '</div>' +
+                '<div class="cal-agenda-event-time">' + t1 + (t2 && t2 !== t1 ? '\u2009–\u2009' + t2 : '') + '</div>' +
+                '</div></div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    container.className = '';
+  }
+
+  /* ── Status legend (calendar_v2) ─────────────────── */
+  function renderLegend() {
+    var id = 'cal-v2-legend';
+    var existing = document.getElementById(id);
+    /* collect which statuses are in the current view */
+    var seen = {};
+    Object.keys(calEventsCache).forEach(function (k) {
+      calEventsCache[k].forEach(function (ev) {
+        var tid = bbqThreadId(ev);
+        var st  = (tid && calInqStatusMap[tid]) || '__default__';
+        seen[st] = true;
+      });
+    });
+    var items = STATUS_ORDER.filter(function (s) { return seen[s]; });
+    if (seen['__default__']) items.push('__default__');
+
+    var html = '<div id="' + id + '" class="cal-v2-legend">';
+    STATUS_ORDER.forEach(function (st) {
+      if (!seen[st]) return;
+      html += '<span class="cal-legend-item">' +
+              '<span class="cal-legend-dot" style="background:' + STATUS_COLORS[st] + '"></span>' +
+              escHtml(STATUS_LABELS[st] || st) + '</span>';
+    });
+    if (seen['__default__']) {
+      html += '<span class="cal-legend-item">' +
+              '<span class="cal-legend-dot" style="background:#f59e0b"></span>Unlinked</span>';
+    }
+    html += '</div>';
+
+    if (existing) {
+      existing.outerHTML = html;
+    } else {
+      var viewContainer = document.getElementById('cal-view-container');
+      if (viewContainer) viewContainer.insertAdjacentHTML('beforebegin', html);
+    }
+  }
+
+  /* ── Period selector chips (calendar_v2) ─────────── */
+  var PERIOD_LABELS = {
+    this_week:  'This Week',
+    last_week:  'Last Week',
+    this_month: 'This Month',
+    last_month: 'Last Month',
+    last_year:  'Last Year',
+    ytd:        'YTD',
+    custom:     'Custom\u2026',
+  };
+  var PERIOD_ORDER = ['this_week','last_week','this_month','last_month','last_year','ytd','custom'];
+
+  function renderPeriodChips() {
+    var rowId = 'cal-period-chips-row';
+    var existing = document.getElementById(rowId);
+    var html = '<div id="' + rowId + '" class="cal-period-chips-row">';
+    PERIOD_ORDER.forEach(function (p) {
+      var active = calPeriod === p;
+      html += '<button class="cal-period-chip' + (active ? ' cal-period-chip-active' : '') + '"' +
+              ' onclick="calSetPeriod(' + JSON.stringify(p) + ')">' +
+              PERIOD_LABELS[p] + '</button>';
+    });
+    /* Custom range inputs — shown when calPeriod === 'custom' */
+    if (calPeriod === 'custom') {
+      var startVal = calPeriodStart ? (calPeriodStart.year + '-' + pad2(calPeriodStart.month + 1) + '-' + pad2(calPeriodStart.day)) : '';
+      var endVal   = calPeriodEnd   ? (calPeriodEnd.year   + '-' + pad2(calPeriodEnd.month   + 1) + '-' + pad2(calPeriodEnd.day))   : '';
+      html += '<input id="cal-custom-start" class="cal-custom-date" type="date" value="' + startVal + '" placeholder="Start"' +
+              ' onchange="calApplyCustomRange()">' +
+              '<span class="cal-custom-sep">–</span>' +
+              '<input id="cal-custom-end" class="cal-custom-date" type="date" value="' + endVal + '" placeholder="End"' +
+              ' onchange="calApplyCustomRange()">';
+    }
+    html += '</div>';
+
+    if (existing) {
+      existing.outerHTML = html;
+    } else {
+      var calHeader = document.querySelector('#page-calendar .cal-header');
+      if (calHeader) calHeader.insertAdjacentHTML('afterend', html);
+    }
+  }
+
+  /* Apply the custom date range from the two date inputs */
+  function applyCustomRange() {
+    var s = document.getElementById('cal-custom-start');
+    var e = document.getElementById('cal-custom-end');
+    if (!s || !e || !s.value || !e.value) return;
+    var sp = s.value.split('-'), ep = e.value.split('-');
+    calPeriodStart = { year: +sp[0], month: +sp[1] - 1, day: +sp[2] };
+    calPeriodEnd   = { year: +ep[0], month: +ep[1] - 1, day: +ep[2] };
+    calPeriod = 'custom';
+    init();
+  }
+
+  /* ── Monthly totals button (calendar_v2, month view only) ── */
+  function renderTotalsBtn() {
+    var btnId = 'cal-totals-btn';
+    var existing = document.getElementById(btnId);
+    /* Only show in regular month view */
+    var showIt = calView === 'month' && !calPeriod;
+    if (!showIt) {
+      if (existing) existing.remove();
+      var dd = document.getElementById('cal-totals-dd');
+      if (dd) dd.remove();
+      calTotalsOpen = false;
+      return;
+    }
+    if (!existing) {
+      var header = document.querySelector('#page-calendar .cal-header');
+      if (!header) return;
+      var btn = document.createElement('button');
+      btn.id        = btnId;
+      btn.className = 'cal-totals-btn';
+      btn.onclick   = function () { toggleTotals(); };
+      header.appendChild(btn);
+      existing = btn;
+    }
+    /* Calculate totals from current month's events */
+    var year = calDate.getFullYear(), month = calDate.getMonth();
+    var evs = calEventsCache[year + '-' + month] || [];
+    var total = 0, count = 0;
+    evs.forEach(function (ev) {
+      var m = (ev.description || '').match(/Quote Total:\s*\$?([\d,]+\.?\d*)/i);
+      if (m) { total += parseFloat(m[1].replace(/,/g, '')); count++; }
+    });
+    var fmt = '$' + total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    existing.textContent = count > 0 ? fmt : '$ Totals';
+    if (calTotalsOpen) renderTotalsDropdown(existing, evs);
+  }
+
+  function toggleTotals() {
+    calTotalsOpen = !calTotalsOpen;
+    var dd = document.getElementById('cal-totals-dd');
+    if (!calTotalsOpen) { if (dd) dd.remove(); return; }
+    var btn = document.getElementById('cal-totals-btn');
+    var year = calDate.getFullYear(), month = calDate.getMonth();
+    var evs = calEventsCache[year + '-' + month] || [];
+    renderTotalsDropdown(btn, evs);
+  }
+
+  function renderTotalsDropdown(anchorBtn, evs) {
+    var ddId = 'cal-totals-dd';
+    var existing = document.getElementById(ddId);
+    if (existing) existing.remove();
+
+    var total = 0, bookCount = 0;
+    var rows = [];
+    evs.forEach(function (ev) {
+      var m = (ev.description || '').match(/Quote Total:\s*\$?([\d,]+\.?\d*)/i);
+      var amt = m ? parseFloat(m[1].replace(/,/g, '')) : 0;
+      var tid = bbqThreadId(ev);
+      var st  = (tid && calInqStatusMap[tid]) || '';
+      if (amt > 0) { total += amt; bookCount++; }
+      rows.push({ name: eventName(ev), amt: amt, status: st });
+    });
+
+    var fmtAmt = function (n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); };
+    var html = '<div id="' + ddId + '" class="cal-totals-dd">' +
+               '<div class="cal-totals-dd-header">' + MONTH_NAMES[calDate.getMonth()] + ' ' + calDate.getFullYear() + '</div>' +
+               '<div class="cal-totals-dd-total">Total: <strong>' + fmtAmt(total) + '</strong></div>' +
+               '<div class="cal-totals-dd-sub">' + evs.length + ' event' + (evs.length !== 1 ? 's' : '') +
+               (bookCount > 0 ? ', ' + bookCount + ' with quotes' : '') + '</div>';
+    if (rows.length > 0) {
+      html += '<div class="cal-totals-dd-rows">';
+      rows.forEach(function (row) {
+        var clr = (row.status && STATUS_COLORS[row.status]) || '#f59e0b';
+        html += '<div class="cal-totals-dd-row">' +
+                '<span class="cal-totals-dot" style="background:' + clr + '"></span>' +
+                '<span class="cal-totals-name">' + escHtml(row.name) + '</span>' +
+                (row.amt > 0 ? '<span class="cal-totals-amt">' + fmtAmt(row.amt) + '</span>' : '') +
+                '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    var dd = document.getElementById(ddId);
+    /* position below the button */
+    var rect = anchorBtn.getBoundingClientRect();
+    dd.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+    dd.style.left = Math.max(8, rect.left + window.scrollX - dd.offsetWidth + rect.width) + 'px';
+
+    /* close on outside click */
+    setTimeout(function () {
+      document.addEventListener('click', function closer(ev) {
+        if (!dd.contains(ev.target) && ev.target !== anchorBtn) {
+          calTotalsOpen = false;
+          dd.remove();
+          document.removeEventListener('click', closer);
+        }
+      });
+    }, 0);
+  }
+
+  /* ── Period navigation (calendar_v2) ─────────────── */
+  function setPeriod(period) {
+    var t = todayChi();
+    calTotalsOpen = false;
+    /* Remove totals dropdown if open */
+    var dd = document.getElementById('cal-totals-dd');
+    if (dd) dd.remove();
+
+    if (period === 'this_week') {
+      calPeriod = null;
+      calDate = new Date(t.year, t.month, t.day);
+      calView = 'week';
+      init();
+      return;
+    }
+    if (period === 'last_week') {
+      calPeriod = null;
+      calDate = new Date(t.year, t.month, t.day - 7);
+      calView = 'week';
+      init();
+      return;
+    }
+    if (period === 'this_month') {
+      calPeriod = null;
+      calDate = new Date(t.year, t.month, 1);
+      calView = 'month';
+      init();
+      return;
+    }
+    if (period === 'last_month') {
+      calPeriod = null;
+      calDate = new Date(t.year, t.month - 1, 1);
+      calView = 'month';
+      init();
+      return;
+    }
+    if (period === 'custom') {
+      calPeriod = 'custom';
+      /* Keep existing range or default to current month */
+      if (!calPeriodStart) {
+        calPeriodStart = { year: t.year, month: t.month, day: 1 };
+        calPeriodEnd   = { year: t.year, month: t.month, day: new Date(t.year, t.month + 1, 0).getDate() };
+      }
+      render(); /* just re-render to show the custom date inputs */
+      return;
+    }
+    /* last_year, ytd → agenda view */
+    var range = computePeriodRange(period);
+    if (range) {
+      calPeriod      = period;
+      calPeriodStart = range.start;
+      calPeriodEnd   = range.end;
+      init();
+    }
   }
 
   /* ── Window bindings ─────────────────────────── */
@@ -684,7 +1008,10 @@
   window._calSubmitNewEvent = submitNewEvent;
   window._calEventClick    = calEventClick;
   window._calDeleteEvent   = deleteEvent;
-  window._calOpenInquiry   = function (tid) { if (typeof openInquiry === 'function') openInquiry(tid); };
+  window._calOpenInquiry     = function (tid) { if (typeof openInquiry === 'function') openInquiry(tid); };
   window._calCloseEventModal = closeEventModal;
+  window.calSetPeriod        = setPeriod;
+  window.calApplyCustomRange = applyCustomRange;
+  window.calIsPastEvent      = isPastEvent;
 
 })();
