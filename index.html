@@ -565,6 +565,7 @@ if (typeof marked !== 'undefined') {
 
     <div class="nav-section-label">Settings</div>
     <div class="nav-item" id="theme-toggle-btn" onclick="themeToggle()" title="Toggle light/dark mode"><span class="theme-icon">☾</span><span class="theme-label">Dark Mode</span></div>
+    <div class="nav-item" onclick="showPage('flags')"><span class="nav-dot dot-amber"></span>Feature Flags</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Integrations</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Account</div>
 
@@ -976,7 +977,7 @@ if (typeof marked !== 'undefined') {
             <div class="topbar-sub">Auto-fetched from info@blusbarbeque.com</div>
           </div>
         </div>
-        <div class="topbar-actions">
+        <div id="inq-topbar-actions" class="topbar-actions">
           <button class="btn" onclick="selectAllInq()" style="font-size:12px;padding:6px 12px" title="Select all visible">☑ All</button>
           <button class="btn" onclick="loadInquiries()" style="font-size:12px;padding:6px 12px">🔄 Refresh</button>
         </div>
@@ -1242,6 +1243,25 @@ if (typeof marked !== 'undefined') {
         <div id="hist-list"><div class="history-empty-msg">Loading…</div></div>
       </div>
     </div>
+
+    <!-- FEATURE FLAGS PAGE -->
+    <div id="page-flags" class="page">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div>
+            <div class="topbar-title">Feature Flags</div>
+            <div class="topbar-sub">Enable or disable experimental features</div>
+          </div>
+        </div>
+      </div>
+      <div class="content" style="max-width:640px">
+        <div id="flags-loading" style="padding:32px;text-align:center;color:var(--text3)">Loading flags…</div>
+        <div id="flags-list" style="display:none"></div>
+        <!-- Test-mode settings panel — rendered by test-mode.js when flag is on -->
+        <div id="tm-settings-panel" style="display:none;margin-top:24px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px"></div>
+      </div>
+    </div>
+
 </div>
 </div>
 
@@ -1473,9 +1493,66 @@ function showPage(page) {
   else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
   if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); }
   if (page === 'ai') { loadChatHistory(); if (typeof chatApprovalInit === 'function') chatApprovalInit(); } // C21 + D24
+  if (page === 'flags') loadFlagsPage();
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
   });
+}
+
+async function loadFlagsPage() {
+  const loadingEl = document.getElementById('flags-loading');
+  const listEl    = document.getElementById('flags-list');
+  if (!listEl) return;
+  if (loadingEl) loadingEl.style.display = 'block';
+  listEl.style.display = 'none';
+  try {
+    const r = await fetch('/api/flags');
+    const d = await r.json();
+    const flags = d.flags || [];
+    if (window.flags) await window.flags.reload();
+    listEl.innerHTML = flags.map(function(f) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:10px">'
+        + '<div>'
+          + '<div style="font-size:14px;font-weight:600;color:var(--text1);font-family:monospace">' + f.name + '</div>'
+          + '<div style="font-size:12px;color:var(--text2);margin-top:2px">' + (f.description || '') + '</div>'
+          + (f.created_at ? '<div style="font-size:11px;color:var(--text3);margin-top:2px">Set ' + new Date(f.created_at).toLocaleDateString() + '</div>' : '')
+        + '</div>'
+        + '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0">'
+          + '<input type="checkbox" id="flag-cb-' + f.name + '" ' + (f.enabled ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--amber);cursor:pointer"'
+          + ' onchange="toggleFlag(\'' + f.name + '\',this.checked,\'' + (f.description||'').replace(/'/g,"\\'") + '\')">'
+          + '<span style="font-size:12px;color:var(--text2)">' + (f.enabled ? 'On' : 'Off') + '</span>'
+        + '</label>'
+        + '</div>';
+    }).join('');
+    if (loadingEl) loadingEl.style.display = 'none';
+    listEl.style.display = 'block';
+    if (typeof testModeInit === 'function') testModeInit();
+    else if (window.testMode) window.testMode.init();
+  } catch (e) {
+    if (loadingEl) loadingEl.textContent = 'Failed to load flags: ' + e.message;
+  }
+}
+
+async function toggleFlag(name, enabled, description) {
+  const labelEl = document.querySelector('#flag-cb-' + name + ' + span');
+  if (labelEl) labelEl.textContent = enabled ? 'On' : 'Off';
+  try {
+    const r = await fetch('/api/flags/' + name, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: INQ_SECRET, enabled: enabled, description: description }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Unknown error');
+    if (window.flags) await window.flags.reload();
+    // Re-init test mode in case test_customer_mode flag just changed
+    if (window.testMode) window.testMode.init();
+  } catch (e) {
+    // Revert checkbox on failure
+    const cb = document.getElementById('flag-cb-' + name);
+    if (cb) { cb.checked = !enabled; if (labelEl) labelEl.textContent = !enabled ? 'On' : 'Off'; }
+    alert('Failed to save flag: ' + e.message);
+  }
 }
 
 function switchTab(tab, el) {
@@ -2979,12 +3056,15 @@ function renderInqCardHTML(inq) {
     ? '<button title="In Pipeline" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--green-bg);border:1px solid var(--green-border);border-radius:8px;cursor:default;font-size:16px;color:#80c898" disabled>✓</button>'
     : '<button title="Approve → Pipeline" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:8px;cursor:pointer;font-size:16px;color:var(--amber)" onclick="approveInq(event,\'' + tid + '\')">✓</button>';
   const updateDot = inq.has_unreviewed_update ? '<span class="inq-update-dot" title="Customer replied — needs review"></span>' : '';
+  const testBadge = (inq.test === true || (typeof tid === 'string' && tid.startsWith('test-')))
+    ? '<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;background:#f59e0b;color:#000;margin-right:4px;vertical-align:middle">TEST</span>'
+    : '';
   const isSelected = inqSelectedIds.has(tid);
   return '<div class="inq-card' + (isSelected ? ' inq-selected' : '') + '" data-tid="' + tid + '">'
     + '<div class="inq-card-top">'
       + '<label onclick="event.stopPropagation()" style="display:flex;align-items:center;margin-right:10px;cursor:pointer;flex-shrink:0"><input type="checkbox" class="inq-bulk-cb" ' + (isSelected ? 'checked' : '') + ' style="width:16px;height:16px;cursor:pointer;accent-color:var(--amber)" onchange="toggleInqSelect(\'' + tid + '\',this)"></label>'
       + '<div onclick="openInquiry(\'' + tid + '\')" style="flex:1;min-width:0">'
-        + '<div class="inq-card-name">' + updateDot + name + '</div>'
+        + '<div class="inq-card-name">' + testBadge + updateDot + name + '</div>'
         + '<div class="inq-card-meta">' + date + guests + '</div>'
         + '<div class="inq-card-meta" style="color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (inq.subject || '') + '</div>'
         + (bodyPreview ? '<div class="inq-card-meta" style="color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic">' + bodyPreview + '</div>' : '')
@@ -3063,9 +3143,10 @@ function renderInqCards() {
 
 function getFilteredInquiries(filter) {
   if (!inquiriesCache) return [];
-  // Strip test/seed records — threadIds prefixed with 'test-' are dev fixtures
-  // not real inquiries and should never appear in the UI
-  const real = inquiriesCache.filter(i => !i.threadId.startsWith('test-'));
+  // Strip test records unless "show test data" is enabled
+  const real = window.showTestData
+    ? inquiriesCache
+    : inquiriesCache.filter(i => !i.threadId.startsWith('test-'));
   if (filter === 'all')      return real.filter(i => i.status !== 'archived');
   if (filter === 'new')      return real.filter(i => i.status !== 'archived' && !i.approved);
   if (filter === 'wix')      return real.filter(i => i.source === 'wix' && i.status !== 'archived');
@@ -3436,9 +3517,10 @@ async function loadPipelineInquiries() {
   try {
     const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
     const d = await r.json();
-    // Stage 2: only approved, non-archived, non-test inquiries
+    // Stage 2: only approved, non-archived; exclude test records unless showTestData is on
     pipelineInqCache = (d.inquiries || []).filter(i =>
-      i.approved === true && i.status !== 'archived' && !i.threadId.startsWith('test-'));
+      i.approved === true && i.status !== 'archived' &&
+      (window.showTestData || !i.threadId.startsWith('test-')));
     renderKanban(); renderTable(); updateStats();
     // Update Recent Replies dashboard widget
     const replies = (d.inquiries || []).filter(i => i.has_unreviewed_update && i.status !== 'archived').slice(0, 3);
@@ -4524,8 +4606,13 @@ setInterval(() => { loadScheduled(); renderScheduled(); }, 60000);
 loadLeads();
 loadScheduled();
 checkGmailStatus();
-// push-notifications: init after defer scripts have loaded
-window.addEventListener('load', function() { if (typeof notifInit === 'function') notifInit(); });
+// push-notifications + feature flags: init after defer scripts have loaded
+window.addEventListener('load', function() {
+  if (typeof notifInit === 'function') notifInit();
+  if (window.flags) window.flags.load().then(function() {
+    if (window.testMode) window.testMode.init();
+  });
+});
 // focus listener removed — visibilitychange below is sufficient and avoids
 // spurious Gmail-status toasts appearing after PDF download dialogs
 document.addEventListener('visibilitychange', () => {
@@ -4554,5 +4641,7 @@ function closeMobileSidebar() {
 <script defer src="/static/js/notifications.js"></script>
 <script defer src="/static/js/inquiries-filters.js"></script>
 <script defer src="/static/js/theme.js"></script>
+<script defer src="/static/js/flags.js"></script>
+<script defer src="/static/js/test-mode.js"></script>
 </body>
 </html>
