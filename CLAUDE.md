@@ -243,3 +243,29 @@ Unit test files live next to their source:
 - `static/js/inquiries-filters.test.js`
 - `static/js/quote-engine.test.js`
 - `api/notifications/send.test.js`
+
+---
+
+## Destructive Action Explanations
+
+Before requesting user approval for any action that could delete, destroy, overwrite, or irreversibly change state — including but not limited to: `rm`, `sudo`, `git push --force`, `git reset --hard`, `git branch -D`, `git clean -fd`, `git push --delete`, `drop table`, `truncate`, `delete from`, `uninstall`, `shutdown`, `reboot`, `crontab -r`, `docker volume rm`, `docker system prune`, `brew uninstall`, `pip uninstall`, `npm uninstall --global`, `npm publish`, `gh repo delete`, `gh release delete`, `find ... -delete`, `find ... -exec rm` — first output a plain-English explanation block in the chat covering:
+
+1. **What** the exact command will do (e.g. "Delete the directory `node_modules/` and all contents").
+2. **Why** you need to run it (e.g. "Forcing a clean install to resolve a dependency conflict").
+3. **Scope** — what files, data, or state will be affected (e.g. "Affects only `node_modules/`; no source code, config, or git history changes").
+4. **Rollback** — how to undo it, or a note that it cannot be undone (e.g. "Reversible via `npm install`" or "Irreversible — data will be permanently lost").
+5. **Blast radius** — local only, repo-wide, or affects shared services (production, shared KV, deployed env vars, etc.).
+
+Output this block as regular text in the chat before the action is executed. The user's permission prompt will fire after this explanation is visible, so they can read it and decide in context.
+
+Example format:
+
+> **About to run a destructive action:**
+> **Command:** `git reset --hard origin/main`
+> **What:** Discards all local uncommitted changes and any local commits not pushed, resetting the branch to match `origin/main` exactly.
+> **Why:** Branch is in a bad state after a failed rebase; this returns it to a known-good starting point.
+> **Scope:** This local branch only. Remote is untouched. No data outside this working tree affected.
+> **Rollback:** If you have uncommitted work, it's gone. Committed work can be recovered via `git reflog` for ~90 days.
+> **Blast radius:** Local only.
+
+This requirement applies to every code session working on this repo. Do not skip it even when "obvious" — Zach has specifically asked to see the context before approving destructive actions.
