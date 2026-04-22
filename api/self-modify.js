@@ -84,6 +84,10 @@ const STATIC_MODULE_FILES = [
   'static/css/kanban.css',
   'api/_lib/repeat-customer.js',
   'api/pipeline/customer-history.js',
+  // Group 5 — Notification Center frontend
+  'api/notifications/counts.js',
+  'static/js/notifications-panel.js',
+  'static/css/notifications-panel.css',
   // Group 10 — Event-day operations view
   'static/js/event-day.js',
   'static/css/event-day.css',

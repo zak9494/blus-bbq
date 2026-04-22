@@ -5,6 +5,14 @@
 const { test, expect } = require('@playwright/test');
 
 const BASE_URL = process.env.SMOKE_BASE_URL || 'https://blus-bbq.vercel.app';
+const FLAG_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
+
+// Ensure flag is off before tests run (guards against stale dev KV state)
+test.beforeAll(async ({ request }) => {
+  await request.post(`${BASE_URL}/api/flags/test_customer_mode`, {
+    data: { secret: FLAG_SECRET, enabled: false },
+  }).catch(() => {});
+});
 
 test('test_customer_mode flag is present and disabled by default', async ({ request }) => {
   const res = await request.get(BASE_URL + '/api/flags');
