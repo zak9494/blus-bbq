@@ -3953,6 +3953,7 @@ async function loadPipelineInquiries() {
     pipelineInqCache = (d.inquiries || []).filter(i =>
       i.approved === true && i.status !== 'archived' &&
       (window.showTestData || !i.threadId.startsWith('test-')));
+    window.pipelineInqCache = pipelineInqCache; // kanban-view.js + list-view.js read this via window
     const useNewKanban = window.flags && window.flags.isEnabled('kanban_restructure');
     if (useNewKanban) {
       const kbContainer = document.getElementById('view-kanban');
