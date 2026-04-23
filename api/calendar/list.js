@@ -4,7 +4,7 @@
    Stores nextSyncToken in KV for incremental webhook sync.
    ===== */
 'use strict';
-const { getAccessToken, gcalRequest, getOrCreateCalendarId, kvSet, SYNC_TOKEN_KEY } = require('./_gcal');
+const { getAccessToken, gcalRequest, getOrCreateCalendarId, kvGet, kvSet, SYNC_TOKEN_KEY } = require('./_gcal');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -53,9 +53,19 @@ module.exports = async (req, res) => {
       await kvSet(SYNC_TOKEN_KEY, r.body.nextSyncToken);
     }
 
+    // Merge soft-deleted (hidden) event IDs from KV
+    const rawHidden = await kvGet('calendar:hidden').catch(() => null);
+    let hiddenIds = [];
+    try { hiddenIds = rawHidden ? (typeof rawHidden === 'string' ? JSON.parse(rawHidden) : rawHidden) : []; } catch { hiddenIds = []; }
+    if (!Array.isArray(hiddenIds)) hiddenIds = [];
+
+    const events = (r.body.items || []).map(ev =>
+      hiddenIds.includes(ev.id) ? Object.assign({}, ev, { hidden: true }) : ev
+    );
+
     return res.status(200).json({
       ok:            true,
-      events:        r.body.items || [],
+      events,
       nextSyncToken: r.body.nextSyncToken || null,
       calendarId,
     });
