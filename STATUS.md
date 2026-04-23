@@ -734,11 +734,6 @@ New `api/cron/poll-inquiries.js`:
 
 ---
 
-## Next: Wave 1
-TBD — pending Zach's direction after Wave 0 merges.
-
----
-
 ## Wave 0 — FINAL (all PRs merged)
 **Closed:** 2026-04-23  
 **main HEAD:** `1c789fc`
@@ -775,7 +770,7 @@ TBD — pending Zach's direction after Wave 0 merges.
 ---
 
 ## Wave 0.5 — iOS Polish (feat/ios-polish-wave-0-5)
-**Status: PR open, pending CI + merge**
+**Status: MERGED ✓ · PR #42 · main HEAD: `c62dfcd` · 2026-04-23**
 
 ### Changes shipped
 1. **PWA icons** — `static/icons/` with 192, 512, maskable-512, apple-touch-icon (180). Placeholder "BB" glyphs; swap real logo by dropping files in same dir. `manifest.json` updated. `<link rel="apple-touch-icon">` added to `<head>`.
@@ -788,4 +783,17 @@ TBD — pending Zach's direction after Wave 0 merges.
 8. **Bottom-sheet** — `static/js/ui/bottom-sheet.js` + `static/css/ui/bottom-sheet.css`. `BottomSheet.open({title, body, actions})`. Calendar delete confirmations (past-event + future-event) replaced; falls back to `window.confirm()` if module not loaded. Swipe-to-dismiss on handle, Escape key closes.
 9. **Pull-to-refresh** — `static/js/ui/pull-to-refresh.js`. `PullToRefresh.activate(asyncFn)` / `.deactivate()`. Wired to pipeline (`renderPipelineInquiries`), calendar (`calInit`), scheduled (`loadScheduled`) via `showPage` patch. Mobile-only (no-op on desktop). 70px threshold, rubber-band spring.
 10. **Feature flag** — `ios_polish_v1` added to `SEED_FLAGS`, default `true`.
-11. **Tier 1 tests** — `tests/journey/ios-polish.spec.js`: bottom-sheet open/close + scroll lock, PTR module present, scroll-lock module present, toggle-ios on checkboxes, inputmode attrs, tab-bar safe-area, apple-touch-icon, manifest 4 icons. Sweeps 375/768/1440 × light/dark. Unit tests: 255 pass / 0 fail.
+11. **Tier 1 tests** — `tests/journey/ios-polish.spec.js`: bottom-sheet open/close + scroll lock, PTR module present, scroll-lock module present, toggle-ios on checkboxes, inputmode attrs, tab-bar safe-area, apple-touch-icon, manifest 4 icons. Sweeps 375/768/1440 × light/dark. Unit tests: 255 pass / 0 fail. CI run `24835613745`: ✅ green.
+
+### Tier 2 walkthroughs queued for Zach (visual, async)
+- PWA install prompt on iOS Safari (Add to Home Screen flow)
+- Bottom-sheet delete confirmation at 375px (past event + future event flows)
+- Pull-to-refresh on pipeline, calendar, and scheduled pages at 375px
+- iOS-style toggles on settings checkboxes (tax-exempt, follow-up, feature flags)
+- Tab bar safe-area on notched iPhone (bottom home indicator padding)
+- Notch/topbar safe-area on iPhone with Dynamic Island or notch
+
+---
+
+## Next: Wave 1
+TBD — pending Zach's direction.
