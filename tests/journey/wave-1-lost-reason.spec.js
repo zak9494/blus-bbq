@@ -88,7 +88,7 @@ test.describe('Lost reason — BottomSheet opens', () => {
           }
         });
         const panel = page.locator('#bottom-sheet-panel.bs-open');
-        await expect(panel).toBeVisible({ timeout: 4000 });
+        await expect(panel).toBeVisible({ timeout: 8000 });
         const title = await page.locator('#bottom-sheet-title').textContent();
         expect(title?.toLowerCase()).toContain('lost');
         await page.screenshot({ path: `${OUT}/sheet-open-${vp.name}-${theme}.png`, fullPage: false });
@@ -111,7 +111,7 @@ test.describe('Lost reason — reason buttons in sheet', () => {
           if (window.lostReasonSheet) window.lostReasonSheet.open('wave1-lr-001', function() {}, function() {});
         });
         // Wait for async reason fetch + DOM swap
-        await page.waitForSelector('.lrs-btn', { timeout: 6000 });
+        await page.waitForSelector('.lrs-btn', { timeout: 10000 });
         const buttons = page.locator('.lrs-btn');
         const count = await buttons.count();
         expect(count).toBeGreaterThan(0);

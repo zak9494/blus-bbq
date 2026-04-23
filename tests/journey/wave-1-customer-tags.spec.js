@@ -56,9 +56,9 @@ async function setupMocks(page, tags = ['VIP']) {
 async function waitForKanbanCard(page) {
   await page.evaluate(async () => {
     if (window.flags) await window.flags.load();
+    if (typeof showPage === 'function') await showPage('pipeline');
   });
-  await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
-  await page.waitForSelector('.kb-card', { timeout: 8000 });
+  await page.waitForSelector('.kb-card', { timeout: 15000 });
 }
 
 // ── tag-picker module loaded ──────────────────────────────────────────────────

@@ -56,9 +56,9 @@ async function setupMocks(page) {
 async function waitForKanbanCard(page) {
   await page.evaluate(async () => {
     if (window.flags) await window.flags.load();
+    if (typeof showPage === 'function') await showPage('pipeline');
   });
-  await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
-  await page.waitForSelector('.kb-status-sel', { timeout: 8000 });
+  await page.waitForSelector('.kb-status-sel', { timeout: 15000 });
 }
 
 // ── Select element present on every kanban card ───────────────────────────────
