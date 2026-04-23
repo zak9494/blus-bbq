@@ -1907,6 +1907,8 @@ async function toggleFlag(name, enabled, description) {
     if (window.flags) await window.flags.reload();
     // Re-init test mode in case test_customer_mode flag just changed
     if (window.testMode) window.testMode.init();
+    // Re-activate nav if nav_v2 was just toggled on
+    if (window.navV2) window.navV2.init();
   } catch (e) {
     // Revert checkbox on failure
     const cb = document.getElementById('flag-cb-' + name);

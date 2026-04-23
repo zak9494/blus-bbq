@@ -70,6 +70,10 @@ const SEED_FLAGS = [
   { name: 'quote_templates',        description: 'Quote template library — save/load canned setups in Quote Builder' },
   // Wave 0.5 — iOS polish
   { name: 'ios_polish_v1',          description: 'Wave 0.5 iOS polish — bottom-sheet confirms, pull-to-refresh, iOS toggles, safe-area fixes', default: true },
+  // Wave 1 — Core UX
+  { name: 'todays_actions_widget',  description: "Wave 1: Today's Actions card on dashboard home — overdue follow-ups, today's events, AI draft reviews, pending approvals", default: true },
+  { name: 'customer_tags',          description: 'Wave 1: Customer tag picker on profiles + tag chips on inquiry cards (VIP, Corporate, etc.)', default: true },
+  { name: 'lost_reason_capture',    description: 'Wave 1: BottomSheet for lost-reason when moving card to Lost; user-editable reasons in Settings', default: true },
 ];
 
 async function getFlag(name, defaultValue) {
