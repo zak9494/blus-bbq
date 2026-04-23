@@ -55,8 +55,9 @@ async function setupMocks(page) {
 
 // Wait for flags cache + kanban board to render cards
 async function waitForKanbanCard(page) {
-  // First wait for flags (required for kanban_restructure check in loadPipelineInquiries)
-  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 8000 });
+  // Explicitly trigger flags.load() — don't wait for window.load (slow in CI)
+  await page.evaluate(() => window.flags && window.flags.load());
+  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
   // Re-trigger pipeline load with flags now ready
   await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
   // Wait for a kb-status-sel to appear (kanban card rendered)

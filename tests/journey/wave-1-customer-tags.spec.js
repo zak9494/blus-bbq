@@ -55,7 +55,9 @@ async function setupMocks(page, tags = ['VIP']) {
 
 // Wait for flags + kanban board to render cards
 async function waitForKanbanCard(page) {
-  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 8000 });
+  // Explicitly trigger flags.load() — don't wait for window.load (slow in CI)
+  await page.evaluate(() => window.flags && window.flags.load());
+  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
   await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
   await page.waitForSelector('.kb-card', { timeout: 8000 });
 }
@@ -112,8 +114,9 @@ test.describe('Customer tags — picker in customer profile', () => {
               notes: '' }) }));
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
-        // Wait for flags so customer_profile_v2 flag is readable
-        await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 8000 });
+        // Explicitly trigger flags.load() before waiting
+        await page.evaluate(() => window.flags && window.flags.load());
+        await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
         // Navigate to customer profile page
         await page.evaluate(() => {
           if (window.customerProfile && typeof window.customerProfile.show === 'function') {
@@ -145,7 +148,8 @@ test.describe('Customer tags — flag gate', () => {
       await page.route('**/api/**', r =>
         r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
       await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
-      await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 8000 });
+      await page.evaluate(() => window.flags && window.flags.load());
+      await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
       await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
       await page.waitForTimeout(500);
       // renderChips returns '' when flag OFF, so no ctp-chips should appear

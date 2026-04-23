@@ -44,10 +44,11 @@ async function setupMocks(page, inquiries = []) {
     r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
 }
 
-// Wait for flags cache to be populated (window.load event fires flags.load()).
-// Without this, isEnabled() returns false while _cache is null.
+// Explicitly trigger flags.load() so we don't wait for window.load event
+// (which can be slow in CI against Vercel preview URLs loading CDN assets).
 async function waitForFlags(page) {
-  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 8000 });
+  await page.evaluate(() => window.flags && window.flags.load());
+  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
 }
 
 // ── Container present on pipeline page ───────────────────────────────────────
@@ -177,8 +178,9 @@ test.describe("Today's Actions — flag gate", () => {
       await page.route('**/api/**', r =>
         r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
       await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
-      // Wait for flags to load (nav_v2 is on, so this will return true once loaded)
-      await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 8000 });
+      // Explicitly trigger flags.load() before waiting
+      await page.evaluate(() => window.flags && window.flags.load());
+      await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
       await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
       await page.waitForTimeout(400);
       const container = page.locator('#todays-actions-container');

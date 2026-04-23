@@ -48,10 +48,11 @@ async function setupMocks(page) {
     r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
 }
 
-// Wait for flags cache to be populated (window.load fires flags.load()).
+// Explicitly trigger flags.load() — don't wait for window.load (slow in CI).
 // lostReasonSheet.open() checks lost_reason_capture flag — needs cache ready.
 async function waitForFlags(page) {
-  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 8000 });
+  await page.evaluate(() => window.flags && window.flags.load());
+  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
 }
 
 // ── lostReasonSheet module loaded ─────────────────────────────────────────────
