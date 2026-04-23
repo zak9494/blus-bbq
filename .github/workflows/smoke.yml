@@ -3,6 +3,12 @@ name: Smoke tests (Vercel preview)
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: 'Vercel preview URL to test against'
+        required: true
+        type: string
 
 jobs:
   smoke:
@@ -36,6 +42,12 @@ jobs:
       - name: Get Vercel preview URL from GitHub deployments API
         id: vercel-preview
         run: |
+          # If triggered manually with a preview_url input, use it directly
+          if [ -n "${{ inputs.preview_url }}" ]; then
+            echo "url=${{ inputs.preview_url }}" >> "$GITHUB_OUTPUT"
+            echo "Using manual preview URL: ${{ inputs.preview_url }}"
+            exit 0
+          fi
           SHA="${{ github.event.pull_request.head.sha }}"
           echo "Looking for preview deployment for SHA $SHA"
           for i in $(seq 1 24); do
