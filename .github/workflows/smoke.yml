@@ -70,6 +70,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Warm up Vercel preview (prime edge cache before parallel tests)
+        run: |
+          URL="${{ steps.vercel-preview.outputs.url }}"
+          echo "Warming $URL ..."
+          for i in 1 2 3 4; do
+            curl -sf -o /dev/null -w "warmup $i: %{http_code} %{time_total}s\n" \
+              -H "x-vercel-protection-bypass: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}" \
+              "$URL" || true
+          done
+
       - name: Run unit tests
         run: npm test
 
