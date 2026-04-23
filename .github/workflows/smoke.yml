@@ -61,8 +61,8 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-      - name: Run smoke tests against preview URL
-        run: npx playwright test tests/smoke/ --reporter=line
+      - name: Run smoke + journey tests against preview URL
+        run: npx playwright test tests/smoke/ tests/journey/ --reporter=line
         env:
           SMOKE_BASE_URL: ${{ steps.vercel-preview.outputs.url }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
