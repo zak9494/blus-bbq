@@ -29,16 +29,11 @@ const SAMPLE_INQ = {
 };
 
 async function setupMocks(page, tags = ['VIP']) {
+  // Catch-all FIRST — specific routes registered after override it (last-registered wins)
+  await page.route('**/api/**', r =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
   await page.route('**/api/auth/status', r =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ connected: false }) }));
-  await page.route('**/api/flags', r =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ flags: [
-      { name: 'nav_v2',              enabled: true, description: '' },
-      { name: 'kanban_restructure',  enabled: true, description: '' },
-      { name: 'ios_polish_v1',       enabled: true, description: '' },
-      { name: 'customer_tags',       enabled: true, description: '' },
-      { name: 'customer_profile_v2', enabled: true, description: '' },
-    ]}) }));
   await page.route('**/api/notifications/counts', r =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ unread: 0 }) }));
   await page.route('**/api/inquiries/list', r =>
@@ -49,8 +44,14 @@ async function setupMocks(page, tags = ['VIP']) {
       body: JSON.stringify({ ok: true, email: TEST_EMAIL, tags }) }));
   await page.route('**/api/pipeline/customer-history**', r =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'none' }) }));
-  await page.route('**/api/**', r =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+  await page.route('**/api/flags', r =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ flags: [
+      { name: 'nav_v2',              enabled: true, description: '' },
+      { name: 'kanban_restructure',  enabled: true, description: '' },
+      { name: 'ios_polish_v1',       enabled: true, description: '' },
+      { name: 'customer_tags',       enabled: true, description: '' },
+      { name: 'customer_profile_v2', enabled: true, description: '' },
+    ]}) }));
 }
 
 async function waitForKanbanCard(page) {
@@ -136,14 +137,14 @@ test.describe('Customer tags — flag gate', () => {
   for (const vp of [VIEWPORTS[0], VIEWPORTS[2]]) {
     test(`no ctp-chip when flag OFF — ${vp.name}`, async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.route('**/api/**', r =>
+        r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
       await page.route('**/api/flags', r =>
         r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ flags: [
           { name: 'nav_v2',            enabled: true,  description: '' },
           { name: 'kanban_restructure', enabled: true, description: '' },
           { name: 'customer_tags',     enabled: false, description: '' },
         ]}) }));
-      await page.route('**/api/**', r =>
-        r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
       await page.goto(BASE_URL + '/', { waitUntil: 'load' });
       await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
       await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));

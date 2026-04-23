@@ -26,15 +26,11 @@ const SAMPLE_INQ = {
 };
 
 async function setupMocks(page) {
+  // Catch-all FIRST — specific routes registered after override it (last-registered wins)
+  await page.route('**/api/**', r =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
   await page.route('**/api/auth/status', r =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ connected: false }) }));
-  await page.route('**/api/flags', r =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ flags: [
-      { name: 'nav_v2',              enabled: true, description: '' },
-      { name: 'kanban_restructure',  enabled: true, description: '' },
-      { name: 'ios_polish_v1',       enabled: true, description: '' },
-      { name: 'lost_reason_capture', enabled: true, description: '' },
-    ]}) }));
   await page.route('**/api/notifications/counts', r =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ unread: 0 }) }));
   await page.route('**/api/inquiries/list', r =>
@@ -49,8 +45,13 @@ async function setupMocks(page) {
   await page.route('**/api/settings/lost-reasons**', r =>
     r.fulfill({ status: 200, contentType: 'application/json',
       body: JSON.stringify({ ok: true, reasons: ['Budget too high', 'Competitor', 'No response from customer', 'Event cancelled', 'Other'] }) }));
-  await page.route('**/api/**', r =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+  await page.route('**/api/flags', r =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ flags: [
+      { name: 'nav_v2',              enabled: true, description: '' },
+      { name: 'kanban_restructure',  enabled: true, description: '' },
+      { name: 'ios_polish_v1',       enabled: true, description: '' },
+      { name: 'lost_reason_capture', enabled: true, description: '' },
+    ]}) }));
 }
 
 async function waitForKanbanCard(page) {

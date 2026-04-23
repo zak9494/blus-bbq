@@ -31,17 +31,18 @@ function baseFlags(extras = []) {
 }
 
 async function setupMocks(page, inquiries = []) {
+  // Catch-all FIRST — specific routes registered after override it (last-registered wins)
+  await page.route('**/api/**', r =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
   await page.route('**/api/auth/status', r =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ connected: false }) }));
-  await page.route('**/api/flags', r =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: baseFlags() }));
   await page.route('**/api/notifications/counts', r =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ unread: 0 }) }));
   await page.route('**/api/inquiries/list', r =>
     r.fulfill({ status: 200, contentType: 'application/json',
       body: JSON.stringify({ ok: true, inquiries, total: inquiries.length }) }));
-  await page.route('**/api/**', r =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+  await page.route('**/api/flags', r =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: baseFlags() }));
 }
 
 async function waitForFlags(page) {
@@ -169,13 +170,13 @@ test.describe("Today's Actions — flag gate", () => {
   for (const vp of [VIEWPORTS[0], VIEWPORTS[2]]) { // iphone + desktop
     test(`widget hidden when flag OFF — ${vp.name}`, async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.route('**/api/**', r =>
+        r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
       await page.route('**/api/flags', r =>
         r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ flags: [
           { name: 'nav_v2', enabled: true, description: '' },
           { name: 'todays_actions_widget', enabled: false, description: '' },
         ]}) }));
-      await page.route('**/api/**', r =>
-        r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
       await page.goto(BASE_URL + '/', { waitUntil: 'load' });
       await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
       await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
