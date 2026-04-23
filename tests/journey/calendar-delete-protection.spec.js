@@ -38,6 +38,7 @@ function mockCalendarList(page, events) {
 
 async function openCalendar(page) {
   await page.goto(BASE_URL);
+  await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
   const calBtn = page.locator('.nav-item', { hasText: 'Calendar' });
   await expect(calBtn).toBeVisible({ timeout: 8000 });
   await calBtn.click();

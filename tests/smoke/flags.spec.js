@@ -42,12 +42,14 @@ test('each flag has required shape fields', async ({ request }) => {
 
 test('Feature Flags nav item is present in sidebar', async ({ page }) => {
   await page.goto(BASE_URL);
+  await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
   const flagsBtn = page.locator('.nav-item', { hasText: 'Feature Flags' });
   await expect(flagsBtn).toBeVisible();
 });
 
 test('Feature Flags page renders flag list on navigation', async ({ page }) => {
   await page.goto(BASE_URL);
+  await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
   await page.locator('.nav-item', { hasText: 'Feature Flags' }).click();
   await expect(page.locator('#page-flags')).toBeVisible();
   // Wait for async load — flags-list should become visible

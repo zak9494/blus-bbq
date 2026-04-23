@@ -182,7 +182,7 @@ test.describe('flag-on tests', () => {
 
 test('bulk approve: checkbox reveals button, dismiss preserves selection', async ({ page }) => {
   await page.goto(BASE_URL);
-  await page.waitForLoadState('networkidle');
+  await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
   await page.locator('.nav-item', { hasText: 'Inquiries' }).click();
   await expect(page.locator('#page-inquiries')).toBeVisible({ timeout: 6000 });
   await page.waitForTimeout(1500);
