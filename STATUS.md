@@ -7,6 +7,15 @@
 
 ## Items Completed
 
+### Security — /api/self-modify auth gap closed (2026-04-23)
+**Status: DONE ✓** · Branch `fix/self-modify-auth-gate`
+
+- Added `AUTH_SECRET` check at top of handler in `api/self-modify.js` (same pattern as `/api/diag/verify-sender`).
+- Accepts secret via `?secret=` query param or `x-secret` header; returns 401 on mismatch/absence.
+- Journey test `tests/journey/self-modify-auth.spec.js` covers: no secret → 401, wrong secret → 401, correct secret → not 401.
+
+---
+
 ### #6 — Verify delivered From: header
 **Status: Partially complete — deferred (requires re-OAuth)**
 
