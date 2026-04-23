@@ -34,7 +34,7 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 /* LAYOUT */
 .app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
 .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-.main { display: flex; flex-direction: column; min-height: 100vh; }
+.main { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
 
 /* SIDEBAR */
 .sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid var(--border); }
@@ -394,6 +394,15 @@ tr:hover td { background: var(--surface2); }
   #inq-activity-entries, .inq-email-body-text { word-break: break-word; overflow-wrap: break-word; }
   /* Inquiry detail: clip horizontal overflow so no child blows out the viewport width */
   .inq-detail-scroll { overflow-x: hidden; }
+  /* M-04: AI Chat textarea 44px min-height (was 38px) */
+  .chat-textarea { min-height: 44px; }
+  /* M-06: Inquiry detail topbar — long names overflow; truncate */
+  #inq-detail-view .topbar-left { min-width: 0; flex: 1; overflow: hidden; }
+  #inq-detail-view .topbar-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* N-02: Sidebar nav items 44px touch targets (was 38px) */
+  .nav-item { padding: 13px 18px; }
+  /* N-02: Sidebar close button 44x44px touch target (was 23x28px) */
+  .sidebar-close-btn { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
 }
 
 /* Extra breakpoint: very narrow (375px iPhone SE) */
@@ -415,8 +424,8 @@ tr:hover td { background: var(--surface2); }
      Removed -webkit-overflow-scrolling:touch (deprecated iOS 13+; caused native
      touch layer to swallow hamburger taps and break position:sticky). */
   #modify-overlay {
-    padding-top: 60px;
-    align-items: flex-start;
+    padding-top: 60px !important;
+    align-items: flex-start !important;
   }
   .modify-box {
     padding: 16px;
