@@ -52,7 +52,7 @@ const SEED_FLAGS = [
   { name: 'deposit_tracking',       description: 'Deposit tracking panel on inquiry cards' },
   { name: 'ai_dessert_trigger',     description: 'Auto-notify Zach to offer dessert when customer replies to a sent quote' },
   { name: 'ai_post_event_archive',  description: 'Daily auto-archive of non-booked past-event inquiries with hope-to-serve draft' },
-  { name: 'nav_v2',                 description: 'Nav v2 — bottom tab bar (mobile) + collapsed sidebar (tablet/desktop); replaces hamburger' },
+  { name: 'nav_v2',                 description: 'Nav v2 — bottom tab bar (mobile) + collapsed sidebar (tablet/desktop); replaces hamburger', default: true },
   { name: 'ezcater_integration',    description: 'Show ezCater source filter chip — enable once ezCater account is connected and sending leads' },
   { name: 'event_day_view',         description: 'Today tab — field-ops event-day view (Group 10)' },
   // Group 4 — Completed Orders Handling
@@ -70,14 +70,17 @@ const SEED_FLAGS = [
   { name: 'quote_templates',        description: 'Quote template library — save/load canned setups in Quote Builder' },
 ];
 
-async function getFlag(name, defaultValue = false) {
+async function getFlag(name, defaultValue) {
+  const seed = SEED_FLAGS.find(f => f.name === name);
+  const seedDefault = seed && seed.default === true ? true : false;
+  const def = defaultValue !== undefined ? defaultValue : seedDefault;
   try {
     const raw = await kvGet('flags:' + name);
-    if (!raw) return defaultValue;
+    if (!raw) return def;
     const rec = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    return typeof rec.enabled === 'boolean' ? rec.enabled : defaultValue;
+    return typeof rec.enabled === 'boolean' ? rec.enabled : def;
   } catch {
-    return defaultValue;
+    return def;
   }
 }
 
@@ -127,9 +130,10 @@ async function listFlags() {
     try { rec = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null; } catch { rec = null; }
 
     const seed = SEED_FLAGS.find(f => f.name === name);
+    const seedDefault = seed && seed.default === true ? true : false;
     return {
       name,
-      enabled:     rec ? !!rec.enabled : false,
+      enabled:     rec ? !!rec.enabled : seedDefault,
       description: (rec && rec.description) || (seed && seed.description) || '',
       created_at:  (rec && rec.created_at) || null,
     };

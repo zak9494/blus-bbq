@@ -194,12 +194,16 @@ describe('listFlags', () => {
     SEED_FLAGS.forEach(s => assert.ok(names.includes(s.name), 'missing seed: ' + s.name));
   });
 
-  it('all seed flags default to enabled=false', async () => {
+  it('seed flags default to their seed.default value (false unless overridden)', async () => {
     clearStore();
     const flags = await listFlags();
     flags
       .filter(f => SEED_FLAGS.some(s => s.name === f.name))
-      .forEach(f => assert.equal(f.enabled, false, f.name + ' should default to false'));
+      .forEach(f => {
+        const seed = SEED_FLAGS.find(s => s.name === f.name);
+        const expected = seed && seed.default === true ? true : false;
+        assert.equal(f.enabled, expected, f.name + ' should default to ' + expected);
+      });
   });
 
   it('reflects setFlag changes', async () => {
