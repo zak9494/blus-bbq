@@ -879,3 +879,21 @@ CI: Playwright smoke suite ✅ (run 24837061717). Unit tests: 255 pass / 0 fail.
   - Test at iPhone 375px, iPad 768px, desktop 1280px × light + dark themes
   - Verify gated features hidden when flags OFF
   - Confirm no regressions on pipeline kanban, quote builder, calendar pages
+
+---
+
+## Desktop Layout Smoke Coverage (PR #50 — feat/desktop-smoke-tests)
+**Status: PR OPEN**
+
+`tests/smoke/desktop-layout.spec.js` — 14 tests at 1440×900 (desktop) and 375×812 (mobile).
+
+### What's covered
+- **Grid regression check** — asserts `.main` bounding-box x < 120 and width > 1200 at 1440px with nav_v2 ON. Directly catches the specificity bug that caused the blank right panel (2026-04-23). 
+- **Nav v2 sidebar** — visible at desktop, expands to 200px on toggle.
+- **Bottom tab bar** — hidden at desktop, visible and anchored to bottom at mobile.
+- **Nav item routing** — clicking inquiries/pipeline/calendar/settings renders the correct page.
+- **nav_v2 OFF** — original sidebar and nav labels visible; main content fills viewport.
+- **Visual snapshot** — `tests/smoke/__screenshots__/nav-v2-desktop-home.png` compared on every CI run (5% pixel tolerance). Serves the local `nav-v2.css` to the browser so the golden always reflects the intended fixed layout regardless of deployment state.
+
+### Tier 2 walkthroughs
+Desktop layout regressions are now caught automatically by the grid regression check and visual snapshot. Tier 2 visual walkthroughs remain optional for non-layout changes (colors, new widgets, content).
