@@ -64,6 +64,10 @@ const SEED_FLAGS = [
   { name: 'quote_builder_v2',       description: 'Quote Builder v2: Save as Draft, Load Draft, auto-save (localStorage)' },
   // Group 9 — Customer Profile + Widgets (default OFF)
   { name: 'customer_profile_v2',    description: 'Customer profile page: stats widgets, inquiry history, notes — drill-down from inquiry detail' },
+  // Group 9 extended — overdue widget, quote templates, weekly digest (default OFF)
+  { name: 'overdue_widget',         description: 'Dashboard widget: unanswered quotes, overdue deposits, events missing headcount' },
+  { name: 'weekly_digest',          description: 'Monday 8 AM digest email: week events, outstanding quotes, overdue follow-ups' },
+  { name: 'quote_templates',        description: 'Quote template library — save/load canned setups in Quote Builder' },
 ];
 
 async function getFlag(name, defaultValue = false) {

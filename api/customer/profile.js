@@ -1,138 +1,117 @@
-/**
- * GET  /api/customer/profile?email=...  — aggregated customer stats + inquiry history + notes
- * POST /api/customer/profile             — save customer notes { email, notes }
- *
- * Response (GET): { ok, email, name, stats: { totalEvents, bookedCount, totalSpend,
- *   avgOrderSize, lastEventDate }, inquiries: [...indexEntries], notes }
- */
+/* ===== MODULE: CUSTOMER PROFILE
+   GET /api/customer/profile?email=...
+   Aggregates all past inquiries, quotes, emails, and notes for a customer email.
+   Auth: ?secret=GMAIL_READ_SECRET
+   Returns: { ok, customer: { email, name, phone, events[], totalBilled, totalEvents }, notes }
+   ===== */
 'use strict';
-
 const https = require('https');
 
 function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
 function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
 
 function kvGet(key) {
-  const url = kvUrl(), tok = kvToken();
-  if (!url) return Promise.reject(new Error('KV env vars not set'));
-  return new Promise((resolve, reject) => {
+  return new Promise(resolve => {
+    const url = kvUrl(), tok = kvToken();
+    if (!url) return resolve(null);
     const u = new URL(url + '/get/' + encodeURIComponent(key));
-    const req = https.request({ hostname: u.hostname, path: u.pathname + u.search,
-      method: 'GET', headers: { Authorization: 'Bearer ' + tok } }, r => {
+    const req = https.request({ hostname: u.hostname, path: u.pathname + u.search, method: 'GET',
+      headers: { Authorization: 'Bearer ' + tok } }, r => {
       let d = ''; r.on('data', c => d += c);
       r.on('end', () => { try { resolve(JSON.parse(d).result); } catch { resolve(null); } });
     });
-    req.on('error', reject); req.end();
+    req.on('error', () => resolve(null)); req.end();
   });
 }
 
-function kvSet(key, value) {
-  const url = kvUrl(), tok = kvToken();
-  if (!url) return Promise.resolve();
-  const body = JSON.stringify([['SET', key, typeof value === 'string' ? value : JSON.stringify(value)]]);
-  return new Promise((resolve, reject) => {
-    const u = new URL(url + '/pipeline');
-    const req = https.request({ hostname: u.hostname, path: u.pathname,
-      method: 'POST', headers: { Authorization: 'Bearer ' + tok,
-        'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, r => {
-      r.resume().on('end', resolve);
-    });
-    req.on('error', reject); req.write(body); req.end();
-  });
-}
-
-function secretGate(req, res) {
-  const secret = process.env.GMAIL_READ_SECRET;
-  const provided = (req.query && req.query.secret) || req.headers['x-secret'];
-  if (!secret) { res.status(500).json({ error: 'GMAIL_READ_SECRET not configured' }); return false; }
-  if (provided !== secret) { res.status(401).json({ error: 'Unauthorized' }); return false; }
-  return true;
-}
-
-function normalizeEmail(email) {
-  return (email || '').toLowerCase().trim();
-}
-
-function extractEmail(inq) {
-  if (inq.customer_email) return normalizeEmail(inq.customer_email);
-  const from = inq.from || '';
-  const m = from.match(/<(.+?)>/);
-  return m ? normalizeEmail(m[1]) : normalizeEmail(from);
-}
+function normalizeEmail(e) { return (e || '').toLowerCase().trim(); }
 
 module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Cache-Control', 'no-store');
-  if (!secretGate(req, res)) return;
-
-  // POST — save notes
-  if (req.method === 'POST') {
-    let body = req.body || {};
-    if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
-    const email = normalizeEmail(body.email);
-    if (!email) return res.status(400).json({ error: 'email required' });
-    const notes = typeof body.notes === 'string' ? body.notes : '';
-    await kvSet('customer:notes:' + email, { notes, updated_at: new Date().toISOString() });
-    return res.status(200).json({ ok: true });
-  }
-
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const email = normalizeEmail(req.query && req.query.email);
-  if (!email) return res.status(400).json({ error: 'email required' });
+  const secret   = (req.query || {}).secret;
+  const expected = process.env.GMAIL_READ_SECRET;
+  if (!expected || secret !== expected) return res.status(401).json({ error: 'Unauthorized' });
 
-  // Load index
-  let index = [];
+  const email = normalizeEmail((req.query || {}).email);
+  if (!email) return res.status(400).json({ error: 'email is required' });
+
   try {
-    const raw = await kvGet('inquiries:index');
-    index = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
-  } catch (_) {}
+    // Load inquiries index
+    const rawIdx = await kvGet('inquiries:index');
+    const index  = rawIdx ? (typeof rawIdx === 'string' ? JSON.parse(rawIdx) : rawIdx) : [];
 
-  // Filter by email
-  const matches = index.filter(inq => {
-    if (inq.status === 'archived') return false;
-    return extractEmail(inq) === email;
-  }).sort((a, b) => new Date(b.event_date || b.updated_at || 0) - new Date(a.event_date || a.updated_at || 0));
+    // Match inquiries to this email
+    const matches = (Array.isArray(index) ? index : []).filter(item => {
+      const itemEmail = normalizeEmail(item.email || item.from || item.customer_email || '');
+      const extractedEmail = normalizeEmail(item.extracted_email || '');
+      return itemEmail.includes(email) || extractedEmail.includes(email) ||
+             email.includes(itemEmail.split('@')[0] || '___NOMATCH___');
+    });
 
-  // Compute stats
-  let bookedCount = 0;
-  let totalSpend = 0;
-  let lastEventDate = null;
-  let name = '';
+    // Load full records for matched inquiries (up to 30)
+    const fullRecords = await Promise.all(
+      matches.slice(0, 30).map(async item => {
+        try {
+          const raw = await kvGet('inquiries:' + item.threadId);
+          if (!raw) return null;
+          return typeof raw === 'string' ? JSON.parse(raw) : raw;
+        } catch { return null; }
+      })
+    );
+    const records = fullRecords.filter(Boolean);
 
-  for (const inq of matches) {
-    if (!name && (inq.customer_name || inq.from)) {
-      name = inq.customer_name || inq.from;
-    }
-    const isBooked = inq.status === 'booked' || inq.status === 'completed';
-    if (isBooked) {
-      bookedCount++;
-      const qt = parseFloat(inq.quote_total);
-      if (!isNaN(qt)) totalSpend += qt;
-    }
-    if (inq.event_date && (!lastEventDate || inq.event_date > lastEventDate)) {
-      lastEventDate = inq.event_date;
-    }
+    // Aggregate customer identity from most recent record
+    const recent = records.sort((a, b) => new Date(b.storedAt || b.created_at || 0) - new Date(a.storedAt || a.created_at || 0))[0] || {};
+    const ef = recent.extracted_fields || {};
+
+    const customerName  = ef.customer_name || recent.name || recent.customer_name || '';
+    const customerPhone = ef.customer_phone || recent.phone || '';
+
+    // Build events list
+    const events = records.map(r => {
+      const f = r.extracted_fields || {};
+      const q = r.quote || {};
+      return {
+        threadId:    r.threadId,
+        subject:     r.subject || '',
+        eventDate:   f.event_date || r.event_date || '',
+        eventType:   f.event_type || '',
+        guestCount:  f.guest_count || r.guest_count || null,
+        status:      r.status || 'new',
+        quoteTotal:  q.total || r.quote_total || null,
+        storedAt:    r.storedAt || r.created_at || '',
+        approved:    r.approved || false,
+        menuItems:   (q.line_items || []).map(li => li.name || li.item_name || ''),
+        serviceType: f.service_type || q.service_type || '',
+        notes:       r.notes || '',
+      };
+    }).sort((a, b) => new Date(b.storedAt || 0) - new Date(a.storedAt || 0));
+
+    const totalBilled = events.reduce((sum, e) => sum + (parseFloat(e.quoteTotal) || 0), 0);
+
+    // Load customer notes
+    const notesRaw = await kvGet('customer:' + email + ':notes');
+    const notes = typeof notesRaw === 'string' ? notesRaw : (notesRaw ? JSON.stringify(notesRaw) : '');
+
+    return res.status(200).json({
+      ok: true,
+      customer: {
+        email,
+        name:        customerName,
+        phone:       customerPhone,
+        totalEvents: events.length,
+        totalBilled: Math.round(totalBilled * 100) / 100,
+        events,
+      },
+      notes,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || String(err) });
   }
-
-  const totalEvents = matches.length;
-  const avgOrderSize = bookedCount > 0 ? Math.round(totalSpend / bookedCount) : 0;
-
-  // Load notes
-  let notes = '';
-  try {
-    const raw = await kvGet('customer:notes:' + email);
-    if (raw) {
-      const rec = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      notes = rec.notes || '';
-    }
-  } catch (_) {}
-
-  return res.status(200).json({
-    ok: true,
-    email,
-    name,
-    stats: { totalEvents, bookedCount, totalSpend, avgOrderSize, lastEventDate },
-    inquiries: matches,
-    notes,
-  });
 };

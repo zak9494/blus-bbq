@@ -553,6 +553,7 @@ if (typeof marked !== 'undefined') {
     <div class="nav-item" onclick="showPage('inquiries')"><span class="nav-dot dot-blue"></span>Inquiries <span class="notif-badge" id="inq-badge" style="display:none">0</span></div>
     <div class="nav-item" onclick="showPage('calendar');calInit()"><span class="nav-dot dot-green"></span>Calendar</div>
     <div class="nav-item" id="nav-today" style="display:none" onclick="showPage('today')"><span class="nav-dot dot-orange"></span>Today's Gigs</div>
+    <div class="nav-item" id="nav-customers" onclick="showPage('customer')" style="display:none"><span class="nav-dot dot-amber"></span>Customers</div>
     <button class="sidebar-close-btn" onclick="closeMobileSidebar()">✕</button>
     <div class="nav-item disabled"><span class="nav-dot dot-green"></span>Invoices</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Outbound Leads</div>
@@ -645,6 +646,9 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
 
+        <!-- Overdue widget (Group 9, flag-gated) -->
+        <div id="overdue-widget-container" style="display:none;margin-bottom:12px"></div>
+
         <!-- Alerts: hidden (stale hardcoded data replaced by dynamic recent-replies-section) -->
         <div class="alerts-section" id="alerts-section" style="display:none"></div>
         <div id="recent-replies-section" style="display:none;margin-top:4px"></div>
@@ -704,6 +708,9 @@ if (typeof marked !== 'undefined') {
               <div class="section-title">Quote Details</div>
               <span id="quote-number" style="font-size:12px;color:var(--text3)">#QT-1043</span>
             </div>
+
+            <!-- Quote template picker (Group 9, flag-gated) -->
+            <div class="qt-template-bar" id="qt-template-bar" style="display:none"></div>
 
             <!-- Repeat-customer banner (Group 3) -->
             <div id="qb-repeat-banner" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600"></div>
@@ -1354,6 +1361,44 @@ if (typeof marked !== 'undefined') {
         <div id="test-email-panel" style="margin-top:16px"></div>
         <!-- Test-mode settings panel — rendered by test-mode.js when flag is on -->
         <div id="tm-settings-panel" style="display:none;margin-top:24px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px"></div>
+        <!-- Weekly digest recipient (Group 9) -->
+        <div id="digest-settings-panel"></div>
+        <!-- Quote template library (Group 9) -->
+        <div id="quote-templates-panel" style="margin-top:24px"></div>
+      </div>
+    </div>
+
+    <!-- CUSTOMER PROFILE PAGE (Group 9) -->
+    <div id="page-customer" class="page">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="cp-back-btn btn" onclick="if(window.customerProfile)window.customerProfile.back()">← Back</button>
+          <div>
+            <div class="topbar-title" id="cp-topbar-title">Customer</div>
+            <div class="topbar-sub" id="cp-topbar-sub"></div>
+          </div>
+        </div>
+      </div>
+      <div class="content">
+        <div id="cp-loading" style="padding:32px;text-align:center;color:var(--text3)">Loading…</div>
+        <div id="cp-body" style="display:none">
+          <div class="cp-header">
+            <div class="cp-avatar" id="cp-avatar">?</div>
+            <div>
+              <div class="cp-name" id="cp-name"></div>
+              <div style="font-size:13px;color:var(--text2)" id="cp-email-display"></div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px" id="cp-phone-display"></div>
+            </div>
+          </div>
+          <div class="cp-stats" id="cp-stats"></div>
+          <div class="cp-notes-panel">
+            <div class="cp-timeline-hdr">Notes</div>
+            <textarea class="cp-notes-textarea" id="cp-notes" placeholder="Freeform notes about this customer…" rows="4"></textarea>
+            <div id="cp-notes-status" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+          </div>
+          <div class="cp-timeline-hdr" style="margin-top:24px">Event History</div>
+          <div id="cp-events"></div>
+        </div>
       </div>
     </div>
 
@@ -1700,7 +1745,8 @@ function showPage(page) {
   if (page === 'scheduled') renderScheduled();
   if (page === 'inquiries') loadInquiries();
   else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
-  if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); }
+  if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); if (window.overdueWidget) window.overdueWidget.init(); }
+  if (page === 'customer') { if (window.customerProfile) window.customerProfile.init(); }
   if (page === 'ai') { loadChatHistory(); if (typeof chatApprovalInit === 'function') chatApprovalInit(); } // C21 + D24
   if (page === 'flags') loadFlagsPage();
   if (page === 'notifications' && typeof notifPanelRenderPage === 'function') notifPanelRenderPage();
@@ -1741,10 +1787,96 @@ async function loadFlagsPage() {
     if (typeof testModeInit === 'function') testModeInit();
     else if (window.testMode) window.testMode.init();
     if (window.testModeEmail) window.testModeEmail.init();
+    if (window.quoteTemplates) window.quoteTemplates.initSettings();
+    initDigestSettingsPanel();
   } catch (e) {
     if (loadingEl) loadingEl.textContent = 'Failed to load flags: ' + e.message;
   }
 }
+
+async function initDigestSettingsPanel() {
+  const panel = document.getElementById('digest-settings-panel');
+  if (!panel) return;
+  try {
+    const r = await fetch('/api/settings/digest-recipient?secret=' + encodeURIComponent(INQ_SECRET));
+    const d = await r.json();
+    const current = d.email || '';
+    panel.innerHTML = '<div style="margin-top:24px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">'
+      + '<div style="font-size:14px;font-weight:600;margin-bottom:8px">Weekly Digest Recipient</div>'
+      + '<div style="font-size:12px;color:var(--text2);margin-bottom:12px">Email address that receives the Monday 8AM digest (requires weekly_digest flag ON)</div>'
+      + '<div style="display:flex;gap:8px;align-items:center">'
+      + '<input class="form-input" id="digest-email-input" type="email" value="' + (current || '') + '" placeholder="owner@example.com" style="flex:1">'
+      + '<button class="btn btn-primary" onclick="saveDigestEmail()">Save</button>'
+      + '</div>'
+      + '<div id="digest-save-status" style="font-size:12px;color:var(--text3);margin-top:6px"></div>'
+      + '</div>';
+  } catch(e) {
+    if (panel) panel.innerHTML = '';
+  }
+}
+
+async function saveDigestEmail() {
+  const input = document.getElementById('digest-email-input');
+  const status = document.getElementById('digest-save-status');
+  if (!input) return;
+  const email = input.value.trim();
+  if (status) status.textContent = 'Saving…';
+  try {
+    const r = await fetch('/api/settings/digest-recipient', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: INQ_SECRET, email }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Failed');
+    if (status) { status.textContent = 'Saved ✓'; setTimeout(() => { if (status) status.textContent = ''; }, 2500); }
+  } catch(e) {
+    if (status) status.textContent = 'Error: ' + e.message;
+  }
+}
+
+window.getQBLineItems = function() {
+  const items = [];
+  document.querySelectorAll('.line-item-row').forEach(function(row) {
+    const desc = row.querySelector('.li-desc');
+    const qty  = row.querySelector('.li-qty');
+    const price = row.querySelector('.li-price');
+    if (desc) items.push({ description: desc.value || '', qty: qty ? parseFloat(qty.value)||1 : 1, price: price ? parseFloat(price.value)||0 : 0 });
+  });
+  return items;
+};
+window.getQBServiceType = function() {
+  const el = document.getElementById('q-service-type');
+  return el ? el.value : '';
+};
+window.getQBServiceCharge = function() {
+  const el = document.getElementById('q-service-charge');
+  return el ? parseFloat(el.value)||0 : 0;
+};
+window.getQBDeliveryFee = function() {
+  const el = document.getElementById('q-delivery-fee');
+  return el ? parseFloat(el.value)||0 : 0;
+};
+window.loadQBTemplate = function(tpl) {
+  if (!tpl) return;
+  if (tpl.line_items && Array.isArray(tpl.line_items)) {
+    const container = document.getElementById('line-items-container');
+    if (container) {
+      container.innerHTML = '';
+      tpl.line_items.forEach(function(item) {
+        if (typeof addLineItem === 'function') addLineItem(item.description, item.qty, item.price);
+      });
+    }
+  }
+  if (tpl.service_charge_pct != null) {
+    const el = document.getElementById('q-service-charge');
+    if (el) { el.value = tpl.service_charge_pct; if (typeof updatePreview === 'function') updatePreview(); }
+  }
+  if (tpl.delivery_fee != null) {
+    const el = document.getElementById('q-delivery-fee');
+    if (el) { el.value = tpl.delivery_fee; if (typeof updatePreview === 'function') updatePreview(); }
+  }
+};
 
 async function toggleFlag(name, enabled, description) {
   const labelEl = document.querySelector('#flag-cb-' + name + ' + span');
@@ -4950,6 +5082,8 @@ window.addEventListener('load', function() {
     if (window.navV2) window.navV2.init();
     var navToday = document.getElementById('nav-today');
     if (navToday && window.flags.isEnabled('event_day_view')) navToday.style.display = '';
+    const navCust = document.getElementById('nav-customers');
+    if (navCust && window.flags && window.flags.isEnabled('customer_profile_v2')) navCust.style.display = '';
     initCompletedOrdersToggle();
     if (window.flags.isEnabled('quote_builder_v2')) {
       var qbDraftsBtn     = document.getElementById('qb-drafts-btn');
@@ -4958,6 +5092,13 @@ window.addEventListener('load', function() {
       if (qbSaveDraftBtn) qbSaveDraftBtn.style.display = '';
       if (typeof window.quoteDraftsInit === 'function') window.quoteDraftsInit();
     }
+    if (window.quoteTemplates) {
+      window.quoteTemplates.initPicker();
+      const bar = document.getElementById('qt-template-bar');
+      if (bar && window.flags && window.flags.isEnabled('quote_templates')) bar.style.display = '';
+    }
+    if (window.overdueWidget) window.overdueWidget.init();
+    if (window.customerProfile) window.customerProfile.init();
   });
 });
 // focus listener removed — visibilitychange below is sufficient and avoids
@@ -4997,6 +5138,9 @@ function closeMobileSidebar() {
 <script defer src="/static/js/nav-v2.js"></script>
 <script defer src="/static/js/completed-orders.js"></script>
 <script defer src="/static/js/quote-drafts.js"></script>
+<script defer src="/static/js/customer-profile.js"></script>
+<script defer src="/static/js/overdue-widget.js"></script>
+<script defer src="/static/js/quote-templates.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof twInit === 'function') twInit('input[type="time"]');
