@@ -736,3 +736,42 @@ New `api/cron/poll-inquiries.js`:
 
 ## Next: Wave 1
 TBD — pending Zach's direction after Wave 0 merges.
+
+---
+
+## Wave 0 — FINAL (all PRs merged)
+**Closed:** 2026-04-23  
+**main HEAD:** `1c789fc`
+
+### Merged PRs (in order)
+
+| PR | Branch | What shipped | SHA on main |
+|----|--------|-------------|-------------|
+| #25 | `fix/kanban-pipeline-cache-window` | Expose `pipelineInqCache` on `window` for kanban-view.js | `ed52833` |
+| #28 | `fix/qa-punch-list-layout-touch-targets` | Layout + 44px touch targets from QA punch list | `dc03da1` |
+| #27 | `feat/group9-customer-profile-widgets` | Group 9 extended — overdue widget, quote templates, weekly digest, duplicate-quote; `customer_profile` → `customer_profile_v2` | `bf89647` |
+| #38 | (already on main) | Mobile hamburger 44×44px touch target | `bbb9cba` |
+| #41 | `feat/calendar-delete-protection` | Calendar soft-delete past events, confirm future; 255 unit tests; journey test; smoke fix `customer_profile` → `customer_profile_v2` | `b0263b0` |
+| #39 | `feat/nav-v2-default-on` | nav_v2 seed default:true; `getFlag`/`listFlags` respect seed.default; nav-v2 smoke test (page.route mock) | `f6477ea` |
+| #40 | `docs/wave0-claude-md` | CLAUDE.md: 4 new sections (QA gate, SMS lockdown, payment abstraction, feature modularity); `tests/journey/` scaffold; `smoke.yml` runs smoke+journey | `1c789fc` |
+
+### Infrastructure fixes shipped alongside
+- `58f0fb3` — `api/flags.js` accepts `INQ_SECRET` OR `SELF_MODIFY_SECRET` (unblocked all smoke suites)
+- KV reset: `test_customer_mode`, `ai_quote_updates`, `notifications_center`, `nav_v2` all reset to OFF during CI debugging
+
+### PR #30 status
+- **OPEN — needs manual close by Zach.** Changes already on main (ezcater chip behind flag). `gh pr close 30` was denied.
+
+### Tier 2 walkthroughs queued (visual — not blocking)
+1. `nav_v2` bottom tab bar at iPhone 375px, iPad 768px, desktop 1280px
+2. Calendar soft-delete (strikethrough) + confirmation dialog at all viewports
+3. Extended customer profile (PR #27) at all viewports
+4. Kanban view (PR #25) at all viewports
+
+### Unit test baseline
+- **255 pass, 0 fail** (was 250 pass, 1 fail at Wave 0 start)
+
+---
+
+## Next: Wave 0.5 (iOS polish)
+Spawn fresh task when ready. Tier 2 walkthroughs above are the primary input.
