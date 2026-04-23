@@ -124,6 +124,15 @@ const STATIC_MODULE_FILES = [
   'static/js/ui/bottom-sheet.js',
   'static/js/ui/pull-to-refresh.js',
   'static/css/ui/bottom-sheet.css',
+  // Wave 1 — Core UX
+  'static/js/widgets/todays-actions.js',
+  'static/css/widgets/todays-actions.css',
+  'static/js/kanban/card-status-dropdown.js',
+  'static/js/pipeline/lost-reason-sheet.js',
+  'static/js/customers/tag-picker.js',
+  'static/css/customers/tag-picker.css',
+  'api/customers/tags.js',
+  'api/settings/lost-reasons.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
