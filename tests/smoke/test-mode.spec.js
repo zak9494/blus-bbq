@@ -25,8 +25,11 @@ test('test_customer_mode flag is present and disabled by default', async ({ requ
 
 test('+ Test Inquiry button is NOT visible when flag is off', async ({ page }) => {
   await page.goto(BASE_URL);
-  await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
-  await page.locator('.nav-item', { hasText: 'Inquiries' }).click();
+  await page.evaluate(async () => {
+    if (window.flags) await window.flags.load();
+    if (typeof showPage === 'function') showPage('inquiries');
+  });
+  await expect(page.locator('#page-inquiries')).toBeVisible({ timeout: 5000 });
   // Button should not exist in DOM (flag is off)
   const btn = page.locator('#tm-create-btn');
   await expect(btn).not.toBeVisible();
@@ -34,8 +37,11 @@ test('+ Test Inquiry button is NOT visible when flag is off', async ({ page }) =
 
 test('inquiries page does not show test- prefixed cards by default', async ({ page }) => {
   await page.goto(BASE_URL);
-  await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
-  await page.locator('.nav-item', { hasText: 'Inquiries' }).click();
+  await page.evaluate(async () => {
+    if (window.flags) await window.flags.load();
+    if (typeof showPage === 'function') showPage('inquiries');
+  });
+  await expect(page.locator('#page-inquiries')).toBeVisible({ timeout: 5000 });
   // Wait for inquiries to load
   await page.waitForTimeout(2000);
   // No card should have the TEST badge visible

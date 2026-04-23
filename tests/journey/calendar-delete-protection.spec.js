@@ -38,10 +38,11 @@ function mockCalendarList(page, events) {
 
 async function openCalendar(page) {
   await page.goto(BASE_URL);
-  await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
-  const calBtn = page.locator('.nav-item', { hasText: 'Calendar' });
-  await expect(calBtn).toBeVisible({ timeout: 8000 });
-  await calBtn.click();
+  // Navigate via showPage() — nav-agnostic (works with nav_v2 ON or OFF)
+  await page.evaluate(async () => {
+    if (window.flags) await window.flags.load();
+    if (typeof showPage === 'function') showPage('calendar');
+  });
   await expect(page.locator('#page-calendar')).toBeVisible({ timeout: 5000 });
 }
 
