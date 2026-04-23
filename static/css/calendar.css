@@ -195,6 +195,13 @@
 .cal-event-name { font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
 .cal-event-overflow { font-size: 9px; color: var(--text3); padding: 1px 5px; }
 
+/* Soft-deleted (hidden) events — visible but struck through */
+.cal-event-hidden {
+  opacity: 0.45;
+  text-decoration: line-through;
+  pointer-events: auto;
+}
+
 /* ════════════════════════════════════════════════
    SHARED TIME-GRID (Week + Day)
    ════════════════════════════════════════════════ */

@@ -318,7 +318,7 @@
             var s   = eventStart(ev);
             var tid = bbqThreadId(ev);
             var t   = s ? formatTime12(s.hour, s.minute) : '';
-            html += '<div class="cal-event" onclick="event.stopPropagation();calEventClick(' +
+            html += '<div class="cal-event' + (ev.hidden ? ' cal-event-hidden' : '') + '" onclick="event.stopPropagation();calEventClick(' +
                     JSON.stringify(ev.id) + ',' + JSON.stringify(tid) + ')">' +
                     (t ? '<span class="cal-event-time">' + t + '</span> ' : '') +
                     '<span class="cal-event-name">' + escHtml(eventName(ev)) + '</span></div>';
@@ -405,7 +405,7 @@
         var topPx = (startMin - DAY_START * 60) / 60 * HOUR_HEIGHT;
         var htPx  = Math.max(24, (endMin - startMin) / 60 * HOUR_HEIGHT);
         var tid   = bbqThreadId(ev);
-        html += '<div class="cal-timed-event" style="top:' + topPx + 'px;height:' + htPx + 'px"' +
+        html += '<div class="cal-timed-event' + (ev.hidden ? ' cal-event-hidden' : '') + '" style="top:' + topPx + 'px;height:' + htPx + 'px"' +
                 ' onclick="event.stopPropagation();calEventClick(' + JSON.stringify(ev.id) + ',' + JSON.stringify(tid) + ')">' +
                 '<div class="cal-timed-event-name">' + escHtml(eventName(ev)) + '</div>' +
                 '<div class="cal-timed-event-time">' + formatTime12(s.hour, s.minute) + '</div>' +
@@ -453,7 +453,7 @@
           var s   = eventStart(ev);
           var tid = bbqThreadId(ev);
           var t   = s ? formatTime12(s.hour, s.minute) : '';
-          html += '<div class="cal-mobile-event" onclick="event.stopPropagation();calEventClick(' +
+          html += '<div class="cal-mobile-event' + (ev.hidden ? ' cal-event-hidden' : '') + '" onclick="event.stopPropagation();calEventClick(' +
                   JSON.stringify(ev.id) + ',' + JSON.stringify(tid) + ')">' +
                   (t ? '<span class="cal-mobile-event-time">' + t + '</span>' : '') +
                   '<span class="cal-mobile-event-name">' + escHtml(eventName(ev)) + '</span>' +
@@ -506,7 +506,7 @@
       var htPx  = Math.max(36, (endMin - startMin) / 60 * HOUR_HEIGHT);
       var tid   = bbqThreadId(ev);
       var eStr  = e ? formatTime12(e.hour, e.minute) : '';
-      html += '<div class="cal-day-event" style="top:' + topPx + 'px;height:' + htPx + 'px"' +
+      html += '<div class="cal-day-event' + (ev.hidden ? ' cal-event-hidden' : '') + '" style="top:' + topPx + 'px;height:' + htPx + 'px"' +
               ' onclick="calEventClick(' + JSON.stringify(ev.id) + ',' + JSON.stringify(tid) + ')">' +
               '<div class="cal-day-event-name">' + escHtml(eventName(ev)) + '</div>' +
               '<div class="cal-day-event-time">' + formatTime12(s.hour, s.minute) +
@@ -636,31 +636,33 @@
   }
 
   /* ── Delete ──────────────────────────────────── */
-  async function deleteEvent(eventId) {
-    /* Never-delete guarantee: block deletion of past events */
-    var ev = null;
-    Object.keys(calEventsCache).forEach(function (k) {
-      calEventsCache[k].forEach(function (e) { if (e.id === eventId) ev = e; });
-    });
-    if (ev && isPastEvent(ev)) {
-      if (typeof window.showToast === 'function') {
-        window.showToast('Cannot delete past events — preserved for records');
-      } else {
-        window.alert('Cannot delete past events — they are preserved for records.');
-      }
-      return;
-    }
-
-    if (!window.confirm('Delete this event from Google Calendar?')) return;
+  async function deleteEvent(eventId, opts) {
+    opts = opts || {};
     try {
       var r = await fetch(
         '/api/calendar/delete?secret=' + encodeURIComponent(getSecret()) +
         '&eventId=' + encodeURIComponent(eventId),
-        { method: 'DELETE' }
+        { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(opts) }
       );
       var d = await r.json();
+
+      if (r.status === 403) {
+        /* Past event — offer soft-delete (hide with strikethrough, preserved for records) */
+        if (window.confirm('Past events cannot be deleted (they are preserved for records).\n\nHide it on the calendar instead? It will appear struck through.')) {
+          return deleteEvent(eventId, { soft: true });
+        }
+        return;
+      }
+
+      if (d.requiresConfirmation) {
+        if (!window.confirm('Delete this event from Google Calendar?')) return;
+        return deleteEvent(eventId, { confirmed: true });
+      }
+
       if (!d.ok) throw new Error(d.error || 'Delete failed');
-      if (typeof window.showToast === 'function') window.showToast('Event deleted');
+      if (typeof window.showToast === 'function') {
+        window.showToast(d.hidden ? 'Event hidden (preserved for records)' : 'Event deleted');
+      }
       calEventsCache = {};
       await init();
     } catch (e) {
@@ -800,7 +802,7 @@
         var t2  = e ? formatTime12(e.hour, e.minute) : '';
         var tid = bbqThreadId(ev);
         var clr = eventStatusColor(ev);
-        html += '<div class="cal-agenda-event" style="border-left-color:' + clr + '"' +
+        html += '<div class="cal-agenda-event' + (ev.hidden ? ' cal-event-hidden' : '') + '" style="border-left-color:' + clr + '"' +
                 ' onclick="calEventClick(' + JSON.stringify(ev.id) + ',' + JSON.stringify(tid) + ')">' +
                 '<div class="cal-agenda-event-date">' +
                 '<span class="cal-agenda-dow">' + DOW_SHORT[new Date(s.year, s.month, s.day).getDay()] + '</span>' +
