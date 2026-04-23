@@ -52,18 +52,21 @@
   async function doSendNow(item, actionsEl, cardEl) {
     actionsEl.innerHTML = '<span class="approval-status">Sending…</span>';
     try {
-      const r = await fetch('/api/dispatch/email', {
+      const r = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: item.to, name: item.name || item.to,
-          subject: item.subject, body: item.body,
-          secret: secret(),
+          channel: 'email',
+          sendAt: new Date().toISOString(),
+          payload: {
+            to: item.to, name: item.name || item.to,
+            subject: item.subject, body: item.body,
+          },
         }),
       });
       const d = await r.json().catch(() => ({}));
       await dequeueItem(item.id);
-      if (r.ok || d.ok || d.success) {
+      if (r.ok || d.ok || d.taskId) {
         cardEl.innerHTML =
           '<div class="approval-sent">✅ Email sent to ' + esc(item.to) + '</div>';
       } else {
@@ -75,6 +78,27 @@
       actionsEl.innerHTML =
         '<span class="approval-status error">Send failed: ' + esc(e.message) + '</span>';
     }
+  }
+
+  /* ── immediate send for human-triggered SEND_EMAIL_NOW:: calls ────── */
+
+  function doSendImmediate(raw) {
+    fetch('/api/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        channel: 'email',
+        sendAt: new Date().toISOString(),
+        payload: {
+          to: raw.to || '',
+          name: raw.name || raw.to || '',
+          subject: raw.subject || '',
+          body: raw.body || '',
+        },
+      }),
+    }).catch(function (e) {
+      console.error('chat-approval: immediate send failed', e);
+    });
   }
 
   async function doSendScheduled(item, sendAt, actionsEl, cardEl) {
@@ -237,6 +261,12 @@
     if (msg && typeof msg === 'string' && msg.startsWith('SEND_EMAIL_NOW::')) {
       try {
         var raw = JSON.parse(msg.slice('SEND_EMAIL_NOW::'.length));
+        // Human-triggered sends (source: 'human') bypass the approval queue and fire
+        // immediately via /api/schedule. Only source: 'ai' (or unset) goes to the queue.
+        if (raw.source === 'human') {
+          doSendImmediate(raw);
+          return;
+        }
         var item = {
           id: raw.id || ('ap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5)),
           to: raw.to || '',

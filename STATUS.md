@@ -533,21 +533,25 @@ setTimeout(() => { toast.remove(); URL.revokeObjectURL(iosUrl); }, 15000);
 ## Standing Rule — "Schedule Send" on All Outbound Email/Text UIs
 **Established:** 2026-04-19 · Applies to all current and future comm surfaces.
 
-Every UI surface that sends or drafts an outbound email or text message must offer TWO primary actions: **"Send Now"** and **"Schedule Send"** (with a datetime picker). Scheduled sends go through `/api/schedule` → QStash → `/api/dispatch/email`. Immediate sends go directly through `/api/dispatch/email`. Sender lockdown (`info@blusbarbeque.com`) applies to both paths.
+Every UI surface that sends or drafts an outbound email or text message must offer TWO primary actions: **"Send Now"** and **"Schedule Send"** (with a datetime picker). All sends (immediate and scheduled) go through `/api/schedule` → QStash → `/api/dispatch/email`. Sender lockdown (`info@blusbarbeque.com`) applies to both paths.
+
+### AI-send routing decision (2026-04-23)
+**Decided:** AI-triggered `SEND_EMAIL_NOW::` calls route through the approval queue (`chat-approval.js`). Human-triggered calls (Zach explicitly clicking a send button) bypass the queue and fire immediately. Scheduled sends auto-fire at the scheduled time without a second approval — the scheduling action IS the approval.
+
+**Implementation:** `SEND_EMAIL_NOW::` payloads carry `source: 'human'` from UI buttons. The `chat-approval.js` interceptor routes `source: 'human'` directly to `/api/schedule` (immediate), and everything else (`source: 'ai'` or unset) to the approval card. The "Approve & Send" button on approval cards also routes through `/api/schedule` (fixes prior broken `/api/dispatch/email` direct-call that required QStash auth).
 
 ### Audit — existing email-sending surfaces
 
 | Surface | Has Schedule Option? | Notes |
 |---------|---------------------|-------|
-| **Follow-up email modal** (`#followup-modal`) | ✅ Yes | `📅 Schedule` toggle already present; `toggleSchedule()` shows datetime picker, switches send button to scheduled path |
-| **Toast payment link modal** (`#toast-modal`) | ❌ No | Only "Send Payment Link" → immediate send via `sendToastLink()`. **Needs schedule option added in a future round.** |
+| **Follow-up email modal** (`#followup-modal`) | ✅ Yes | `📅 Schedule` toggle present; fires via `source: 'human'` → immediate `/api/schedule` |
+| **Toast payment link modal** (`#toast-modal`) | ❌ No | Immediate send via `source: 'human'`. **Needs schedule option added in a future round.** |
 | **R4-1 Phase 7 — Quote email** | 🔲 Not built yet | Will be built with both "Send Now" and "Schedule Send" from the start |
 | **R4-1 Phase 8 — Request More Info email** | 🔲 Not built yet | Same — both options from the start |
-| **AI Chat `SEND_EMAIL_NOW`** | ⚠️ Edge case | AI-triggered send from chat (e.g. "send follow-up to Danielle"). Not a composition UI — no schedule option currently. Flag for Zach: should AI-triggered sends be forced to a review/schedule step instead of auto-firing? |
+| **AI Chat `SEND_EMAIL_NOW`** | ✅ Decided | AI-triggered sends go through approval queue; Zach clicks "Approve & Send" or "📅 Schedule". Scheduled = auto-fires. |
 
 ### Action items (future rounds)
 - **Toast modal:** add `📅 Schedule` toggle + datetime picker beside "Send Payment Link" (same pattern as follow-up modal)
-- **AI chat sends:** discuss with Zach whether `SEND_EMAIL_NOW` from AI should route to the Inquiries/approval queue instead of firing immediately
 
 ---
 
