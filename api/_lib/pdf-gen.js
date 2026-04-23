@@ -4,6 +4,7 @@
  * No external dependencies — uses only built-in Buffer.
  * Produces PDF 1.4, US Letter, Helvetica built-in fonts.
  */
+const { businessConfig } = require('./business-config.js');
 
 const PW = 612, PH = 792; // US Letter @ 72pt/inch
 const ML = 54;            // left margin (0.75 in)
@@ -40,8 +41,8 @@ function generateQuotePDF(q, customerName) {
   }
 
   // ── Header ──────────────────────────────────────────────────────────
-  txt(ML, 52, "Blu's Barbeque", 'F2', 22);
-  txt(ML, 75, 'Dallas, TX  |  info@blusbarbeque.com', 'F1', 10);
+  txt(ML, 52, businessConfig.name, 'F2', 22);
+  txt(ML, 75, businessConfig.city + ', ' + businessConfig.state + '  |  ' + businessConfig.email, 'F1', 10);
   hline(84, ML, PW - ML, 1.5);
 
   txt(ML, 102, 'CATERING QUOTE', 'F2', 14);
@@ -96,12 +97,13 @@ function generateQuotePDF(q, customerName) {
   }
 
   if (q.tax_exempt) {
-    totRow('TX Sales Tax', 'Exempt', false);
+    totRow(businessConfig.state + ' Sales Tax', 'Exempt', false);
   } else {
     var tax = q.sales_tax !== undefined
       ? q.sales_tax
-      : Math.round(Number(q.food_subtotal || 0) * 0.0825 * 100) / 100;
-    totRow('TX Sales Tax (8.25%)', '$' + Number(tax).toFixed(2), false);
+      : Math.round(Number(q.food_subtotal || 0) * businessConfig.salesTaxRate * 100) / 100;
+    var taxPct = parseFloat((businessConfig.salesTaxRate * 100).toFixed(2));
+    totRow(businessConfig.state + ' Sales Tax (' + taxPct + '%)', '$' + Number(tax).toFixed(2), false);
   }
 
   y += 2;
@@ -131,7 +133,7 @@ function generateQuotePDF(q, customerName) {
 
   // ── Footer ──────────────────────────────────────────────────────────
   hline(762, ML, PW - ML, 0.5);
-  txt(ML, 775, "This quote is valid for 30 days. Thank you for choosing Blu's Barbeque!", 'F3', 8);
+  txt(ML, 775, 'This quote is valid for 30 days. Thank you for choosing ' + businessConfig.name + '!', 'F3', 8);
 
   // ── Assemble PDF ────────────────────────────────────────────────────
   var streamSrc = cmds.join('\n');

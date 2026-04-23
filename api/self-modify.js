@@ -133,6 +133,9 @@ const STATIC_MODULE_FILES = [
   'static/css/customers/tag-picker.css',
   'api/customers/tags.js',
   'api/settings/lost-reasons.js',
+  // SaaS prep — tenant-aware business config
+  'api/_lib/business-config.js',
+  'static/js/business-config.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

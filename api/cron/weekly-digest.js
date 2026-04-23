@@ -22,8 +22,9 @@ module.exports.config = { maxDuration: 60 };
 const https  = require('https');
 const { getFlag }            = require('../_lib/flags.js');
 const { getTestModeEmail }   = require('../_lib/settings.js');
+const { businessConfig }     = require('../_lib/business-config.js');
 
-const CANONICAL_SENDER = 'info@blusbarbeque.com';
+const CANONICAL_SENDER = businessConfig.email;
 const KV_TOKENS_KEY    = 'gmail:' + CANONICAL_SENDER;
 
 function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
@@ -90,7 +91,7 @@ async function sendGmail(accessToken, to, subject, htmlBody) {
   }
 
   const raw = [
-    'From: Blu\'s Barbeque <' + CANONICAL_SENDER + '>',
+    'From: ' + businessConfig.name + ' <' + CANONICAL_SENDER + '>',
     'To: ' + to,
     'Subject: ' + subject,
     'MIME-Version: 1.0',
@@ -210,7 +211,7 @@ function buildDigestHtml(weekLabel, thisWeekEvents, outstandingQuotes, overdueFo
   <style>${styles}</style></head><body>
   <div class="wrap">
     <div class="header">
-      <h1>Blu's BBQ</h1>
+      <h1>${businessConfig.shortName}</h1>
       <p>Weekly Operations Digest &mdash; ${weekLabel}</p>
     </div>
     <div class="section">
@@ -227,7 +228,7 @@ function buildDigestHtml(weekLabel, thisWeekEvents, outstandingQuotes, overdueFo
     </div>
     <div class="footer">
       Thank you for another great week of BBQ! 🔥<br>
-      Sent automatically from Blu's BBQ Operations Dashboard.
+      Sent automatically from ${businessConfig.shortName} Operations Dashboard.
     </div>
   </div>
   </body></html>`;
@@ -329,7 +330,7 @@ module.exports = async (req, res) => {
     }) + ' week';
 
     const html    = buildDigestHtml(weekLabel, thisWeekEvents, outstandingQuotes, overdueFollowups);
-    const subject = 'Blu\'s BBQ — Weekly Digest (' + weekLabel + ')';
+    const subject = businessConfig.shortName + ' — Weekly Digest (' + weekLabel + ')';
 
     const accessToken = await getAccessToken();
     const sendResult  = await sendGmail(accessToken, recipient, subject, html);

@@ -7,7 +7,8 @@
  * Tokens land in /api/auth/callback → stored in Upstash KV.
  */
 
-const REQUIRED_EMAIL = 'info@blusbarbeque.com';
+const { businessConfig } = require('../_lib/business-config.js');
+const REQUIRED_EMAIL = businessConfig.email;
 
 module.exports = (req, res) => {
   const clientId = process.env.GMAIL_CLIENT_ID;

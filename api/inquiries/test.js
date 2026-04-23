@@ -10,13 +10,14 @@
    ===== */
 'use strict';
 const https = require('https');
+const { businessConfig } = require('../_lib/business-config.js');
 
 function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
 function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
 
 const INDEX_KEY = 'inquiries:index';
 const MAX_INDEX = 500;
-const TEST_EMAIL = 'zak9494+bbqtest@gmail.com';
+const TEST_EMAIL = businessConfig.testEmail;
 
 function kvGet(key) {
   return new Promise((resolve, reject) => {

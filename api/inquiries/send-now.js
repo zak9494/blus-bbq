@@ -12,8 +12,9 @@ module.exports.config = { maxDuration: 20 };
 
 const https = require('https');
 const { generateQuotePDF } = require('../_lib/pdf-gen');
+const { businessConfig } = require('../_lib/business-config.js');
 
-const CANONICAL_SENDER = 'info@blusbarbeque.com';
+const CANONICAL_SENDER = businessConfig.email;
 const KV_TOKENS_KEY = 'gmail:' + CANONICAL_SENDER;
 const BOUNDARY = 'BLUS_BBQ_MIME_BOUNDARY_42';
 
@@ -73,7 +74,7 @@ function secretGate(req, res) {
 
 async function getKVTokens() {
   let raw = await kvGet(KV_TOKENS_KEY);
-  if (!raw) throw new Error('Gmail not connected — visit /api/auth/init to connect info@blusbarbeque.com');
+  if (!raw) throw new Error('Gmail not connected — visit /api/auth/init to connect ' + CANONICAL_SENDER);
   let tokens = typeof raw === 'string' ? JSON.parse(raw) : raw;
   if (tokens.email && tokens.email !== CANONICAL_SENDER)
     throw new Error('Sender locked to ' + CANONICAL_SENDER + '. Tokens are for ' + tokens.email + '. Re-auth required.');
@@ -110,7 +111,7 @@ function wrapBase64(b64) {
  */
 function buildPlainMIME(toHeader, subject, textBody) {
   const lines = [
-    'From: Blu\'s Barbeque <' + CANONICAL_SENDER + '>',
+    'From: ' + businessConfig.name + ' <' + CANONICAL_SENDER + '>',
     'To: ' + toHeader,
     'Subject: ' + subject,
     'MIME-Version: 1.0',
@@ -127,7 +128,7 @@ function buildPlainMIME(toHeader, subject, textBody) {
 function buildMultipartMIME(toHeader, subject, textBody, pdfBuf, filename) {
   const b64pdf = wrapBase64(pdfBuf.toString('base64'));
   const lines = [
-    'From: Blu\'s Barbeque <' + CANONICAL_SENDER + '>',
+    'From: ' + businessConfig.name + ' <' + CANONICAL_SENDER + '>',
     'To: ' + toHeader,
     'Subject: ' + subject,
     'MIME-Version: 1.0',

@@ -11,7 +11,7 @@
 **Status: Partially complete — deferred (requires re-OAuth)**
 
 - Deployed `/api/diag/verify-sender` with `SELF_MODIFY_SECRET` secret gating (commit `afb2b9d`).
-- Added `SELF_MODIFY_SECRET=8987bae97af3367d22b124f8555f20a0132fd38c704807fc` to Vercel env vars.
+- Added `SELF_MODIFY_SECRET=<redacted-rotated-2026-04-23>` to Vercel env vars.
 - Hit the endpoint — returned 403 from Gmail API: "Insufficient authentication scopes."
 - **Root cause:** Stored OAuth token was obtained with `gmail.send` scope only. `users.messages.list` requires `gmail.readonly` (or `gmail.modify`).
 - **What Zach needs to do:** Add `gmail.readonly` scope to `api/auth/init.js` OAuth flow, then re-consent at `/api/auth/init`. The diag endpoint will then work.
@@ -150,7 +150,7 @@ Replaced the stub alert with a full `async generatePDF()` using jsPDF 2.5.1 load
 ### #6 — Live Gmail From: header verification
 - **Blocker:** OAuth token needs `gmail.readonly` scope. Re-consent required (Zach must be present).
 - **To fix:** In `api/auth/init.js`, add `https://www.googleapis.com/auth/gmail.readonly` to the scopes array, push, then visit `/api/auth/init` to re-consent.
-- **After re-consent:** Hit `https://blus-bbq.vercel.app/api/diag/verify-sender?limit=5&secret=8987bae97af3367d22b124f8555f20a0132fd38c704807fc` — should return `allCanonical: true`.
+- **After re-consent:** Hit `https://blus-bbq.vercel.app/api/diag/verify-sender?limit=5&secret=<redacted-rotated-2026-04-23>` — should return `allCanonical: true`.
 
 ### #13 — Plan-first mode
 - Design decision: section map in system prompt is sufficient for now. Revisit if multi-region edits start producing regressions.
