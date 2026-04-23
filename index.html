@@ -27,6 +27,8 @@
 <link rel="stylesheet" href="/static/css/quote-drafts.css">
 <link rel="stylesheet" href="/static/css/customer-profile.css">
 <link rel="stylesheet" href="/static/css/ui/bottom-sheet.css">
+<link rel="stylesheet" href="/static/css/widgets/todays-actions.css">
+<link rel="stylesheet" href="/static/css/customers/tag-picker.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -71,8 +73,18 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
 .btn-primary { background: var(--red); border-color: var(--red); color: #fff; font-weight: 500; }
 .btn-primary:hover { background: var(--red-light); border-color: var(--red-light); }
+.btn-primary:active { transform: scale(0.97); }
 .btn-ghost { border: none; background: transparent; }
 .btn-sm { padding: 4px 10px; font-size: 11px; }
+/* Wave 1 — iOS haptic feel: tap scale on primary action areas */
+@media (pointer: coarse) {
+  .btn-primary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .stat-card:active { transform: scale(0.98); }
+}
+/* Wave 1 — safe-area bottom padding for standalone PWA home cards */
+@media all and (display-mode: standalone) {
+  #page-pipeline .content { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+}
 
 /* CONTENT */
 .content { padding: 24px; flex: 1; }
@@ -657,6 +669,9 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
 
+        <!-- Today's Actions widget (Wave 1, flag: todays_actions_widget) -->
+        <div id="todays-actions-container" style="display:none;margin-bottom:12px"></div>
+
         <!-- Overdue widget (Group 9, flag-gated) -->
         <div id="overdue-widget-container" style="display:none;margin-bottom:12px"></div>
 
@@ -1194,8 +1209,7 @@ if (typeof marked !== 'undefined') {
       </div>
     </div><!-- /page-inquiries -->
 
-    <!-- CUSTOMER PROFILE PAGE (Group 9, flag: customer_profile_v2) -->
-    <div id="page-customer" class="page"></div><!-- /page-customer -->
+    <!-- CUSTOMER PROFILE PAGE (Group 9) is defined below near line 1398 -->
 
     <!-- CALENDAR PAGE -->
     <div id="page-calendar" class="page">
@@ -1477,6 +1491,18 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
 
+        <!-- Lost Reasons (Wave 1, flag: lost_reason_capture) -->
+        <div class="settings-section" id="settings-lost-reasons-section">
+          <div class="settings-section-title">Pipeline</div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Lost Reasons</div>
+              <div class="settings-row-sub" id="settings-lost-reasons-sub">Manage options shown when marking a lead Lost</div>
+            </div>
+          </div>
+          <div id="settings-lost-reasons-editor" style="padding:0 0 8px"></div>
+        </div>
+
         <div class="settings-section">
           <div class="settings-section-title">Developer</div>
           <div class="settings-row settings-row-tap" onclick="showPage('outbound')">
@@ -1728,6 +1754,11 @@ if (typeof marked !== 'undefined') {
 <script src="/static/js/ui/scroll-lock.js"></script>
 <script src="/static/js/ui/bottom-sheet.js"></script>
 <script src="/static/js/ui/pull-to-refresh.js"></script>
+<!-- Wave 1: Core UX modules -->
+<script src="/static/js/pipeline/lost-reason-sheet.js"></script>
+<script src="/static/js/kanban/card-status-dropdown.js"></script>
+<script src="/static/js/widgets/todays-actions.js"></script>
+<script src="/static/js/customers/tag-picker.js"></script>
 <script>
 /* ===== MODULE: CONSTANTS & STATIC DATA ===== */
 // D22: MENU is now loaded from /static/js/menu.js (window.MENU).
@@ -1766,6 +1797,7 @@ function showPage(page) {
   if (page === 'flags') loadFlagsPage();
   if (page === 'notifications' && typeof notifPanelRenderPage === 'function') notifPanelRenderPage();
   if (page === 'today') { if (typeof loadEventDayView === 'function') loadEventDayView(); }
+  if (page === 'settings') initLostReasonsSettings();
   // customer profile is rendered on-demand by openCustomerProfile(); no init needed here
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
@@ -1847,6 +1879,86 @@ async function saveDigestEmail() {
     if (status) { status.textContent = 'Saved ✓'; setTimeout(() => { if (status) status.textContent = ''; }, 2500); }
   } catch(e) {
     if (status) status.textContent = 'Error: ' + e.message;
+  }
+}
+
+/* Wave 1 — Lost Reasons settings editor */
+async function initLostReasonsSettings() {
+  const editor = document.getElementById('settings-lost-reasons-editor');
+  if (!editor) return;
+  const secret = (typeof INQ_SECRET !== 'undefined' ? INQ_SECRET : '') || '';
+  editor.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0">Loading…</div>';
+  try {
+    const r = await fetch('/api/settings/lost-reasons?secret=' + encodeURIComponent(secret));
+    const d = await r.json();
+    const reasons = (d.ok && Array.isArray(d.reasons)) ? d.reasons : [];
+    _renderLostReasonsEditor(editor, reasons, secret);
+  } catch (e) {
+    editor.innerHTML = '<div style="font-size:12px;color:var(--red);padding:4px 0">Failed to load: ' + e.message + '</div>';
+  }
+}
+
+function _renderLostReasonsEditor(editor, reasons, secret) {
+  editor.innerHTML = '';
+  const list = document.createElement('div');
+  list.style.cssText = 'display:flex;flex-direction:column;gap:4px;margin-bottom:10px';
+  reasons.forEach(function(r, idx) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px';
+    const lbl = document.createElement('span');
+    lbl.style.cssText = 'flex:1;font-size:13px;color:var(--text)';
+    lbl.textContent = r;
+    const del = document.createElement('button');
+    del.className = 'btn btn-sm';
+    del.textContent = '✕';
+    del.style.cssText = 'padding:2px 8px;font-size:11px;color:var(--red)';
+    del.addEventListener('click', function() {
+      const updated = reasons.filter(function(_, i) { return i !== idx; });
+      _saveLostReasons(updated, secret, editor);
+    });
+    row.appendChild(lbl);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+  editor.appendChild(list);
+
+  const addRow = document.createElement('div');
+  addRow.style.cssText = 'display:flex;gap:8px;align-items:center';
+  const addInput = document.createElement('input');
+  addInput.className = 'form-input';
+  addInput.style.cssText = 'font-size:12px;padding:5px 10px;flex:1';
+  addInput.placeholder = 'Add reason…';
+  addInput.maxLength = 80;
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn btn-sm btn-primary';
+  addBtn.textContent = 'Add';
+  function doAdd() {
+    const val = addInput.value.trim();
+    if (!val || reasons.includes(val)) return;
+    _saveLostReasons([...reasons, val], secret, editor);
+  }
+  addBtn.addEventListener('click', doAdd);
+  addInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
+  addRow.appendChild(addInput);
+  addRow.appendChild(addBtn);
+  editor.appendChild(addRow);
+  if (window.lostReasonSheet) window.lostReasonSheet.invalidateCache();
+}
+
+async function _saveLostReasons(reasons, secret, editor) {
+  try {
+    const r = await fetch('/api/settings/lost-reasons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reasons, secret }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      _renderLostReasonsEditor(editor, d.reasons, secret);
+      if (window.lostReasonSheet) window.lostReasonSheet.invalidateCache();
+    }
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('Save failed: ' + e.message);
   }
 }
 
@@ -3981,6 +4093,8 @@ async function loadPipelineInquiries() {
       renderKanban(); renderTable();
     }
     updateStats();
+    // Wave 1: refresh Today's Actions widget after pipeline data loads
+    if (window.todaysActions) window.todaysActions.render();
     // Update Recent Replies dashboard widget
     const replies = (d.inquiries || []).filter(i => i.has_unreviewed_update && i.status !== 'archived').slice(0, 3);
     const rrSec = document.getElementById('recent-replies-section');

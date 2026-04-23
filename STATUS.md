@@ -833,5 +833,49 @@ CI: Playwright smoke suite ✅ (run 24837061717). Unit tests: 255 pass / 0 fail.
 
 ---
 
-## Next: Wave 1
-TBD — pending Zach's direction.
+## Wave 1 — Core UX (feat/wave-1-core-ux)
+**Status: PR OPEN · [#43](https://github.com/zak9494/blus-bbq/pull/43) · branch: `feat/wave-1-core-ux` · HEAD: `554414e` · 2026-04-23**
+
+### Changes shipped
+
+1. **Today's Actions widget** — `#todays-actions-container` on pipeline home aggregates:
+   - Overdue follow-ups (red dot): `has_unreviewed_update === true`
+   - Today's booked events: `event_date === today && status === 'booked'`
+   - AI draft reviews: `status === 'quote_drafted' && !approved`
+   - Pending quote approvals: `status === 'quote_approved'`
+   All rows are single-tap to open the relevant inquiry. Empty state: "All clear for today 🍖".
+   Module: `static/js/widgets/todays-actions.js` + CSS. Flag: `todays_actions_widget` default ON.
+
+2. **Kanban card status dropdown** — `card-status-dropdown.js` wires the existing `<select class="kb-status-sel">` with BottomSheet lost-reason support. When "Lost" is selected (via select or drag-drop), `lostReasonSheet.open()` fires before committing. Falls back to existing `openLostModal()` if module not loaded. No flag.
+
+3. **Customer tags** — `POST /api/customers/tags` stores `string[]` per customer email (KV: `customer:tags:{email}`). `tag-picker.js` renders the full picker in customer profile (`#cp-tag-picker-container`) and prefetches + renders async chip rows on kanban cards (`kb-card-customer-tags`). Seeded: VIP, Corporate, Holiday Party Regular, Graduation, Family Get Together. Flag: `customer_tags` default ON.
+
+4. **Lost-reason BottomSheet** — `lost-reason-sheet.js` fetches options from `GET /api/settings/lost-reasons` (KV: `settings:lost_reasons`, fallback to 5 seeded options). Settings → Pipeline section now has an editable lost-reasons list (`#settings-lost-reasons-editor`). Flag: `lost_reason_capture` default ON.
+
+5. **iOS polish** — `btn-primary:active` `scale(0.97)`, `touch-action: manipulation`, safe-area bottom padding for standalone PWA on pipeline page.
+
+### New files
+| File | Purpose |
+|------|---------|
+| `static/js/widgets/todays-actions.js` | Today's Actions widget |
+| `static/css/widgets/todays-actions.css` | Widget styles |
+| `static/js/kanban/card-status-dropdown.js` | Dropdown wiring |
+| `static/js/pipeline/lost-reason-sheet.js` | Lost-reason BottomSheet |
+| `static/js/customers/tag-picker.js` | Tag picker + chips |
+| `static/css/customers/tag-picker.css` | Tag + LRS styles |
+| `api/customers/tags.js` | Customer tags CRUD |
+| `api/settings/lost-reasons.js` | Lost reasons settings |
+| `tests/journey/wave-1-*.spec.js` (×4) | Playwright journey tests |
+
+### Scope adjustments vs brief
+- `/api/inquiries/update` (referenced in brief) does not exist — used `statusSync.set()` → `/api/inquiries/save` (same path existing kanban used)
+- `/api/customers/[id]/tags` collapsed to `/api/customers/tags` with email in body/query (no nested Vercel dynamic segments)
+
+### Unit test baseline
+- **255 pass, 0 fail** (unchanged)
+
+### Tier 2 walkthroughs queued for Zach (visual, async)
+- Wave 1 four flows — Today's Actions, kanban dropdown auto-move, customer tag picker, lost-reason BottomSheet
+  - Test at iPhone 375px, iPad 768px, desktop 1280px × light + dark themes
+  - Verify gated features hidden when flags OFF
+  - Confirm no regressions on pipeline kanban, quote builder, calendar pages
