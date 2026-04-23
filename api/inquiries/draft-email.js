@@ -13,8 +13,9 @@ module.exports.config = { maxDuration: 30 };
 
 
 const https = require('https');
+const { businessConfig } = require('../_lib/business-config.js');
 
-const CANONICAL_SENDER = 'info@blusbarbeque.com';
+const CANONICAL_SENDER = businessConfig.email;
 const KV_TOKENS_KEY = 'gmail:' + CANONICAL_SENDER;
 
 function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
@@ -73,7 +74,7 @@ function secretGate(req, res) {
 
 async function getKVTokens() {
   let raw = await kvGet(KV_TOKENS_KEY);
-  if (!raw) throw new Error('Gmail not connected — visit /api/auth/init to connect info@blusbarbeque.com');
+  if (!raw) throw new Error('Gmail not connected — visit /api/auth/init to connect ' + CANONICAL_SENDER);
   let tokens = typeof raw === 'string' ? JSON.parse(raw) : raw;
   if (tokens.email && tokens.email !== CANONICAL_SENDER)
     throw new Error('Sender locked to ' + CANONICAL_SENDER + '. Tokens are for ' + tokens.email + '. Re-auth required.');
@@ -130,7 +131,7 @@ function callClaude(systemPrompt, userMsg) {
 function fmtCurrency(n) { return '$' + (Number(n) || 0).toFixed(2); }
 
 function buildQuoteSystemPrompt() {
-  return `You are Zach, owner of Blu's Barbeque in Dallas, TX (phone: 214-514-8684).
+  return `You are ${businessConfig.ownerName}, owner of ${businessConfig.name} in ${businessConfig.city}, ${businessConfig.state} (phone: ${businessConfig.phone}).
 Write a warm, professional catering quote email to a potential customer.
 Tone: friendly, personal, confident. Keep it under 200 words.
 
@@ -140,14 +141,14 @@ Rules:
 - Do not re-include answers the customer has already received in the thread. Focus only on new or unaddressed items.
 - Present the quote line items clearly (you will receive them already formatted — just include them as-is)
 - Show the total prominently
-- Invite them to stop by Wed–Sun after 1 PM to try samples — "just ask for Raul!"
-- Close with your name, Blu's Barbeque, and 214-514-8684
+- Invite them to stop by Wed–Sun after 1 PM to try samples — "just ask for ${businessConfig.staffName}!"
+- Close with your name, ${businessConfig.name}, and ${businessConfig.phone}
 - Do NOT mention any pricing changes or discounts
 - Plain text only — no markdown, no bullet symbols, just line breaks`;
 }
 
 function buildRequestInfoSystemPrompt() {
-  return `You are Zach, owner of Blu's Barbeque in Dallas, TX (phone: 214-514-8684).
+  return `You are ${businessConfig.ownerName}, owner of ${businessConfig.name} in ${businessConfig.city}, ${businessConfig.state} (phone: ${businessConfig.phone}).
 Write a warm, friendly follow-up email asking a catering inquiry customer for missing information.
 Tone: helpful, brief, not pushy. Keep it under 150 words.
 
@@ -158,7 +159,7 @@ Rules:
 - Explain you just need a few more details to prepare their quote
 - List each missing field naturally in a sentence or short list (you will receive them)
 - Promise a quick turnaround once you have the info
-- Close with your name, Blu's Barbeque, and 214-514-8684
+- Close with your name, ${businessConfig.name}, and ${businessConfig.phone}
 - Plain text only — no markdown formatting`;
 }
 
@@ -182,7 +183,7 @@ module.exports = async (req, res) => {
 
   if (mode === 'quote') {
     systemPrompt   = buildQuoteSystemPrompt();
-    defaultSubject = "Re: Blu's BBQ — Catering Quote for " + (name || 'Your Event');
+    defaultSubject = "Re: " + businessConfig.shortName + " — Catering Quote for " + (name || 'Your Event');
 
     // Format line items for Claude
     let lineItemsText = '';
@@ -219,7 +220,7 @@ Please write the quote email now.`;
 
   } else if (mode === 'request_info') {
     systemPrompt   = buildRequestInfoSystemPrompt();
-    defaultSubject = "Re: Blu's BBQ — Quick Follow-up on Your Catering Request";
+    defaultSubject = "Re: " + businessConfig.shortName + " — Quick Follow-up on Your Catering Request";
 
     // Collect missing fields from quote and/or extracted_fields
     const missingFromQuote = (q && q.unresolved_preferences) ? q.unresolved_preferences : [];

@@ -3,12 +3,18 @@ name: Smoke tests (Vercel preview)
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: 'Vercel preview URL to test against'
+        required: true
+        type: string
 
 jobs:
   smoke:
     name: Playwright smoke suite
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
 
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +42,12 @@ jobs:
       - name: Get Vercel preview URL from GitHub deployments API
         id: vercel-preview
         run: |
+          # If triggered manually with a preview_url input, use it directly
+          if [ -n "${{ inputs.preview_url }}" ]; then
+            echo "url=${{ inputs.preview_url }}" >> "$GITHUB_OUTPUT"
+            echo "Using manual preview URL: ${{ inputs.preview_url }}"
+            exit 0
+          fi
           SHA="${{ github.event.pull_request.head.sha }}"
           echo "Looking for preview deployment for SHA $SHA"
           for i in $(seq 1 24); do
@@ -57,6 +69,16 @@ jobs:
           exit 1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Warm up Vercel preview (prime edge cache before parallel tests)
+        run: |
+          URL="${{ steps.vercel-preview.outputs.url }}"
+          echo "Warming $URL ..."
+          for i in 1 2 3 4; do
+            curl -sf -o /dev/null -w "warmup $i: %{http_code} %{time_total}s\n" \
+              -H "x-vercel-protection-bypass: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}" \
+              "$URL" || true
+          done
 
       - name: Run unit tests
         run: npm test

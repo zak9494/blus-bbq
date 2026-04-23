@@ -11,6 +11,7 @@
 module.exports.config = { maxDuration: 30 };
 
 const https = require('https');
+const { businessConfig } = require('../_lib/business-config.js');
 
 const MODEL = 'claude-sonnet-4-6';
 
@@ -40,18 +41,18 @@ function secretGate(req, res) {
 }
 
 function buildThankYouSystemPrompt() {
-  return `You are Zach, owner of Blu's Barbeque in Dallas, TX (phone: 214-514-8684).
+  return `You are ${businessConfig.ownerName}, owner of ${businessConfig.name} in ${businessConfig.city}, ${businessConfig.state} (phone: ${businessConfig.phone}).
 Write a warm, genuine post-event thank-you email to a catering customer.
 Tone: heartfelt, personal, celebratory. Keep it under 180 words.
 
 Rules:
 - Open with "Hi [FirstName],"
-- Thank them for choosing Blu's Barbeque for their event
+- Thank them for choosing ${businessConfig.name} for their event
 - Express how much you enjoyed being part of their celebration
 - If a discount offer is included, mention it warmly and naturally with the exact placeholders provided
 - Invite them to leave a Google review if they loved it
 - Invite them to come by the restaurant anytime (Wed\u2013Sun after 1 PM)
-- Close with your name, Blu's Barbeque, and 214-514-8684
+- Close with your name, ${businessConfig.name}, and ${businessConfig.phone}
 - Plain text only \u2014 no markdown, no bullet symbols, just line breaks`;
 }
 
@@ -137,7 +138,7 @@ Please write the thank-you email now.`;
     const name = ef.customer_name || 'Your Event';
     return res.status(200).json({
       ok: true,
-      subject: "Thank You from Blu's Barbeque \u2014 " + name,
+      subject: 'Thank You from ' + businessConfig.name + ' \u2014 ' + name,
       body: result.content[0].text.trim(),
       model: result.model,
       input_tokens:  result.usage && result.usage.input_tokens,

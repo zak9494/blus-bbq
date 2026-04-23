@@ -8,8 +8,9 @@
  * - Deletes any legacy gmail:tokens key
  */
 const https = require('https');
+const { businessConfig } = require('../_lib/business-config.js');
 
-const REQUIRED_EMAIL = 'info@blusbarbeque.com';
+const REQUIRED_EMAIL = businessConfig.email;
 const KV_TOKENS_KEY = `gmail:${REQUIRED_EMAIL}`;
 const KV_TOKENS_KEY_LEGACY = 'gmail:tokens';
 

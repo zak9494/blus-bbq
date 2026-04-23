@@ -7,8 +7,14 @@
  */
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
-const QB_DELIVERY_FEE = 50;      // flat delivery fee, dollars
-const SALES_TAX_RATE  = 0.0825;  // Texas sales tax (8.25%)
+// Load from businessConfig global (browser) or require (Node.js tests); fall back to hardcoded defaults.
+var _bc;
+try {
+  _bc = typeof businessConfig !== 'undefined' ? businessConfig
+      : (typeof require === 'function' ? require('./business-config.js').businessConfig : null);
+} catch(_e) { _bc = null; }
+const QB_DELIVERY_FEE = (_bc && _bc.defaultDeliveryFee != null) ? _bc.defaultDeliveryFee : 50;
+const SALES_TAX_RATE  = (_bc && _bc.salesTaxRate  != null) ? _bc.salesTaxRate  : 0.0825;
 
 if (typeof window !== 'undefined') {
   window.QB_DELIVERY_FEE = QB_DELIVERY_FEE;

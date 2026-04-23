@@ -15,6 +15,7 @@
 
 const https  = require('https');
 const crypto = require('crypto');
+const { businessConfig } = require('../_lib/business-config.js');
 
 const KV_KEY = 'push:subscriptions';
 
@@ -148,7 +149,7 @@ const handler = async (req, res) => {
 
   const vapidPublicKey  = process.env.VAPID_PUBLIC_KEY;
   const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-  const vapidSubject    = process.env.VAPID_SUBJECT || 'mailto:info@blusbarbeque.com';
+  const vapidSubject    = process.env.VAPID_SUBJECT || `mailto:${businessConfig.email}`;
 
   if (!vapidPublicKey || !vapidPrivateKey) {
     return res.status(503).json({
@@ -158,7 +159,7 @@ const handler = async (req, res) => {
   }
 
   const payload = JSON.stringify({
-    title: body.title || "Blu's BBQ",
+    title: body.title || businessConfig.shortName,
     body:  body.body  || '',
     url:   body.url   || '/',
     tag:   body.tag   || 'blus-notif',

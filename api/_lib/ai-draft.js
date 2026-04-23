@@ -6,6 +6,7 @@
    ===== */
 'use strict';
 const https = require('https');
+const { businessConfig } = require('./business-config.js');
 
 const MODEL = 'claude-sonnet-4-6';
 
@@ -37,7 +38,7 @@ function callClaude(systemPrompt, userMsg, maxTokens) {
 function fmtCurrency(n) { return '$' + (Number(n) || 0).toFixed(2); }
 
 function buildEmailSystemPrompt() {
-  return `You are Zach, owner of Blu's Barbeque in Dallas, TX (phone: 214-514-8684).
+  return `You are ${businessConfig.ownerName}, owner of ${businessConfig.name} in ${businessConfig.city}, ${businessConfig.state} (phone: ${businessConfig.phone}).
 Write a warm, professional catering email to a potential customer.
 Tone: friendly, personal, confident. Keep it under 200 words.
 
@@ -46,13 +47,13 @@ Rules:
 - Thank them for reaching out
 - Do not re-include answers the customer has already received in the thread. Focus only on new or unaddressed items.
 - If a quote is provided, present the line items clearly and show the total prominently
-- Invite them to stop by Wed\u2013Sun after 1 PM to try samples \u2014 "just ask for Raul!"
-- Close with your name, Blu's Barbeque, and 214-514-8684
+- Invite them to stop by Wed\u2013Sun after 1 PM to try samples \u2014 "just ask for ${businessConfig.staffName}!"
+- Close with your name, ${businessConfig.name}, and ${businessConfig.phone}
 - Plain text only \u2014 no markdown, no bullet symbols, just line breaks`;
 }
 
 function buildQuoteReplySystemPrompt() {
-  return `You are Zach, owner of Blu's Barbeque in Dallas, TX (phone: 214-514-8684).
+  return `You are ${businessConfig.ownerName}, owner of ${businessConfig.name} in ${businessConfig.city}, ${businessConfig.state} (phone: ${businessConfig.phone}).
 Write a brief, warm reply to a customer's question about their catering quote.
 Tone: helpful, direct, friendly. Keep it under 100 words.
 
@@ -60,12 +61,12 @@ Rules:
 - Open with "Hi [FirstName],"
 - Answer the question directly and concisely
 - Do not re-include information the customer has already received in the thread
-- Close with your name and Blu's Barbeque
+- Close with your name and ${businessConfig.name}
 - Plain text only`;
 }
 
 function buildTextSystemPrompt() {
-  return `You are Zach, owner of Blu's Barbeque in Dallas, TX (phone: 214-514-8684).
+  return `You are ${businessConfig.ownerName}, owner of ${businessConfig.name} in ${businessConfig.city}, ${businessConfig.state} (phone: ${businessConfig.phone}).
 Write a short, warm SMS-style follow-up for a catering inquiry. Keep it under 60 words.
 Conversational and friendly. No formal greetings. No subject line. Just the message text.`;
 }
@@ -148,7 +149,7 @@ async function generateDraft({ inquiry, draftType, addedContext, existingDraft }
   const ef = (inquiry && inquiry.extracted_fields) || {};
   const name = ef.customer_name || '';
   const subject = draftType === 'email'
-    ? "Re: Blu's BBQ \u2014 Catering for " + (name || 'Your Event')
+    ? 'Re: ' + businessConfig.shortName + ' \u2014 Catering for ' + (name || 'Your Event')
     : null;
 
   return {

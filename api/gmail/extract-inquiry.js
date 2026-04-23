@@ -18,10 +18,11 @@
 module.exports.config = { maxDuration: 60 };
 
 const https = require('https');
+const { businessConfig } = require('../_lib/business-config.js');
 
-const SYSTEM_PROMPT = `You are a catering inquiry parser for Blu's Barbeque, a BBQ catering company in Dallas, TX.
+const SYSTEM_PROMPT = `You are a catering inquiry parser for ${businessConfig.name}, a BBQ catering company in ${businessConfig.city}, ${businessConfig.state}.
 
-Your job: extract structured data from catering inquiry emails sent to info@blusbarbeque.com.
+Your job: extract structured data from catering inquiry emails sent to ${businessConfig.email}.
 
 RULES — read carefully:
 1. Extract ONLY information EXPLICITLY stated in the email. Do NOT infer, guess, or fill in blanks.
