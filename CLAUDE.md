@@ -269,3 +269,74 @@ Example format:
 > **Blast radius:** Local only.
 
 This requirement applies to every code session working on this repo. Do not skip it even when "obvious" — Zach has specifically asked to see the context before approving destructive actions.
+
+---
+
+## Two-Tier QA Gate (Mandatory Before Every Merge)
+
+Every PR must pass **both** tiers before merging to main.
+
+### Tier 1 — Automated (blocking)
+Run before opening or updating any PR:
+```bash
+npm test                                    # unit tests
+npx playwright test tests/smoke/ tests/journey/ --reporter=line
+```
+All tests must be green. If a test fails due to pre-existing KV state, reset the relevant flags to OFF via the production API (using `INQ_SECRET`) before re-running — never skip or suppress failing tests.
+
+### Tier 2 — Visual walkthrough (human, async)
+After Tier 1 passes, queue a visual walkthrough using Chrome MCP or computer-use:
+- Verify the feature's golden path at iPhone 375px, iPad 768px, and desktop 1280px.
+- Check that gated features (behind a feature flag) are **not visible** when the flag is OFF.
+- Confirm no regressions on the pipeline kanban, quote builder, and calendar pages.
+- Tier 2 may be deferred until the user returns, but it must be completed before declaring a feature "done."
+
+Flag any Tier 2 issues as follow-up tasks; do not hold up merges for cosmetic-only findings unless the feature is visually broken.
+
+---
+
+## SMS Sender Lockdown
+
+Outbound SMS must always originate from the verified Twilio number registered to Blu's BBQ.
+
+- Never hardcode a different `from` number in any SMS send path.
+- The Twilio account SID and auth token live in environment variables (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`). Never log or expose these values.
+- Before sending, confirm the `to` number is a real customer number pulled from the inquiry record — never send to a hardcoded test number in production code.
+- SMS send paths live under `api/sms/`. New SMS features go there; do not inline Twilio calls in cron handlers or other API routes.
+- **DO NOT TOUCH:** `api/sms/send.js` (once created) carries the same "no accidental send from wrong number" invariant as `api/dispatch/email.js`.
+
+---
+
+## Payment Provider Abstraction
+
+All payment processing must go through a provider-agnostic adapter in `api/payments/providers/`.
+
+- No Stripe, Square, or other payment-SDK calls outside of `api/payments/providers/`.
+- Each provider implements a common interface: `{ charge, refund, getStatus }`.
+- The active provider is selected via environment variable (`PAYMENT_PROVIDER=stripe|square`). Default to `stripe` if unset.
+- Never store raw card numbers or full PANs anywhere — not in KV, not in logs, not in inquiry records.
+- Deposit amounts recorded in KV (`deposits:{threadId}`) store only the amount and a provider transaction ID, never card data.
+- If switching providers, add a new file under `api/payments/providers/` and update the adapter selector — do not modify existing provider files.
+
+---
+
+## New Feature Modularity
+
+Big features must live in their own folder or dedicated module. Do not inline large features into `index.html` or existing catch-all files.
+
+### Rules
+1. **New API feature group → own folder.** Create `api/{feature}/` with one file per endpoint. Example: `api/sms/send.js`, `api/payments/providers/stripe.js`.
+2. **New client feature → own JS module.** Create `static/js/{feature}.js`. Load it via a `<script src="...">` tag in `index.html`. Register it in `STATIC_MODULE_FILES` in `api/self-modify.js` so the AI dashboard can edit it.
+3. **New CSS → own file.** Create `static/css/{feature}.css` and link it in `index.html`. Register in `STATIC_MODULE_FILES`.
+4. **Do not retrofit** existing features — this rule is forward-only. Do not refactor Groups 1–9 into folders unless that is the explicit task.
+5. **Flag-gate all new features.** Add an entry to `SEED_FLAGS` in `api/_lib/flags.js` (default OFF). Gate the UI block with `window.flags.isEnabled('{flag}')` and gate the API handler with `await getFlag('{flag}')`.
+6. **Add routes to `vercel.json`.** Every new API file needs a rewrite entry; every new cron needs a cron entry.
+
+### Example structure for a new "comms" feature
+```
+api/sms/send.js          ← SMS send endpoint
+api/sms/status.js        ← delivery status webhook
+static/js/comms.js       ← client module (gated by sms_channel flag)
+static/css/comms.css     ← styles
+```
+All four files go into `STATIC_MODULE_FILES`. The flag `sms_channel` already exists in `SEED_FLAGS`.
