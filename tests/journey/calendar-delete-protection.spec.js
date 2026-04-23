@@ -44,6 +44,15 @@ async function openCalendar(page) {
   await expect(page.locator('#page-calendar')).toBeVisible({ timeout: 5000 });
 }
 
+/* Neuter the BottomSheet module so calendar.js falls back to window.confirm.
+   These calendar-delete tests verify the deletion logic, not the sheet UI —
+   BottomSheet itself is covered by tests/journey/ios-polish.spec.js. */
+function mockNoBottomSheet(page) {
+  return page.route('**/static/js/ui/bottom-sheet.js', route =>
+    route.fulfill({ status: 200, contentType: 'application/javascript', body: '' })
+  );
+}
+
 // ── Flow 1: past event delete is blocked ─────────────────────────────────────
 test.describe('Calendar delete protection — past event blocked', () => {
   test('DELETE without soft flag returns 403 from the API', async ({ request }) => {
@@ -133,6 +142,7 @@ test.describe('Calendar delete protection — soft-delete', () => {
 test.describe('Calendar delete protection — future event confirmation', () => {
   test('DELETE without confirmed flag returns requiresConfirmation:true', async ({ page }) => {
     await mockCalendarList(page, [FUTURE_EVENT]);
+    await mockNoBottomSheet(page);
 
     const responses = [];
     await page.route('**/api/calendar/delete**', async route => {
@@ -172,6 +182,7 @@ test.describe('Calendar delete protection — future event confirmation', () => 
 
   test('DELETE without confirmed flag — user cancels — no delete call', async ({ page }) => {
     await mockCalendarList(page, [FUTURE_EVENT]);
+    await mockNoBottomSheet(page);
 
     let deleteCalled = false;
     await page.route('**/api/calendar/delete**', async route => {

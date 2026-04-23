@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Blu's BBQ">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
 <link rel="stylesheet" href="/static/css/theme.css">
 <link rel="stylesheet" href="/static/css/time-picker.css">
 <link rel="stylesheet" href="/static/css/calendar.css">
@@ -25,6 +26,7 @@
 <link rel="stylesheet" href="/static/css/completed-orders.css">
 <link rel="stylesheet" href="/static/css/quote-drafts.css">
 <link rel="stylesheet" href="/static/css/customer-profile.css">
+<link rel="stylesheet" href="/static/css/ui/bottom-sheet.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -727,11 +729,11 @@ if (typeof marked !== 'undefined') {
             <div class="form-row-2">
               <div class="form-group">
                 <label class="form-label">Customer Name</label>
-                <input class="form-input" id="q-name" placeholder="Full name" oninput="updatePreview()">
+                <input class="form-input" id="q-name" placeholder="Full name" autocomplete="name" oninput="updatePreview()">
               </div>
               <div class="form-group">
                 <label class="form-label">Email</label>
-                <input class="form-input" id="q-email" placeholder="email@example.com" onblur="qbCheckRepeatCustomer(this.value)">
+                <input class="form-input" id="q-email" type="email" inputmode="email" placeholder="email@example.com" autocomplete="email" onblur="qbCheckRepeatCustomer(this.value)">
               </div>
             </div>
             <div class="form-row-3">
@@ -745,7 +747,7 @@ if (typeof marked !== 'undefined') {
               </div>
               <div class="form-group">
                 <label class="form-label">Guest Count</label>
-                <input class="form-input" id="q-guests" type="number" placeholder="50" oninput="updateChargeSuggestion(); updatePreview()">
+                <input class="form-input" id="q-guests" type="number" inputmode="numeric" placeholder="50" oninput="updateChargeSuggestion(); updatePreview()">
               </div>
             </div>
             <div class="form-row-2">
@@ -770,11 +772,11 @@ if (typeof marked !== 'undefined') {
             <div class="form-row-2">
               <div class="form-group">
                 <label class="form-label">Phone</label>
-                <input class="form-input" id="q-phone" placeholder="214-xxx-xxxx">
+                <input class="form-input" id="q-phone" type="tel" inputmode="tel" placeholder="214-xxx-xxxx" autocomplete="tel">
               </div>
               <div class="form-group">
                 <label class="form-label">Budget ($)</label>
-                <input class="form-input" type="number" id="q-budget-amt" placeholder="e.g. 1500" min="0" step="1">
+                <input class="form-input" type="number" inputmode="decimal" id="q-budget-amt" placeholder="e.g. 1500" min="0" step="1">
               </div>
             </div>
             <div class="form-group">
@@ -844,7 +846,7 @@ if (typeof marked !== 'undefined') {
             <div class="charge-row">
               <span style="font-size:12px; color:var(--text2);">Service charge</span>
               <div style="display:flex; align-items:center; gap:6px;">
-                <input type="number" class="charge-pct-input" id="charge-pct" value="0" min="0" max="30" oninput="updatePreview()">
+                <input type="number" inputmode="decimal" class="charge-pct-input" id="charge-pct" value="0" min="0" max="30" oninput="updatePreview()">
                 <span style="font-size:12px; color:var(--text3);">%</span>
                 <span style="font-size:12px; color:var(--text2);" id="charge-pct-amt"></span>
               </div>
@@ -853,7 +855,7 @@ if (typeof marked !== 'undefined') {
               <span style="font-size:12px; color:var(--text2);">Delivery fee</span>
               <div style="display:flex; align-items:center; gap:4px;">
                 <span style="font-size:12px; color:var(--text2);">$</span>
-                <input type="number" class="charge-pct-input" id="delivery-fee-input" value="50" min="0" step="1" style="width:56px" oninput="updatePreview()">
+                <input type="number" inputmode="decimal" class="charge-pct-input" id="delivery-fee-input" value="50" min="0" step="1" style="width:56px" oninput="updatePreview()">
               </div>
             </div>
             <div class="charge-row" id="qb-tax-row">
@@ -864,7 +866,7 @@ if (typeof marked !== 'undefined') {
             <!-- Tax-exempt toggle (mirrors inquiry detail Q2 feature) -->
             <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border)">
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--text2); font-size:12px;">
-                <input type="checkbox" id="qb-tax-exempt-chk" onchange="qbToggleTaxExempt(this.checked)">
+                <input type="checkbox" class="toggle-ios" id="qb-tax-exempt-chk" onchange="qbToggleTaxExempt(this.checked)">
                 <span>Tax Exempt</span>
               </label>
               <div id="qb-tax-exempt-cert-row" style="display:none; margin-top:6px">
@@ -1142,14 +1144,14 @@ if (typeof marked !== 'undefined') {
                 <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
                   <label style="white-space:nowrap">Delivery fee</label>
                   <span>$</span>
-                  <input type="number" min="0" step="0.01" class="form-input" id="inq-delivery-fee" style="width:70px;text-align:right;padding:4px 6px;font-size:12px" onchange="recalcDeliveryFee(this.value)">
+                  <input type="number" inputmode="decimal" min="0" step="0.01" class="form-input" id="inq-delivery-fee" style="width:70px;text-align:right;padding:4px 6px;font-size:12px" onchange="recalcDeliveryFee(this.value)">
                 </div>
               </div>
             </div>
             <div class="inq-quote-summary" id="inq-quote-summary"></div>
             <div id="inq-tax-exempt-row" style="display:none;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--text2);font-size:12px">
-                <input type="checkbox" id="inq-tax-exempt-chk" onchange="toggleTaxExempt(this.checked)">
+                <input type="checkbox" class="toggle-ios" id="inq-tax-exempt-chk" onchange="toggleTaxExempt(this.checked)">
                 <span>Tax Exempt</span>
               </label>
               <div id="inq-tax-exempt-cert-row" style="display:none;margin-top:6px">
@@ -1530,15 +1532,15 @@ if (typeof marked !== 'undefined') {
     <div class="modal-title" id="lead-modal-title">New Lead</div>
     <div class="modal-sub" id="lead-modal-sub">Add a new catering inquiry to the pipeline</div>
     <div class="form-row-2">
-      <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="lm-name" placeholder="Full name"></div>
-      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="lm-email" placeholder="email@example.com"></div>
+      <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="lm-name" placeholder="Full name" autocomplete="name"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="lm-email" type="email" inputmode="email" placeholder="email@example.com" autocomplete="email"></div>
     </div>
     <div class="form-row-2">
-      <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="lm-phone" placeholder="214-xxx-xxxx"></div>
+      <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="lm-phone" type="tel" inputmode="tel" placeholder="214-xxx-xxxx" autocomplete="tel"></div>
       <div class="form-group"><label class="form-label">Event Date</label><input class="form-input" id="lm-date" type="date"></div>
     </div>
     <div class="form-row-2">
-      <div class="form-group"><label class="form-label">Guest Count</label><input class="form-input" id="lm-guests" type="number" placeholder="50"></div>
+      <div class="form-group"><label class="form-label">Guest Count</label><input class="form-input" id="lm-guests" type="number" inputmode="numeric" placeholder="50"></div>
       <div class="form-group"><label class="form-label">Status</label>
         <select class="form-select" id="lm-status">
           <option value="new">New Inquiry</option>
@@ -1551,7 +1553,7 @@ if (typeof marked !== 'undefined') {
     </div>
     <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="lm-notes" rows="3" placeholder="Event type, preferences, budget signals..."></textarea></div>
     <div class="form-group">
-      <label class="form-label"><input type="checkbox" id="lm-followup" style="accent-color:var(--red);margin-right:6px">Flag for follow-up</label>
+      <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" class="toggle-ios" id="lm-followup">Flag for follow-up</label>
     </div>
     <div class="modal-footer">
       <div style="margin-right:auto;">
@@ -1722,6 +1724,10 @@ if (typeof marked !== 'undefined') {
 <script src="/static/js/status-sync.js"></script>
 <script src="/static/js/kanban-view.js"></script>
 <script src="/static/js/list-view.js"></script>
+<!-- Wave 0.5: iOS polish UI modules -->
+<script src="/static/js/ui/scroll-lock.js"></script>
+<script src="/static/js/ui/bottom-sheet.js"></script>
+<script src="/static/js/ui/pull-to-refresh.js"></script>
 <script>
 /* ===== MODULE: CONSTANTS & STATIC DATA ===== */
 // D22: MENU is now loaded from /static/js/menu.js (window.MENU).
@@ -1785,7 +1791,7 @@ async function loadFlagsPage() {
           + (f.created_at ? '<div style="font-size:11px;color:var(--text3);margin-top:2px">Set ' + new Date(f.created_at).toLocaleDateString() + '</div>' : '')
         + '</div>'
         + '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0">'
-          + '<input type="checkbox" id="flag-cb-' + f.name + '" ' + (f.enabled ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--amber);cursor:pointer"'
+          + '<input type="checkbox" class="toggle-ios" id="flag-cb-' + f.name + '" ' + (f.enabled ? 'checked' : '')
           + ' onchange="toggleFlag(\'' + f.name + '\',this.checked,\'' + (f.description||'').replace(/'/g,"\\'") + '\')">'
           + '<span style="font-size:12px;color:var(--text2)">' + (f.enabled ? 'On' : 'Off') + '</span>'
         + '</label>'
@@ -5160,6 +5166,27 @@ function closeMobileSidebar() {
   window.addEventListener('load', function() {
     if (typeof twInit === 'function' && !document.querySelector('input[type="time"]._twDone')) twInit('input[type="time"]');
   });
+</script>
+<script>
+/* Wave 0.5: pull-to-refresh wiring — activate per page, mobile only */
+(function() {
+  var PTR_PAGES = {
+    pipeline:  function() { if (typeof renderPipelineInquiries === 'function') renderPipelineInquiries(); },
+    calendar:  function() { if (typeof calInit === 'function') calInit(); },
+    scheduled: function() { if (typeof loadScheduled === 'function') loadScheduled(); },
+  };
+  window.addEventListener('load', function() {
+    if (!window.PullToRefresh) return;
+    var orig = window.showPage;
+    if (typeof orig !== 'function') return;
+    window.showPage = function(page) {
+      orig(page);
+      var fn = PTR_PAGES[page];
+      if (fn) PullToRefresh.activate(fn);
+      else PullToRefresh.deactivate();
+    };
+  });
+}());
 </script>
 
 <!-- NAV V2: global topbar (all breakpoints, hidden until nav_v2 flag ON) -->

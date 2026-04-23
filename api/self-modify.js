@@ -119,6 +119,11 @@ const STATIC_MODULE_FILES = [
   'api/quotes/templates.js',
   'api/settings/digest-recipient.js',
   'api/cron/weekly-digest.js',
+  // Wave 0.5 — iOS polish UI modules
+  'static/js/ui/scroll-lock.js',
+  'static/js/ui/bottom-sheet.js',
+  'static/js/ui/pull-to-refresh.js',
+  'static/css/ui/bottom-sheet.css',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

@@ -163,3 +163,59 @@
   background: var(--surface2);
   color: var(--text);
 }
+
+/* ───────── iOS POLISH — WAVE 0.5 ────────────────────── */
+
+/* Suppress system tap-highlight on all tappable elements */
+a, button, [role="button"], label, input, select, textarea,
+.btn, .nav-item, .card, .inq-card, .kanban-card,
+.settings-row-tap, .modal-overlay, .bs-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Subtle active state for buttons (iOS-style scale + darken) */
+.btn:active, .btn-primary:active {
+  opacity: 0.82;
+  transform: scale(0.98);
+  transition: opacity 0.08s, transform 0.08s;
+}
+.inq-card:active, .kanban-card:active {
+  opacity: 0.88;
+  transform: scale(0.992);
+  transition: opacity 0.08s, transform 0.08s;
+}
+
+/* ── iOS-style toggle switch ────────────────────────────
+   Usage: <input type="checkbox" class="toggle-ios">
+   Replaces accent-color styled checkboxes for setting toggles.
+   Multi-select checkboxes (tag pickers, bulk-select) should NOT use this class.
+   ─────────────────────────────────────────────────────── */
+.toggle-ios {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 44px; height: 26px;
+  border-radius: 13px;
+  background: var(--border2, rgba(0,0,0,0.18));
+  position: relative; cursor: pointer; flex-shrink: 0;
+  border: none; outline: none;
+  transition: background 0.22s ease;
+  vertical-align: middle;
+}
+.toggle-ios:checked {
+  background: var(--green);
+}
+.toggle-ios::after {
+  content: '';
+  position: absolute;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #fff;
+  top: 2px; left: 2px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.28);
+  transition: transform 0.22s ease;
+}
+.toggle-ios:checked::after {
+  transform: translateX(18px);
+}
+.toggle-ios:focus-visible {
+  outline: 2px solid var(--orange); outline-offset: 2px;
+}

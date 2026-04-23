@@ -68,6 +68,8 @@ const SEED_FLAGS = [
   { name: 'overdue_widget',         description: 'Dashboard widget: unanswered quotes, overdue deposits, events missing headcount' },
   { name: 'weekly_digest',          description: 'Monday 8 AM digest email: week events, outstanding quotes, overdue follow-ups' },
   { name: 'quote_templates',        description: 'Quote template library — save/load canned setups in Quote Builder' },
+  // Wave 0.5 — iOS polish
+  { name: 'ios_polish_v1',          description: 'Wave 0.5 iOS polish — bottom-sheet confirms, pull-to-refresh, iOS toggles, safe-area fixes', default: true },
 ];
 
 async function getFlag(name, defaultValue) {
