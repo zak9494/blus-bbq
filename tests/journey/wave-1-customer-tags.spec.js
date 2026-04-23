@@ -53,11 +53,10 @@ async function setupMocks(page, tags = ['VIP']) {
     r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
 }
 
-// Wait for flags + kanban board to render cards
 async function waitForKanbanCard(page) {
-  // Explicitly trigger flags.load() — don't wait for window.load (slow in CI)
-  await page.evaluate(() => window.flags && window.flags.load());
-  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
+  await page.evaluate(async () => {
+    if (window.flags) await window.flags.load();
+  });
   await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
   await page.waitForSelector('.kb-card', { timeout: 8000 });
 }
@@ -69,7 +68,7 @@ test.describe('Customer tags — module loaded', () => {
       test(`window.tagPicker defined — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await setupMocks(page);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         const hasModule = await page.evaluate(() => typeof window.tagPicker !== 'undefined');
         expect(hasModule).toBe(true);
@@ -86,7 +85,7 @@ test.describe('Customer tags — chip rendered on kanban card', () => {
       test(`ctp-chip appears on kb-card — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await setupMocks(page, ['VIP']);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         // Wait for flags + kanban to render
         await waitForKanbanCard(page);
@@ -112,11 +111,9 @@ test.describe('Customer tags — picker in customer profile', () => {
               customer: { email: TEST_EMAIL, name: 'VIP Customer', phone: '',
                 totalEvents: 2, totalBilled: 5000, events: [] },
               notes: '' }) }));
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
-        // Explicitly trigger flags.load() before waiting
-        await page.evaluate(() => window.flags && window.flags.load());
-        await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
+        await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
         // Navigate to customer profile page
         await page.evaluate(() => {
           if (window.customerProfile && typeof window.customerProfile.show === 'function') {
@@ -147,9 +144,8 @@ test.describe('Customer tags — flag gate', () => {
         ]}) }));
       await page.route('**/api/**', r =>
         r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
-      await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
-      await page.evaluate(() => window.flags && window.flags.load());
-      await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
+      await page.goto(BASE_URL + '/', { waitUntil: 'load' });
+      await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
       await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
       await page.waitForTimeout(500);
       // renderChips returns '' when flag OFF, so no ctp-chips should appear

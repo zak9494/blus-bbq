@@ -44,11 +44,10 @@ async function setupMocks(page, inquiries = []) {
     r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
 }
 
-// Explicitly trigger flags.load() so we don't wait for window.load event
-// (which can be slow in CI against Vercel preview URLs loading CDN assets).
 async function waitForFlags(page) {
-  await page.evaluate(() => window.flags && window.flags.load());
-  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
+  await page.evaluate(async () => {
+    if (window.flags) await window.flags.load();
+  });
 }
 
 // ── Container present on pipeline page ───────────────────────────────────────
@@ -58,7 +57,7 @@ test.describe("Today's Actions — container present", () => {
       test(`container in DOM — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await setupMocks(page);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
         const container = page.locator('#todays-actions-container');
@@ -76,7 +75,7 @@ test.describe("Today's Actions — empty state", () => {
       test(`shows empty message when no actions — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await setupMocks(page, []);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         // Wait for flags to load so isEnabled() returns the correct value
         await waitForFlags(page);
@@ -112,7 +111,7 @@ test.describe("Today's Actions — overdue follow-up row", () => {
             approved: true, has_unreviewed_update: true },
         ];
         await setupMocks(page, inqs);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         await waitForFlags(page);
         await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
@@ -145,7 +144,7 @@ test.describe("Today's Actions — today's event row", () => {
             approved: true, has_unreviewed_update: false },
         ];
         await setupMocks(page, inqs);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         await waitForFlags(page);
         await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
@@ -177,10 +176,8 @@ test.describe("Today's Actions — flag gate", () => {
         ]}) }));
       await page.route('**/api/**', r =>
         r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
-      await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
-      // Explicitly trigger flags.load() before waiting
-      await page.evaluate(() => window.flags && window.flags.load());
-      await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
+      await page.goto(BASE_URL + '/', { waitUntil: 'load' });
+      await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
       await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
       await page.waitForTimeout(400);
       const container = page.locator('#todays-actions-container');

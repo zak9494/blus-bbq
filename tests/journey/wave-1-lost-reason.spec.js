@@ -48,11 +48,10 @@ async function setupMocks(page) {
     r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
 }
 
-// Explicitly trigger flags.load() — don't wait for window.load (slow in CI).
-// lostReasonSheet.open() checks lost_reason_capture flag — needs cache ready.
 async function waitForFlags(page) {
-  await page.evaluate(() => window.flags && window.flags.load());
-  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
+  await page.evaluate(async () => {
+    if (window.flags) await window.flags.load();
+  });
 }
 
 // ── lostReasonSheet module loaded ─────────────────────────────────────────────
@@ -62,7 +61,7 @@ test.describe('Lost reason — module loaded', () => {
       test(`window.lostReasonSheet defined — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await setupMocks(page);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         const hasModule = await page.evaluate(() => typeof window.lostReasonSheet !== 'undefined');
         expect(hasModule).toBe(true);
@@ -79,7 +78,7 @@ test.describe('Lost reason — BottomSheet opens', () => {
       test(`BottomSheet panel visible after open() — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await setupMocks(page);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         // Wait for flags so lost_reason_capture is enabled when open() checks it
         await waitForFlags(page);
@@ -105,7 +104,7 @@ test.describe('Lost reason — reason buttons in sheet', () => {
       test(`reason options appear — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await setupMocks(page);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         await waitForFlags(page);
         await page.evaluate(() => {
@@ -129,7 +128,7 @@ test.describe('Lost reason — skip path', () => {
       test(`Skip calls onConfirm(null) and closes sheet — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await setupMocks(page);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         // Wait for flags so the sheet actually opens (vs immediate fallback)
         await waitForFlags(page);
@@ -160,7 +159,7 @@ test.describe('Lost reason — settings editor', () => {
       test(`settings-lost-reasons-editor present on settings page — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await setupMocks(page);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         // Wait for flags before navigating to settings (initLostReasonsSettings checks flag)
         await waitForFlags(page);

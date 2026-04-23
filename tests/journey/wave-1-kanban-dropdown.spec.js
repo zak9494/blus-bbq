@@ -53,14 +53,11 @@ async function setupMocks(page) {
     r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
 }
 
-// Wait for flags cache + kanban board to render cards
 async function waitForKanbanCard(page) {
-  // Explicitly trigger flags.load() — don't wait for window.load (slow in CI)
-  await page.evaluate(() => window.flags && window.flags.load());
-  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 5000 });
-  // Re-trigger pipeline load with flags now ready
+  await page.evaluate(async () => {
+    if (window.flags) await window.flags.load();
+  });
   await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
-  // Wait for a kb-status-sel to appear (kanban card rendered)
   await page.waitForSelector('.kb-status-sel', { timeout: 8000 });
 }
 
@@ -71,7 +68,7 @@ test.describe('Kanban dropdown — select present on cards', () => {
       test(`kb-status-sel present — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await setupMocks(page);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         await waitForKanbanCard(page);
         const sel = page.locator('.kb-status-sel').first();
@@ -94,7 +91,7 @@ test.describe('Kanban dropdown — status change fires save', () => {
           saveHit = true;
           await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
         });
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         await waitForKanbanCard(page);
         const sel = page.locator('.kb-status-sel').first();
@@ -115,7 +112,7 @@ test.describe('Kanban dropdown — declined opens BottomSheet', () => {
       test(`BottomSheet visible after selecting Lost — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await setupMocks(page);
-        await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+        await page.goto(BASE_URL + '/', { waitUntil: 'load' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
         await waitForKanbanCard(page);
         const sel = page.locator('.kb-status-sel').first();
