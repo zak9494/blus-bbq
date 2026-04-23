@@ -36,7 +36,7 @@ async function setupMocks(page, tags = ['VIP']) {
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ connected: false }) }));
   await page.route('**/api/notifications/counts', r =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ unread: 0 }) }));
-  await page.route('**/api/inquiries/list', r =>
+  await page.route('**/api/inquiries/list*', r =>
     r.fulfill({ status: 200, contentType: 'application/json',
       body: JSON.stringify({ ok: true, inquiries: [SAMPLE_INQ], total: 1 }) }));
   await page.route('**/api/customers/tags**', r =>
