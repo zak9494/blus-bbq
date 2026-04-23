@@ -2,6 +2,7 @@
 const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
+  workers: 4,
   use: {
     // Pass the Vercel automation bypass header when running against a protected preview.
     // Set VERCEL_AUTOMATION_BYPASS_SECRET in repo secrets (Vercel → Project → Settings →
