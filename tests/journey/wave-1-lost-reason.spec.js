@@ -18,12 +18,6 @@ const VIEWPORTS = [
 ];
 const THEMES = ['light', 'dark'];
 
-const SAMPLE_INQ = {
-  threadId: 'test-lr-001', customer_name: 'Lost Lead', from: 'lost@test.com',
-  status: 'quote_sent', event_date: '2026-08-01', guest_count: 40,
-  approved: true, has_unreviewed_update: false,
-};
-
 const DEFAULT_REASONS = ['Budget too high', 'Competitor', 'No response from customer', 'Event cancelled', 'Other'];
 
 async function setupMocks(page) {
@@ -40,7 +34,7 @@ async function setupMocks(page) {
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ unread: 0 }) }));
   await page.route('**/api/inquiries/list', r =>
     r.fulfill({ status: 200, contentType: 'application/json',
-      body: JSON.stringify({ ok: true, inquiries: [SAMPLE_INQ], total: 1 }) }));
+      body: JSON.stringify({ ok: true, inquiries: [], total: 0 }) }));
   await page.route('**/api/settings/lost-reasons**', r =>
     r.fulfill({ status: 200, contentType: 'application/json',
       body: JSON.stringify({ ok: true, reasons: DEFAULT_REASONS }) }));
@@ -52,6 +46,12 @@ async function setupMocks(page) {
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, tags: [] }) }));
   await page.route('**/api/**', r =>
     r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+}
+
+// Wait for flags cache to be populated (window.load fires flags.load()).
+// lostReasonSheet.open() checks lost_reason_capture flag — needs cache ready.
+async function waitForFlags(page) {
+  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 8000 });
 }
 
 // ── lostReasonSheet module loaded ─────────────────────────────────────────────
@@ -80,15 +80,15 @@ test.describe('Lost reason — BottomSheet opens', () => {
         await setupMocks(page);
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
-        // Directly call lostReasonSheet.open() to test it in isolation
+        // Wait for flags so lost_reason_capture is enabled when open() checks it
+        await waitForFlags(page);
         await page.evaluate(() => {
           if (window.lostReasonSheet) {
-            window.lostReasonSheet.open('test-lr-001', function() {}, function() {});
+            window.lostReasonSheet.open('wave1-lr-001', function() {}, function() {});
           }
         });
-        await page.waitForTimeout(400);
         const panel = page.locator('#bottom-sheet-panel.bs-open');
-        await expect(panel).toBeVisible();
+        await expect(panel).toBeVisible({ timeout: 4000 });
         const title = await page.locator('#bottom-sheet-title').textContent();
         expect(title?.toLowerCase()).toContain('lost');
         await page.screenshot({ path: `${OUT}/sheet-open-${vp.name}-${theme}.png`, fullPage: false });
@@ -106,11 +106,12 @@ test.describe('Lost reason — reason buttons in sheet', () => {
         await setupMocks(page);
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
+        await waitForFlags(page);
         await page.evaluate(() => {
-          if (window.lostReasonSheet) window.lostReasonSheet.open('test-lr-001', function() {}, function() {});
+          if (window.lostReasonSheet) window.lostReasonSheet.open('wave1-lr-001', function() {}, function() {});
         });
         // Wait for async reason fetch + DOM swap
-        await page.waitForTimeout(700);
+        await page.waitForSelector('.lrs-btn', { timeout: 6000 });
         const buttons = page.locator('.lrs-btn');
         const count = await buttons.count();
         expect(count).toBeGreaterThan(0);
@@ -129,13 +130,16 @@ test.describe('Lost reason — skip path', () => {
         await setupMocks(page);
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
+        // Wait for flags so the sheet actually opens (vs immediate fallback)
+        await waitForFlags(page);
         const confirmedWith = await page.evaluate(() => new Promise(resolve => {
           if (!window.lostReasonSheet) return resolve('no-module');
-          window.lostReasonSheet.open('test-lr-001', r => resolve(r === null ? 'null' : String(r)), function() {});
-          // Click Skip after a tick
+          window.lostReasonSheet.open('wave1-lr-001', r => resolve(r === null ? 'null' : String(r)), function() {});
+          // Click Skip after a tick so the sheet has rendered
           setTimeout(() => {
             const skipBtn = Array.from(document.querySelectorAll('.bs-btn')).find(b => b.textContent === 'Skip');
             if (skipBtn) skipBtn.click();
+            else resolve('no-skip-btn'); // safety: resolve so test doesn't hang
           }, 600);
         }));
         expect(confirmedWith).toBe('null');
@@ -157,11 +161,19 @@ test.describe('Lost reason — settings editor', () => {
         await setupMocks(page);
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
+        // Wait for flags before navigating to settings (initLostReasonsSettings checks flag)
+        await waitForFlags(page);
         await page.evaluate(() => typeof showPage === 'function' && showPage('settings'));
-        await page.waitForTimeout(500);
         const editor = page.locator('#settings-lost-reasons-editor');
-        await expect(editor).toBeAttached();
-        // Editor should show loaded reasons
+        await expect(editor).toBeAttached({ timeout: 4000 });
+        // Wait for async fetch to populate the editor with reasons
+        await page.waitForFunction(
+          () => {
+            var el = document.getElementById('settings-lost-reasons-editor');
+            return el && el.textContent && el.textContent.includes('Budget too high');
+          },
+          { timeout: 6000 }
+        );
         const text = await editor.textContent();
         expect(text).toContain('Budget too high');
         await page.screenshot({ path: `${OUT}/settings-editor-${vp.name}-${theme}.png`, fullPage: false });

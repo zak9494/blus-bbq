@@ -44,6 +44,12 @@ async function setupMocks(page, inquiries = []) {
     r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
 }
 
+// Wait for flags cache to be populated (window.load event fires flags.load()).
+// Without this, isEnabled() returns false while _cache is null.
+async function waitForFlags(page) {
+  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 8000 });
+}
+
 // ── Container present on pipeline page ───────────────────────────────────────
 test.describe("Today's Actions — container present", () => {
   for (const vp of VIEWPORTS) {
@@ -53,7 +59,6 @@ test.describe("Today's Actions — container present", () => {
         await setupMocks(page);
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
-        // navigate to pipeline
         await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
         const container = page.locator('#todays-actions-container');
         await expect(container).toBeAttached();
@@ -69,12 +74,21 @@ test.describe("Today's Actions — empty state", () => {
     for (const theme of THEMES) {
       test(`shows empty message when no actions — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
-        // No approved inquiries with action items
         await setupMocks(page, []);
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
+        // Wait for flags to load so isEnabled() returns the correct value
+        await waitForFlags(page);
+        // Re-trigger pipeline load now that flags are ready
         await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
-        await page.waitForTimeout(300);
+        // Wait for async render
+        await page.waitForFunction(
+          () => {
+            var el = document.getElementById('todays-actions-container');
+            return el && el.textContent && el.textContent.includes('All clear for today');
+          },
+          { timeout: 5000 }
+        );
         const container = page.locator('#todays-actions-container');
         const text = await container.textContent();
         expect(text).toContain('All clear for today');
@@ -90,16 +104,24 @@ test.describe("Today's Actions — overdue follow-up row", () => {
     for (const theme of THEMES) {
       test(`shows overdue row when has_unreviewed_update — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
+        // threadId must NOT start with 'test-' (pipelineInqCache filters those out)
         const inqs = [
-          { threadId: 'test-tda-001', customer_name: 'Jane Doe', from: 'jane@test.com',
+          { threadId: 'wave1-ta-001', customer_name: 'Jane Doe', from: 'jane@example.com',
             status: 'quote_sent', event_date: '2026-06-01', guest_count: 50,
             approved: true, has_unreviewed_update: true },
         ];
         await setupMocks(page, inqs);
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
+        await waitForFlags(page);
         await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
-        await page.waitForTimeout(500);
+        await page.waitForFunction(
+          () => {
+            var el = document.getElementById('todays-actions-container');
+            return el && el.textContent && el.textContent.includes('Jane Doe');
+          },
+          { timeout: 5000 }
+        );
         const container = page.locator('#todays-actions-container');
         const text = await container.textContent();
         expect(text).toContain('Jane Doe');
@@ -117,15 +139,22 @@ test.describe("Today's Actions — today's event row", () => {
       test(`shows event row for today's booked event — ${vp.name} ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         const inqs = [
-          { threadId: 'test-tda-002', customer_name: 'Bob Smith', from: 'bob@test.com',
+          { threadId: 'wave1-ta-002', customer_name: 'Bob Smith', from: 'bob@example.com',
             status: 'booked', event_date: TODAY, guest_count: 80,
             approved: true, has_unreviewed_update: false },
         ];
         await setupMocks(page, inqs);
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
+        await waitForFlags(page);
         await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
-        await page.waitForTimeout(500);
+        await page.waitForFunction(
+          () => {
+            var el = document.getElementById('todays-actions-container');
+            return el && el.textContent && el.textContent.includes('Bob Smith');
+          },
+          { timeout: 5000 }
+        );
         const container = page.locator('#todays-actions-container');
         const text = await container.textContent();
         expect(text).toContain('Bob Smith');
@@ -148,8 +177,10 @@ test.describe("Today's Actions — flag gate", () => {
       await page.route('**/api/**', r =>
         r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
       await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
+      // Wait for flags to load (nav_v2 is on, so this will return true once loaded)
+      await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 8000 });
       await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(400);
       const container = page.locator('#todays-actions-container');
       // When flag is off, widget should be hidden (display:none)
       const display = await container.evaluate(el => window.getComputedStyle(el).display);

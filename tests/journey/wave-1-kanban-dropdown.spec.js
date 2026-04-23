@@ -18,8 +18,9 @@ const VIEWPORTS = [
 ];
 const THEMES = ['light', 'dark'];
 
+// threadId must NOT start with 'test-' — pipelineInqCache filters those out
 const SAMPLE_INQ = {
-  threadId: 'test-kdd-001', customer_name: 'Alice Kanban', from: 'alice@test.com',
+  threadId: 'wave1-kd-001', customer_name: 'Alice Kanban', from: 'alice@example.com',
   status: 'needs_info', event_date: '2026-07-10', guest_count: 60,
   approved: true, has_unreviewed_update: false,
 };
@@ -29,9 +30,9 @@ async function setupMocks(page) {
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ connected: false }) }));
   await page.route('**/api/flags', r =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ flags: [
-      { name: 'nav_v2',             enabled: true, description: '' },
-      { name: 'kanban_restructure', enabled: true, description: '' },
-      { name: 'ios_polish_v1',      enabled: true, description: '' },
+      { name: 'nav_v2',              enabled: true, description: '' },
+      { name: 'kanban_restructure',  enabled: true, description: '' },
+      { name: 'ios_polish_v1',       enabled: true, description: '' },
       { name: 'lost_reason_capture', enabled: true, description: '' },
     ]}) }));
   await page.route('**/api/notifications/counts', r =>
@@ -52,6 +53,16 @@ async function setupMocks(page) {
     r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
 }
 
+// Wait for flags cache + kanban board to render cards
+async function waitForKanbanCard(page) {
+  // First wait for flags (required for kanban_restructure check in loadPipelineInquiries)
+  await page.waitForFunction(() => window.flags && window.flags.isEnabled('nav_v2'), { timeout: 8000 });
+  // Re-trigger pipeline load with flags now ready
+  await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
+  // Wait for a kb-status-sel to appear (kanban card rendered)
+  await page.waitForSelector('.kb-status-sel', { timeout: 8000 });
+}
+
 // ── Select element present on every kanban card ───────────────────────────────
 test.describe('Kanban dropdown — select present on cards', () => {
   for (const vp of VIEWPORTS) {
@@ -61,8 +72,7 @@ test.describe('Kanban dropdown — select present on cards', () => {
         await setupMocks(page);
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
-        await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
-        await page.waitForTimeout(600);
+        await waitForKanbanCard(page);
         const sel = page.locator('.kb-status-sel').first();
         await expect(sel).toBeAttached();
         await page.screenshot({ path: `${OUT}/select-present-${vp.name}-${theme}.png`, fullPage: false });
@@ -85,8 +95,7 @@ test.describe('Kanban dropdown — status change fires save', () => {
         });
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
-        await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
-        await page.waitForTimeout(600);
+        await waitForKanbanCard(page);
         const sel = page.locator('.kb-status-sel').first();
         await expect(sel).toBeAttached();
         await sel.selectOption('booked');
@@ -107,18 +116,17 @@ test.describe('Kanban dropdown — declined opens BottomSheet', () => {
         await setupMocks(page);
         await page.goto(BASE_URL + '/', { waitUntil: 'domcontentloaded' });
         await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
-        await page.evaluate(() => typeof showPage === 'function' && showPage('pipeline'));
-        await page.waitForTimeout(600);
+        await waitForKanbanCard(page);
         const sel = page.locator('.kb-status-sel').first();
         await expect(sel).toBeAttached();
         await sel.selectOption('declined');
         await page.waitForTimeout(500);
         // BottomSheet panel should be visible
         const panel = page.locator('#bottom-sheet-panel.bs-open');
-        await expect(panel).toBeVisible();
+        await expect(panel).toBeVisible({ timeout: 4000 });
         // Title should be lost-related
         const title = await page.locator('#bottom-sheet-title').textContent();
-        expect(title).toContain('lost');
+        expect(title?.toLowerCase()).toContain('lost');
         await page.screenshot({ path: `${OUT}/declined-sheet-${vp.name}-${theme}.png`, fullPage: false });
       });
     }
