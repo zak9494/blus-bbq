@@ -131,6 +131,8 @@
           </div>
         </div>
 
+        <div id="cp-tag-picker-container" style="margin:14px 0 0"></div>
+
         <div class="cp-notes-panel">
           <div class="cp-notes-label">Personal Notes</div>
           <textarea class="cp-notes-textarea" id="cp-notes-input" placeholder="Kids names, allergies, preferences, special requests…">${_lastNotes}</textarea>
@@ -140,6 +142,12 @@
         <div class="cp-timeline-hdr">Event History (${c.events.length})</div>
         ${eventsHtml}
       `;
+
+      // Wire tag picker (Wave 1)
+      if (window.tagPicker) {
+        const tpContainer = document.getElementById('cp-tag-picker-container');
+        if (tpContainer) window.tagPicker.init(tpContainer, c.email || email);
+      }
 
       // Wire up notes autosave
       const textarea = document.getElementById('cp-notes-input');

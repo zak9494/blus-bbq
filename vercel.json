@@ -48,7 +48,9 @@
     { "source": "/api/quotes/duplicate", "destination": "/api/quotes/duplicate.js" },
     { "source": "/api/quotes/templates", "destination": "/api/quotes/templates.js" },
     { "source": "/api/quotes/templates/:id", "destination": "/api/quotes/templates.js" },
-    { "source": "/api/cron/weekly-digest", "destination": "/api/cron/weekly-digest.js" }
+    { "source": "/api/cron/weekly-digest", "destination": "/api/cron/weekly-digest.js" },
+    { "source": "/api/customers/tags",      "destination": "/api/customers/tags.js" },
+    { "source": "/api/settings/lost-reasons", "destination": "/api/settings/lost-reasons.js" }
   ],
   "crons": [
     {

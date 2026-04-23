@@ -1,0 +1,159 @@
+/* ===== Customer tag picker ===== */
+
+/* Full picker (customer profile) */
+.ctp-container {
+  margin: 14px 0;
+}
+
+.ctp-section-hdr {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+
+.ctp-loading {
+  font-size: 12px;
+  color: var(--text3);
+}
+
+.ctp-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.ctp-pill {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: 'DM Sans', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ctp-pill:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.ctp-pill-on {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #fff;
+  font-weight: 600;
+}
+
+.ctp-pill-on:hover {
+  background: var(--orange-dark);
+  border-color: var(--orange-dark);
+  color: #fff;
+}
+
+.ctp-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.ctp-add-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+}
+
+.ctp-add-input:focus {
+  border-color: var(--orange);
+}
+
+/* Inline chips on inquiry cards / kanban cards */
+.ctp-chip {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: rgba(255, 136, 0, 0.12);
+  color: var(--orange);
+  border: 1px solid rgba(255, 136, 0, 0.25);
+  white-space: nowrap;
+}
+
+/* Chip row on kanban cards */
+.kb-card-customer-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* Lost-reason sheet grid */
+.lrs-wrap {
+  padding: 4px 0 8px;
+}
+
+.lrs-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.lrs-btn {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lrs-btn:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.lrs-btn-active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  font-weight: 600;
+}
+
+.lrs-other {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  resize: none;
+  outline: none;
+  margin-top: 4px;
+}
+
+.lrs-other:focus {
+  border-color: var(--red);
+}

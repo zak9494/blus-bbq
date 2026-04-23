@@ -159,10 +159,14 @@
     div.setAttribute('data-tid', inq.threadId);
     div.setAttribute('data-email', email);
     div.__inq__ = inq; // keep reference for popup
+    // Customer tag chips (Wave 1)
+    var ctpHtml = (window.tagPicker && email) ? window.tagPicker.renderChips(email) : '';
+
     div.innerHTML =
       '<div class="kb-card-name">' + dot + name + '</div>'
       + '<div class="kb-card-meta">' + escHtml(ev) + escHtml(guests) + '</div>'
       + (tags ? '<div class="kb-card-tags">' + tags + '</div>' : '<div class="kb-card-tags"></div>')
+      + '<div class="kb-card-customer-tags" style="' + (ctpHtml ? '' : 'display:none') + '">' + ctpHtml + '</div>'
       + '<div class="kb-card-footer">'
         + '<select class="kb-status-sel" title="Move to status">' + opts + '</select>'
       + '</div>';
@@ -190,21 +194,27 @@
       });
     }
 
-    // Status select change → statusSync.set
+    // Status select change — use cardStatusDropdown module (Wave 1) if available
     var sel = div.querySelector('.kb-status-sel');
-    sel.addEventListener('change', function (e) {
-      e.stopPropagation();
-      var newStatus = sel.value;
-      if (newStatus === 'declined') {
-        openLostModal(inq.threadId, inq.status, function (reason) {
-          _commitStatus(inq.threadId, newStatus, reason);
-        }, function () {
-          sel.value = inq.status; // cancel → restore
-        });
-      } else {
-        _commitStatus(inq.threadId, newStatus, null);
-      }
-    });
+    if (window.cardStatusDropdown) {
+      window.cardStatusDropdown.wire(sel, inq, function (newStatus, lostReason) {
+        _commitStatus(inq.threadId, newStatus, lostReason);
+      });
+    } else {
+      sel.addEventListener('change', function (e) {
+        e.stopPropagation();
+        var newStatus = sel.value;
+        if (newStatus === 'declined') {
+          openLostModal(inq.threadId, inq.status, function (reason) {
+            _commitStatus(inq.threadId, newStatus, reason);
+          }, function () {
+            sel.value = inq.status;
+          });
+        } else {
+          _commitStatus(inq.threadId, newStatus, null);
+        }
+      });
+    }
 
     // DnD events
     div.addEventListener('dragstart', function (e) {
@@ -308,11 +318,15 @@
       if (!tid || newStatus === _dragSrcCol) return;
 
       if (newStatus === 'declined') {
-        openLostModal(tid, _dragSrcCol, function (reason) {
-          _commitStatus(tid, newStatus, reason);
-        }, function () {
-          // cancel: no change
-        });
+        if (window.lostReasonSheet) {
+          window.lostReasonSheet.open(tid, function (reason) {
+            _commitStatus(tid, newStatus, reason);
+          }, function () { /* cancel — no change */ });
+        } else {
+          openLostModal(tid, _dragSrcCol, function (reason) {
+            _commitStatus(tid, newStatus, reason);
+          }, function () {});
+        }
       } else {
         _commitStatus(tid, newStatus, null);
       }
@@ -333,6 +347,16 @@
     // Hydrate statusSync
     if (window.statusSync && typeof window.statusSync._hydrate === 'function') {
       window.statusSync._hydrate(data);
+    }
+
+    // Prefetch customer tags for all unique emails (Wave 1)
+    if (window.tagPicker) {
+      var emails = [];
+      data.forEach(function (inq) {
+        var e = getCustomerEmail(inq);
+        if (e && emails.indexOf(e) === -1) emails.push(e);
+      });
+      window.tagPicker.prefetch(emails);
     }
 
     // Group by status
