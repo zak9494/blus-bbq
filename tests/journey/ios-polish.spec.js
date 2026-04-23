@@ -8,7 +8,7 @@ const { test, expect } = require('@playwright/test');
 const fs   = require('fs');
 const path = require('path');
 
-const BASE_URL = process.env.QA_BASE_URL || 'https://blus-bbq.vercel.app';
+const BASE_URL = process.env.SMOKE_BASE_URL || process.env.QA_BASE_URL || 'https://blus-bbq.vercel.app';
 const OUT = path.join(__dirname, '../../outputs/qa-ios-polish');
 fs.mkdirSync(OUT, { recursive: true });
 
