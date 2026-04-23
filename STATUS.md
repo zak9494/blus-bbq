@@ -691,3 +691,48 @@ New `api/cron/poll-inquiries.js`:
 ### Current blockers before starting
 - **Zach's re-OAuth** is required for Phases 2-8 to work (Phase 1 deploys first)
 - R3 must be fully verified on Zach's device first
+
+---
+
+## Wave 0 — Infrastructure Pass
+**Date:** 2026-04-22–23  
+**Goal:** Merge all open feature PRs, harden CI and flag infrastructure, document invariants.
+
+---
+
+### Shipped
+
+| PR / Commit | What landed |
+|-------------|-------------|
+| PR #25 (squash-merged) | Expose `pipelineInqCache` on `window` for kanban-view.js |
+| PR #30 (changes cherry-picked to main) | Gate ezCater filter chip behind `ezcater_integration` flag |
+| PR #28 (squash-merged) | Layout + touch target fixes from QA punch list (mobile 44px targets, hamburger 44×44px) |
+| PR #27 (direct merge) | Group 9 extended — overdue widget, quote templates, weekly digest, duplicate-quote, richer customer profile; consolidated `customer_profile` → `customer_profile_v2` |
+| Commit `58f0fb3` | Fix `api/flags.js` to accept `INQ_SECRET` OR `SELF_MODIFY_SECRET` (unblocked all smoke suites) |
+| Commit `bf89647` | PR #27 merge commit — all new API files, static modules, vercel.json routes added |
+| PR #39 (open) | Flip `nav_v2` flag to `default: true` + Playwright smoke test for bottom tab bar at iPhone 375px |
+| PR #40 (open) | CLAUDE.md: four new sections (two-tier QA gate, SMS sender lockdown, payment abstraction, feature modularity) + `tests/journey/` scaffold + `smoke.yml` journey suite |
+
+### KV state fixes
+- Reset `test_customer_mode`, `ai_quote_updates`, `notifications_center` flags to OFF in production KV (stale-enabled state was causing smoke test failures).
+
+### Infrastructure changes
+- `api/_lib/flags.js`: Added `default` field support to `SEED_FLAGS`; `getFlag()` and `listFlags()` now respect `seed.default` when no KV record exists.
+- `api/self-modify.js`: `STATIC_MODULE_FILES` extended with all Group 9 extended modules.
+- `.github/workflows/smoke.yml`: Updated to run `tests/smoke/ tests/journey/` together.
+- `tests/journey/README.md`: Created scaffold with conventions, local run instructions, CI note.
+
+### Queued Tier 2 walkthroughs (visual — not blocking)
+- `nav_v2` bottom tab bar at iPhone 375px, iPad 768px, desktop 1280px
+- Extended customer profile (PR #27) at all viewports
+- Kanban view (PR #25 touches kanban surface)
+
+### Deferred / needs manual action
+- **PR #30 closure:** Changes already on main. User must close PR #30 manually (permission prompt denied).
+- **PR #39 merge:** Waiting for smoke CI to pass, then merge.
+- **PR #40 merge:** Waiting for smoke CI to pass (no functional code change — docs only), then merge.
+
+---
+
+## Next: Wave 1
+TBD — pending Zach's direction after Wave 0 merges.
