@@ -795,5 +795,43 @@ New `api/cron/poll-inquiries.js`:
 
 ---
 
+## Hotfix — nav_v2 toggle not rendering (PR #44)
+**Status: MERGED ✓ · PR #44 · main HEAD: `39ef813` · 2026-04-23**
+
+### Root cause
+`toggleFlag()` in `index.html` called `window.flags.reload()` after writing the
+new flag state to KV, but never called `window.navV2.init()`. So toggling `nav_v2`
+ON in the Settings / Flags page updated the cache but the activation logic
+(`_activate()` — which adds `.nav-v2-active` to `.app` and shows the tab bar)
+never re-ran. A full page reload was required.
+
+Note: production KV already had `nav_v2: true`, so the nav was activating
+correctly on page load. The bug only manifested when toggling in-place from a
+session where the flag was OFF at load time.
+
+### Fix
+One line added in `toggleFlag` (index.html), after the flags reload:
+```js
+if (window.navV2) window.navV2.init();
+```
+`navV2.init()` is idempotent — it reads the refreshed cache and only calls
+`_activate()` if `nav_v2` is true, so running it on every flag toggle is harmless.
+
+### Journey test pattern established
+`tests/journey/nav-v2-toggle-live.spec.js` — three Playwright tests:
+1. **Golden path (regression guard):** load with `nav_v2=false` (mocked), click the
+   toggle, assert `.app` gets `nav-v2-active` WITHOUT `page.reload()`. Designed to
+   fail on unfixed code and pass once `toggleFlag` calls `navV2.init()`.
+2. **Baseline OFF:** nav not active on load when flag is false.
+3. **Baseline ON:** nav activates on load when flag is true.
+
+**Pattern for future flag-driven layout toggles:** any flag that controls a
+class/style that isn't rechecked on every render needs a corresponding
+`window.module.init()` call in `toggleFlag` after `flags.reload()`.
+
+CI: Playwright smoke suite ✅ (run 24837061717). Unit tests: 255 pass / 0 fail.
+
+---
+
 ## Next: Wave 1
 TBD — pending Zach's direction.
