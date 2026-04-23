@@ -648,15 +648,37 @@
 
       if (r.status === 403) {
         /* Past event — offer soft-delete (hide with strikethrough, preserved for records) */
-        if (window.confirm('Past events cannot be deleted (they are preserved for records).\n\nHide it on the calendar instead? It will appear struck through.')) {
+        if (window.BottomSheet) {
+          window.BottomSheet.open({
+            title: 'Past Event',
+            body: 'Past events are preserved for records and cannot be permanently deleted.',
+            actions: [
+              { label: 'Hide on Calendar', style: 'danger', onClick: function () { deleteEvent(eventId, { soft: true }); } },
+              { label: 'Keep Event',       style: 'cancel' },
+            ],
+          });
+        } else if (window.confirm('Past events cannot be deleted (they are preserved for records).\n\nHide it on the calendar instead? It will appear struck through.')) {
           return deleteEvent(eventId, { soft: true });
         }
         return;
       }
 
       if (d.requiresConfirmation) {
-        if (!window.confirm('Delete this event from Google Calendar?')) return;
-        return deleteEvent(eventId, { confirmed: true });
+        if (window.BottomSheet) {
+          window.BottomSheet.open({
+            title: 'Delete Event',
+            body: 'Remove this event from Google Calendar? This cannot be undone.',
+            actions: [
+              { label: 'Delete',  style: 'danger',  onClick: function () { deleteEvent(eventId, { confirmed: true }); } },
+              { label: 'Cancel',  style: 'cancel' },
+            ],
+          });
+        } else if (!window.confirm('Delete this event from Google Calendar?')) {
+          return;
+        } else {
+          return deleteEvent(eventId, { confirmed: true });
+        }
+        return;
       }
 
       if (!d.ok) throw new Error(d.error || 'Delete failed');

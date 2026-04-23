@@ -767,11 +767,25 @@ TBD — pending Zach's direction after Wave 0 merges.
 2. Calendar soft-delete (strikethrough) + confirmation dialog at all viewports
 3. Extended customer profile (PR #27) at all viewports
 4. Kanban view (PR #25) at all viewports
+5. **Wave 0.5 iOS polish** — PWA install prompt on iOS Safari; bottom-sheet delete confirmation at 375px; pull-to-refresh on tasks/pipeline/calendar; iOS-style toggles on settings checkboxes; tab bar safe-area on notched iPhone
 
 ### Unit test baseline
-- **255 pass, 0 fail** (was 250 pass, 1 fail at Wave 0 start)
+- **255 pass, 0 fail** (unchanged through Wave 0.5)
 
 ---
 
-## Next: Wave 0.5 (iOS polish)
-Spawn fresh task when ready. Tier 2 walkthroughs above are the primary input.
+## Wave 0.5 — iOS Polish (feat/ios-polish-wave-0-5)
+**Status: PR open, pending CI + merge**
+
+### Changes shipped
+1. **PWA icons** — `static/icons/` with 192, 512, maskable-512, apple-touch-icon (180). Placeholder "BB" glyphs; swap real logo by dropping files in same dir. `manifest.json` updated. `<link rel="apple-touch-icon">` added to `<head>`.
+2. **Safe-area insets** — `nav2-topbar` height/padding-top now uses `env(safe-area-inset-top)`; sidebar top tracks topbar; `.nav-v2-active` padding-top matches; tabbar already had `env(safe-area-inset-bottom)` (kept). Bottom-sheet panel also uses `env(safe-area-inset-bottom)` padding.
+3. **Tap-flash suppression** — `-webkit-tap-highlight-color: transparent` applied globally to all tappable selectors. Subtle `scale(0.98)` `:active` states on `.btn` and `.inq-card`.
+4. **Context-aware keyboards** — Phone inputs: `type="tel" inputmode="tel"`; email: `type="email" inputmode="email"`; guest count: `inputmode="numeric"`; numeric fees: `inputmode="decimal"`. `autocomplete` hints added where obvious.
+5. **iOS-style toggles** — `.toggle-ios` CSS class in `theme.css`. Applied to: `#qb-tax-exempt-chk`, `#inq-tax-exempt-chk`, `#lm-followup`, and all dynamically generated feature-flag checkboxes.
+6. **Disclosure chevrons** — `.settings-row-arrow` upgraded from `›` text to SVG mask-image chevron that inherits `--text3` in both themes. All 9 settings tap-rows updated automatically.
+7. **Body-scroll-lock** — `static/js/ui/scroll-lock.js`: `window.scrollLock.lock()` / `.unlock()` with iOS fixed-position trick. Registered in `STATIC_MODULE_FILES`.
+8. **Bottom-sheet** — `static/js/ui/bottom-sheet.js` + `static/css/ui/bottom-sheet.css`. `BottomSheet.open({title, body, actions})`. Calendar delete confirmations (past-event + future-event) replaced; falls back to `window.confirm()` if module not loaded. Swipe-to-dismiss on handle, Escape key closes.
+9. **Pull-to-refresh** — `static/js/ui/pull-to-refresh.js`. `PullToRefresh.activate(asyncFn)` / `.deactivate()`. Wired to pipeline (`renderPipelineInquiries`), calendar (`calInit`), scheduled (`loadScheduled`) via `showPage` patch. Mobile-only (no-op on desktop). 70px threshold, rubber-band spring.
+10. **Feature flag** — `ios_polish_v1` added to `SEED_FLAGS`, default `true`.
+11. **Tier 1 tests** — `tests/journey/ios-polish.spec.js`: bottom-sheet open/close + scroll lock, PTR module present, scroll-lock module present, toggle-ios on checkboxes, inputmode attrs, tab-bar safe-area, apple-touch-icon, manifest 4 icons. Sweeps 375/768/1440 × light/dark. Unit tests: 255 pass / 0 fail.
