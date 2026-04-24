@@ -50,7 +50,16 @@
     { "source": "/api/quotes/templates/:id", "destination": "/api/quotes/templates.js" },
     { "source": "/api/cron/weekly-digest", "destination": "/api/cron/weekly-digest.js" },
     { "source": "/api/customers/tags",      "destination": "/api/customers/tags.js" },
-    { "source": "/api/settings/lost-reasons", "destination": "/api/settings/lost-reasons.js" }
+    { "source": "/api/settings/lost-reasons", "destination": "/api/settings/lost-reasons.js" },
+    { "source": "/api/invoices/summary", "destination": "/api/invoices/summary.js" },
+    { "source": "/api/invoices/list",    "destination": "/api/invoices/list.js" },
+    { "source": "/api/invoices/create",  "destination": "/api/invoices/create.js" },
+    { "source": "/api/invoices/update",  "destination": "/api/invoices/update.js" },
+    { "source": "/api/invoices/payment", "destination": "/api/invoices/payment.js" },
+    { "source": "/api/invoices/void",    "destination": "/api/invoices/void.js" },
+    { "source": "/api/invoices/remind",  "destination": "/api/invoices/remind.js" },
+    { "source": "/api/invoices/pdf",     "destination": "/api/invoices/pdf.js" },
+    { "source": "/api/invoices/export",  "destination": "/api/invoices/export.js" }
   ],
   "crons": [
     {

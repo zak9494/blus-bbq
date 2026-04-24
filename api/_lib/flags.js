@@ -74,6 +74,8 @@ const SEED_FLAGS = [
   { name: 'todays_actions_widget',  description: "Wave 1: Today's Actions card on dashboard home — overdue follow-ups, today's events, AI draft reviews, pending approvals", default: true },
   { name: 'customer_tags',          description: 'Wave 1: Customer tag picker on profiles + tag chips on inquiry cards (VIP, Corporate, etc.)', default: true },
   { name: 'lost_reason_capture',    description: 'Wave 1: BottomSheet for lost-reason when moving card to Lost; user-editable reasons in Settings', default: true },
+  // Invoice Manager
+  { name: 'invoice_manager_v1',    description: 'Invoice Manager: create, track, and record payments on invoices — manual flow only (default OFF)' },
 ];
 
 async function getFlag(name, defaultValue) {
