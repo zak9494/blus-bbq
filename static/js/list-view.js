@@ -30,6 +30,13 @@
   var _search   = '';
   var _container = null;
   var _expandedNotes = new Set();
+  var _dpStart  = null;
+  var _dpEnd    = null;
+  var _dpPicker = null;
+
+  function _dpEnabled() {
+    return !!(window.flags && typeof window.flags.isEnabled === 'function' && window.flags.isEnabled('date_picker_v2'));
+  }
 
   function escHtml(s) {
     return String(s)
@@ -67,8 +74,18 @@
       // Status filter
       if (_filters.status && inq.status !== _filters.status) return false;
 
-      // Date range filter
-      if (_filters.dateRange && inq.event_date) {
+      // Date-picker range filter (date_picker_v2 flag)
+      if (_dpEnabled() && (_dpStart || _dpEnd) && inq.event_date) {
+        var dpParts = String(inq.event_date).split('-');
+        var dpD = new Date(+dpParts[0], +dpParts[1]-1, +dpParts[2]);
+        if (!isNaN(dpD.getTime())) {
+          if (_dpStart && dpD < _dpStart) return false;
+          if (_dpEnd   && dpD > _dpEnd)   return false;
+        }
+      }
+
+      // Date range filter (legacy chips)
+      if (!_dpEnabled() && _filters.dateRange && inq.event_date) {
         var d = new Date(inq.event_date + 'T00:00:00');
         if (_filters.dateRange === 'upcoming_30') {
           var cutoff = new Date(now); cutoff.setDate(cutoff.getDate() + 30);
@@ -79,6 +96,7 @@
         } else if (_filters.dateRange === 'past') {
           if (d >= now) return false;
         }
+      }
       }
 
       // Approved only
@@ -157,6 +175,26 @@
     var html = _buildToolbar(data) + _buildTable(items);
     _container.innerHTML = html;
     _bindEvents();
+    if (_dpEnabled()) {
+      var dpEl = document.getElementById('lv-date-picker-container');
+      if (dpEl) {
+        if (_dpPicker) { _dpPicker.destroy(); _dpPicker = null; }
+        if (window.DatePickerV2) {
+          _dpPicker = window.DatePickerV2.create({
+            container: dpEl,
+            presets: ['today','yesterday','this_week','last_week','last_7_days','this_month'],
+            noPastDates: true,
+            initialPreset: 'this_month',
+            onChange: function (range) {
+              _dpStart = range.start || null;
+              _dpEnd   = range.end   || null;
+              _draw();
+            }
+          });
+          _dpPicker.mount();
+        }
+      }
+    }
   }
 
   function _buildToolbar(data) {
@@ -175,18 +213,22 @@
       + '<label class="lv-toggle' + (_filters.hasBudget ? ' active' : '') + '" data-toggle="hasBudget">Has Budget</label>'
       + '<label class="lv-toggle' + (_filters.hasPhone ? ' active' : '') + '" data-toggle="hasPhone">Has Phone</label>';
 
-    var dateChips =
-      '<button class="lv-chip' + (!_filters.dateRange ? ' active' : '') + '" data-date="">Any Date</button>'
+    var dateSection;
+    if (_dpEnabled()) {
+      dateSection = '<div id="lv-date-picker-container"></div>';
+    } else {
+      dateSection = '<button class="lv-chip' + (!_filters.dateRange ? ' active' : '') + '" data-date="">Any Date</button>'
       + '<button class="lv-chip' + (_filters.dateRange === 'upcoming_30' ? ' active' : '') + '" data-date="upcoming_30">Next 30d</button>'
       + '<button class="lv-chip' + (_filters.dateRange === 'upcoming_90' ? ' active' : '') + '" data-date="upcoming_90">Next 90d</button>'
-      + '<button class="lv-chip' + (_filters.dateRange === 'past' ? ' active' : '') + '" data-date="past">Past</button>';
+        + '<button class="lv-chip' + (_filters.dateRange === 'past' ? ' active' : '') + '" data-date="past">Past</button>';
+    }
 
     return '<div class="lv-toolbar">'
       + '<div class="lv-toolbar-row">'
         + '<input class="lv-search form-input" id="lv-search" placeholder="Search name, email, notes\u2026" value="' + escHtml(_search) + '">'
       + '</div>'
       + '<div class="lv-toolbar-row">' + statusChips + '</div>'
-      + '<div class="lv-toolbar-row">' + dateChips + toggleChips + '</div>'
+      + '<div class="lv-toolbar-row">' + dateSection + toggleChips + '</div>'
       + '</div>';
   }
 
@@ -418,6 +460,8 @@
   window.listView = {
     render: render,
     destroy: destroy,
+    setDateFilter: function (start, end) { _dpStart = start || null; _dpEnd = end || null; },
+    destroyDatePicker: function () { if (_dpPicker) { _dpPicker.destroy(); _dpPicker = null; } _dpStart = null; _dpEnd = null; },
     _resetFilters: function () {
       _filters  = { status: '', dateRange: '', approvedOnly: false, hasBudget: false, hasPhone: false };
       _search   = '';
