@@ -444,6 +444,9 @@
 /* ══════════════════════════════════════
    MODAL OVERLAY
 ══════════════════════════════════════ */
+/* [hidden] must win over the display:flex rule — explicit override prevents the
+   overlay from intercepting pointer events when the modal is closed. */
+#inv-modal-overlay[hidden] { display: none; }
 #inv-modal-overlay {
   position: fixed;
   inset: 0;
