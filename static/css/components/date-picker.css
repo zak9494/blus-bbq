@@ -1,0 +1,285 @@
+/* ===== DatePickerV2 Component Styles ===== */
+
+/* Trigger row */
+.dp-trigger-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dp-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 140px;
+  justify-content: space-between;
+}
+
+.dp-trigger-btn:hover {
+  border-color: var(--amber, #f59e0b);
+}
+
+.dp-caret {
+  font-size: 10px;
+  color: var(--text3);
+}
+
+.dp-step-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.dp-step-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+/* Popover wrapper */
+.dp-popover-wrap {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  min-width: 340px;
+  max-width: 640px;
+}
+
+/* Popover inner layout */
+.dp-popover {
+  display: flex;
+  flex-direction: row;
+}
+
+/* Sidebar */
+.dp-sidebar {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 8px;
+  border-right: 1px solid var(--border);
+  min-width: 130px;
+  gap: 2px;
+}
+
+.dp-preset-btn {
+  text-align: left;
+  padding: 7px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dp-preset-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.dp-preset-active {
+  background: var(--amber, #f59e0b);
+  color: #fff !important;
+  font-weight: 600;
+}
+
+/* Calendar section */
+.dp-cal-section {
+  padding: 12px 14px;
+  flex: 1;
+}
+
+.dp-two-months {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Calendar grid */
+.dp-cal-grid {
+  min-width: 210px;
+}
+
+.dp-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.dp-cal-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dp-cal-nav {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.dp-cal-nav:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.dp-dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.dp-dow {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text3);
+  padding: 2px 0;
+}
+
+.dp-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+
+.dp-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text);
+  position: relative;
+}
+
+.dp-day:hover:not(.dp-day-past):not(.dp-day-empty) {
+  background: var(--surface2);
+}
+
+.dp-day-empty {
+  cursor: default;
+}
+
+.dp-day-past {
+  color: var(--text3);
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.dp-day-today {
+  font-weight: 700;
+  color: var(--amber, #f59e0b);
+}
+
+.dp-day-in-range {
+  background: color-mix(in srgb, var(--amber, #f59e0b) 15%, transparent);
+  border-radius: 0;
+}
+
+.dp-day-start,
+.dp-day-end {
+  background: var(--amber, #f59e0b) !important;
+  color: #fff !important;
+  border-radius: 50%;
+  font-weight: 600;
+}
+
+/* Custom date inputs */
+.dp-custom-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.dp-custom-input {
+  flex: 1;
+  min-width: 120px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.dp-custom-input:focus {
+  outline: none;
+  border-color: var(--amber, #f59e0b);
+}
+
+.dp-custom-sep {
+  color: var(--text3);
+  font-size: 14px;
+}
+
+.dp-apply-btn {
+  height: 32px;
+  padding: 0 14px;
+  background: var(--amber, #f59e0b);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dp-apply-btn:hover {
+  opacity: 0.9;
+}
+
+/* Mobile responsive */
+@media (max-width: 580px) {
+  .dp-popover {
+    flex-direction: column;
+  }
+
+  .dp-sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    min-width: unset;
+    padding: 8px;
+  }
+
+  .dp-two-months {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dp-popover-wrap {
+    min-width: 300px;
+    max-width: calc(100vw - 16px);
+  }
+}
