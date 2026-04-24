@@ -700,8 +700,8 @@ if (typeof marked !== 'undefined') {
 
         <!-- Tabs -->
         <div class="tabs">
-          <div class="tab active" onclick="switchTab('kanban',this)">Kanban</div>
-          <div class="tab" onclick="switchTab('list',this)">List View</div>
+          <div class="tab active" data-view="kanban" onclick="switchTab('kanban',this)">Kanban</div>
+          <div class="tab" data-view="list" onclick="switchTab('list',this)">List View</div>
         </div>
 
         <!-- Date picker row (date_picker_v2 flag; sits above both kanban and list views) -->
