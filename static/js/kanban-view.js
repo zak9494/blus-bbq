@@ -36,6 +36,9 @@
   /* ── State ── */
   var _dragThreadId = null;
   var _dragSrcCol   = null;
+  var _dpStart      = null;
+  var _dpEnd        = null;
+  var _dpPicker     = null;
   var _rcCache      = {};   // email → { status, count, bookedCount, lastEventDate, lastAmount }
   var _rcPending    = {};   // email → true while fetch is in-flight
 
@@ -361,6 +364,21 @@
       });
     }
 
+    // Date-picker filter (date_picker_v2 flag)
+    if (_dpStart || _dpEnd) {
+      Object.keys(groups).forEach(function (s) {
+        groups[s] = groups[s].filter(function (inq) {
+          if (!inq.event_date) return true;
+          var parts = String(inq.event_date).split('-');
+          var d = new Date(+parts[0], +parts[1]-1, +parts[2]);
+          if (isNaN(d.getTime())) return true;
+          if (_dpStart && d < _dpStart) return false;
+          if (_dpEnd   && d > _dpEnd)   return false;
+          return true;
+        });
+      });
+    }
+
     var board = document.createElement('div');
     board.className = 'kb-board';
     board.id = 'kb-board-inner';
@@ -562,9 +580,39 @@
 
   /* ── Public API ── */
 
+  function setDateFilter(start, end) {
+    _dpStart = start || null;
+    _dpEnd   = end   || null;
+  }
+
+  function initDatePicker(containerEl) {
+    if (!containerEl || !window.DatePickerV2) return;
+    if (_dpPicker) { _dpPicker.destroy(); _dpPicker = null; }
+    _dpPicker = window.DatePickerV2.create({
+      container: containerEl,
+      presets: ['today','yesterday','this_week','last_week','last_7_days','this_month'],
+      initialPreset: 'this_month',
+      onChange: function (range) {
+        setDateFilter(range.start, range.end);
+        var c = document.getElementById('kb-board-inner');
+        if (c && c.parentElement) render(c.parentElement);
+      }
+    });
+    _dpPicker.mount();
+  }
+
+  function destroyDatePicker() {
+    if (_dpPicker) { _dpPicker.destroy(); _dpPicker = null; }
+    _dpStart = null;
+    _dpEnd   = null;
+  }
+
   window.kanbanView = {
     render: render,
     destroy: destroy,
+    setDateFilter: setDateFilter,
+    initDatePicker: initDatePicker,
+    destroyDatePicker: destroyDatePicker,
     _closePopup: closeCustomerPopup,
     _openPopup: openCustomerPopup,
     _rcCache: _rcCache,
