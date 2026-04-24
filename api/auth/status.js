@@ -4,10 +4,11 @@
  * { connected: boolean, email: string|null, hasRefreshToken: boolean }
  */
 const https = require('https');
+const { getAllowedAccounts, isAllowedAccount } = require('../_lib/allowed-accounts');
 
-const REQUIRED_EMAIL = 'info@blusbarbeque.com';
-const KV_TOKENS_KEY = `gmail:${REQUIRED_EMAIL}`;
 const KV_TOKENS_KEY_LEGACY = 'gmail:tokens';
+
+function getKvTokensKey() { return `gmail:${getAllowedAccounts()[0]}`; }
 
 function kvUrl() { return process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL; }
 function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
@@ -31,7 +32,7 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   // Try canonical key, then legacy
-  let tokensRaw = await kvGet(KV_TOKENS_KEY);
+  let tokensRaw = await kvGet(getKvTokensKey());
   const fromLegacy = !tokensRaw && !!(tokensRaw = await kvGet(KV_TOKENS_KEY_LEGACY));
 
   if (!tokensRaw) {
@@ -45,8 +46,8 @@ module.exports = async (req, res) => {
   const storedEmail = (tokens.email || '').toLowerCase().trim();
   const hasRefreshToken = !!tokens.refresh_token;
 
-  if (storedEmail && storedEmail !== REQUIRED_EMAIL) {
-    return res.status(200).json({ connected: false, email: storedEmail, hasRefreshToken, error: 'wrong_account', message: `Connected as ${storedEmail}, but only ${REQUIRED_EMAIL} is allowed. Re-authenticate.` });
+  if (storedEmail && !isAllowedAccount(storedEmail)) {
+    return res.status(200).json({ connected: false, email: storedEmail, hasRefreshToken, error: 'wrong_account', message: `Connected as ${storedEmail}, but this account is not in the allowed list. Re-authenticate.` });
   }
 
   if (fromLegacy || !storedEmail) {

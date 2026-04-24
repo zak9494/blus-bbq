@@ -8,9 +8,8 @@
  * - Deletes any legacy gmail:tokens key
  */
 const https = require('https');
+const { isAllowedAccount } = require('../_lib/allowed-accounts');
 
-const REQUIRED_EMAIL = 'info@blusbarbeque.com';
-const KV_TOKENS_KEY = `gmail:${REQUIRED_EMAIL}`;
 const KV_TOKENS_KEY_LEGACY = 'gmail:tokens';
 
 function kvUrl() { return process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL; }
@@ -97,18 +96,20 @@ module.exports = async (req, res) => {
   // Google includes id_token when openid+email scope is granted.
   // We decode the JWT payload (no API call needed) to confirm the account.
   const authedEmail = tokenResp.id_token ? emailFromIdToken(tokenResp.id_token) : '';
-  if (authedEmail !== REQUIRED_EMAIL) {
+  if (!isAllowedAccount(authedEmail)) {
     const errMsg = authedEmail
-      ? `Wrong account: signed in as ${authedEmail}. Only ${REQUIRED_EMAIL} is allowed. Please sign in with the correct account.`
+      ? `Wrong account: signed in as ${authedEmail}. This account is not authorized. Please sign in with an allowed account.`
       : `Could not verify account email. Please try again.`;
     return res.redirect(`/?gmailError=${encodeURIComponent(errMsg)}`);
   }
   // ──────────────────────────────────────────────────────────────────────────────
 
+  const kvKey = `gmail:${authedEmail}`;
+
   // Store at account-specific key AND delete the legacy key atomically
   await kvPipeline([
-    ['SET', KV_TOKENS_KEY, JSON.stringify({
-      email: REQUIRED_EMAIL,
+    ['SET', kvKey, JSON.stringify({
+      email: authedEmail,
       access_token: tokenResp.access_token,
       refresh_token: tokenResp.refresh_token || null,
       expiry_date: Date.now() + (tokenResp.expires_in || 3600) * 1000,
@@ -119,5 +120,5 @@ module.exports = async (req, res) => {
     ['DEL', KV_TOKENS_KEY_LEGACY], // remove any legacy blusoperations tokens
   ]);
 
-  return res.redirect(`/?gmailConnected=1&hasRefreshToken=${tokenResp.refresh_token ? '1' : '0'}&account=${encodeURIComponent(REQUIRED_EMAIL)}`);
+  return res.redirect(`/?gmailConnected=1&hasRefreshToken=${tokenResp.refresh_token ? '1' : '0'}&account=${encodeURIComponent(authedEmail)}`);
 };
