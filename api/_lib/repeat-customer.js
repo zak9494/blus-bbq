@@ -76,7 +76,7 @@ async function lookup(email, excludeThreadId) {
   let lastAmount = null;
 
   for (const m of matches) {
-    if (m.status === 'booked' || m.status === 'completed') {
+    if (m.status === 'completed') {
       bookedCount++;
       if (m.event_date && (!lastEventDate || m.event_date > lastEventDate)) {
         lastEventDate = m.event_date;

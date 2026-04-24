@@ -133,7 +133,7 @@ const STATIC_MODULE_FILES = [
   'static/css/customers/tag-picker.css',
   'api/customers/tags.js',
   'api/settings/lost-reasons.js',
-  // Invoice Manager
+  // Invoice Manager (full implementation)
   'static/js/invoice-manager/index.js',
   'static/css/invoice-manager.css',
   'api/invoices/_lib.js',
