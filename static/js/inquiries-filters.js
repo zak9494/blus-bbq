@@ -23,21 +23,34 @@ function inqEventDateInRange(filter, inq, nowDate, customStart, customEnd) {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const rDay  = new Date(received.getFullYear(), received.getMonth(), received.getDate());
   if (filter === 'today') return rDay.getTime() === today.getTime();
-  if (filter === 'week') {
+  if (filter === 'week' || filter === 'this_week') {
     const dow = today.getDay();
     const mon = new Date(today); mon.setDate(today.getDate() - ((dow + 6) % 7));
     const sun = new Date(mon);   sun.setDate(mon.getDate() + 6);
     return rDay >= mon && rDay <= sun;
   }
-  if (filter === 'last-week') {
+  if (filter === 'last-week' || filter === 'last_week') {
     const dow            = today.getDay();
     const startThisWeek  = new Date(today); startThisWeek.setDate(today.getDate() - ((dow + 6) % 7));
     const startLastWeek  = new Date(startThisWeek); startLastWeek.setDate(startThisWeek.getDate() - 7);
     return rDay >= startLastWeek && rDay < startThisWeek;
   }
-  if (filter === 'month') {
+  if (filter === 'month' || filter === 'this_month') {
     return received.getFullYear() === today.getFullYear() &&
            received.getMonth()    === today.getMonth();
+  }
+  if (filter === 'yesterday') {
+    const yest = new Date(today); yest.setDate(today.getDate() - 1);
+    return rDay.getTime() === yest.getTime();
+  }
+  if (filter === 'last_7_days') {
+    const start7 = new Date(today); start7.setDate(today.getDate() - 6);
+    return rDay >= start7 && rDay <= today;
+  }
+  if (filter === 'last_month') {
+    const lmDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    return received.getFullYear() === lmDate.getFullYear() &&
+           received.getMonth()    === lmDate.getMonth();
   }
   if (filter === 'custom') {
     const cs = customStart || null;

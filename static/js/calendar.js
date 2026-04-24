@@ -29,6 +29,14 @@
   var calPeriodEnd    = null;         // {year,month,day} — end of aggregate/custom range
   var calTotalsOpen   = false;        // monthly totals dropdown visible
   var calInqStatusMap = {};           // threadId → inquiry status string (for color-coding)
+  var calStatusFilters = new Set(['booked', 'completed']);
+  var CAL_STATUS_FILTER_DEFS = [
+    { key: 'needs_info',    label: 'Needs More Info', color: '#f59e0b' },
+    { key: 'quote_drafted', label: 'Quote Drafted',   color: '#f59e0b' },
+    { key: 'quote_sent',    label: 'Quote Sent',      color: '#3b82f6' },
+    { key: 'booked',        label: 'Booked',          color: '#22c55e' },
+    { key: 'completed',     label: 'Completed',       color: '#8b5cf6' },
+  ];
 
   /* ── Status colors (calendar_v2) ─────────────── */
   var STATUS_COLORS = {
@@ -231,6 +239,48 @@
   }
 
   /* ── Render dispatcher ───────────────────────── */
+  function eventPassesStatusFilter(ev) {
+    if (!(window.flags && typeof window.flags.isEnabled === 'function' && window.flags.isEnabled('calendar_filters_v2'))) return true;
+    var tid = bbqThreadId(ev);
+    var status = (tid && calInqStatusMap[tid]) || '';
+    if (!status) return true;
+    return calStatusFilters.has(status);
+  }
+
+  function toggleStatusFilter(key) {
+    if (calStatusFilters.has(key)) {
+      if (calStatusFilters.size > 1) calStatusFilters.delete(key);
+    } else {
+      calStatusFilters.add(key);
+    }
+    render();
+  }
+
+  function renderCalStatusChips() {
+    var bar = document.getElementById('cal-status-chips-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'cal-status-chips-bar';
+      bar.className = 'cal-status-chips-row';
+      var calPage = document.getElementById('page-calendar');
+      var hdr = calPage && calPage.querySelector('.cal-header');
+      if (hdr && hdr.nextSibling) {
+        hdr.parentNode.insertBefore(bar, hdr.nextSibling);
+      } else if (calPage) {
+        calPage.insertBefore(bar, calPage.firstChild);
+      }
+    }
+    bar.innerHTML = '';
+    CAL_STATUS_FILTER_DEFS.forEach(function (def) {
+      var btn = document.createElement('button');
+      btn.className = 'cal-status-chip' + (calStatusFilters.has(def.key) ? ' cal-status-chip-active' : '');
+      btn.textContent = def.label;
+      if (calStatusFilters.has(def.key)) btn.style.borderColor = def.color;
+      btn.onclick = function () { toggleStatusFilter(def.key); };
+      bar.appendChild(btn);
+    });
+  }
+
   function render() {
     updateHeader();
     updateViewButtons();
@@ -239,8 +289,12 @@
     if (calView === 'month')      renderMonth(container);
     else if (calView === 'week')  renderWeek(container);
     else                          renderDay(container);
-    renderPeriodChips();
-    renderTotalsBtn();
+    if (window.flags && typeof window.flags.isEnabled === 'function' && window.flags.isEnabled('calendar_filters_v2')) {
+      renderCalStatusChips();
+    } else {
+      renderPeriodChips();
+      renderTotalsBtn();
+    }
     if (window.flags && window.flags.isEnabled('calendar_v2')) renderLegend();
   }
 
@@ -287,6 +341,7 @@
     (calEventsCache[year + '-' + month] || []).forEach(function (ev) {
       var s = eventStart(ev);
       if (!s || s.year !== year || s.month !== month) return;
+      if (!eventPassesStatusFilter(ev)) return;
       (byDay[s.day] || (byDay[s.day] = [])).push(ev);
     });
 
@@ -427,6 +482,7 @@
     var allEvs = eventsInRange(first, last);
     var byKey = {};
     allEvs.forEach(function (ev) {
+      if (!eventPassesStatusFilter(ev)) return;
       var s = eventStart(ev);
       if (!s) return;
       var k = s.year + '-' + s.month + '-' + s.day;
@@ -472,7 +528,7 @@
     var y = calDate.getFullYear(), m = calDate.getMonth(), d = calDate.getDate();
     var today = todayChi();
     var isToday = today.year === y && today.month === m && today.day === d;
-    var evs = eventsInRange({year:y,month:m,day:d}, {year:y,month:m,day:d});
+    var evs = eventsInRange({year:y,month:m,day:d}, {year:y,month:m,day:d}).filter(eventPassesStatusFilter);
     var dateStr = y + '-' + pad2(m + 1) + '-' + pad2(d);
     var gridH = (DAY_END - DAY_START + 1) * HOUR_HEIGHT;
 
@@ -1109,6 +1165,7 @@
   window._calCloseEventModal = closeEventModal;
   window.calSetPeriod        = setPeriod;
   window.calApplyCustomRange = applyCustomRange;
-  window.calIsPastEvent      = isPastEvent;
+  window.calIsPastEvent         = isPastEvent;
+  window.calToggleStatusFilter = toggleStatusFilter;
 
 })();
