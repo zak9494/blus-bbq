@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="/static/css/ui/bottom-sheet.css">
 <link rel="stylesheet" href="/static/css/widgets/todays-actions.css">
 <link rel="stylesheet" href="/static/css/customers/tag-picker.css">
+<link rel="stylesheet" href="/static/css/invoice-manager.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -578,7 +579,10 @@ if (typeof marked !== 'undefined') {
     <div class="nav-item" id="nav-today" style="display:none" onclick="showPage('today')"><span class="nav-dot dot-orange"></span>Today's Gigs</div>
     <div class="nav-item" id="nav-customers" onclick="showPage('customer')" style="display:none"><span class="nav-dot dot-amber"></span>Customers</div>
     <button class="sidebar-close-btn" onclick="closeMobileSidebar()">✕</button>
-    <div class="nav-item disabled"><span class="nav-dot dot-green"></span>Invoices</div>
+    <!-- Accounting nav section (invoice_manager_v1 flag gates label + active item) -->
+    <div id="nav-accounting-label" class="nav-section-label" style="display:none">Accounting</div>
+    <div id="nav-invoices-active" class="nav-item" style="display:none" onclick="showPage('invoices')"><span class="nav-dot dot-green"></span>Invoices</div>
+    <div id="nav-invoices-stub" class="nav-item disabled"><span class="nav-dot dot-green"></span>Invoices</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Outbound Leads</div>
 
     <div class="nav-section-label">Restaurant</div>
@@ -645,8 +649,8 @@ if (typeof marked !== 'undefined') {
         </div>
       </div>
       <div class="content">
-        <!-- Stats -->
-        <div class="stats-row">
+        <!-- Stats — legacy count tiles (hidden when sales_panel_v1 is ON) -->
+        <div id="pipeline-stats-legacy" class="stats-row">
           <div class="stat-card">
             <div class="stat-label">Active Leads</div>
             <div class="stat-val red" id="stat-active">7</div>
@@ -668,6 +672,8 @@ if (typeof marked !== 'undefined') {
             <div class="stat-sub">this month</div>
           </div>
         </div>
+        <!-- Sales panel (shown when sales_panel_v1 flag is ON; rendered by invoice-manager/index.js) -->
+        <div id="pipeline-sales-panel" style="display:none"></div>
 
         <!-- Today's Actions widget (Wave 1, flag: todays_actions_widget) -->
         <div id="todays-actions-container" style="display:none;margin-bottom:12px"></div>
@@ -1319,8 +1325,22 @@ if (typeof marked !== 'undefined') {
 
     <!-- COMING SOON PAGES -->
     <div id="page-invoices" class="page">
-      <div class="topbar"><div class="topbar-title">Invoices</div></div>
-      <div class="content"><div class="coming-soon"><div class="coming-soon-badge">Coming Soon</div><div class="coming-soon-title">Invoice Manager</div><div class="coming-soon-sub">Track paid, unpaid, and overdue invoices with one-click Toast payment link integration.</div></div></div>
+      <div class="topbar">
+        <div class="topbar-left"><div>
+          <div class="topbar-title">Invoices</div>
+          <div class="topbar-sub">Billing &amp; payment tracking</div>
+        </div></div>
+        <div class="topbar-actions">
+          <button class="btn" onclick="showPage('pipeline')">← Pipeline</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="coming-soon">
+          <div class="coming-soon-badge">Under Construction</div>
+          <div class="coming-soon-title">Invoice Manager</div>
+          <div class="coming-soon-sub">Full invoice table, status filters, and payment-link actions are coming once scope is finalised. Financial summary is available now on the Pipeline page.</div>
+        </div>
+      </div>
     </div>
     <div id="page-outbound" class="page">
       <div class="topbar"><div class="topbar-title">Outbound Leads</div></div>
@@ -5231,6 +5251,7 @@ window.addEventListener('load', function() {
     }
     if (window.overdueWidget) window.overdueWidget.init();
     if (window.customerProfile) window.customerProfile.init();
+    if (window.invoiceMgr) window.invoiceMgr.init();
   });
 });
 // focus listener removed — visibilitychange below is sufficient and avoids
@@ -5273,6 +5294,7 @@ function closeMobileSidebar() {
 <script defer src="/static/js/customer-profile.js"></script>
 <script defer src="/static/js/overdue-widget.js"></script>
 <script defer src="/static/js/quote-templates.js"></script>
+<script defer src="/static/js/invoice-manager/index.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof twInit === 'function') twInit('input[type="time"]');

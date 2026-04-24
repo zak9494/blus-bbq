@@ -1,0 +1,220 @@
+/* ===== INVOICE MANAGER — invoice-manager.css
+   Styles for:
+   - Sales summary panel (sales_panel_v1 flag)
+   - Invoices page coming-soon stub (invoice_manager_v1 flag)
+   ===== */
+
+/* ── Sales panel wrapper ─────────────────────────────────────────────────── */
+.sales-panel {
+  padding: 16px 0 8px;
+}
+
+/* ── Range toggle bar ────────────────────────────────────────────────────── */
+.sales-range-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.sales-range-btn {
+  padding: 5px 13px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border, #ddd);
+  background: transparent;
+  color: var(--text-secondary, #666);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.sales-range-btn:hover {
+  border-color: var(--accent, #e25822);
+  color: var(--accent, #e25822);
+}
+
+.sales-range-btn.active {
+  background: var(--accent, #e25822);
+  border-color: var(--accent, #e25822);
+  color: #fff;
+}
+
+/* ── Custom date row ─────────────────────────────────────────────────────── */
+.sales-custom-row {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--text-secondary, #666);
+}
+
+.sales-custom-row.visible {
+  display: flex;
+}
+
+.sales-custom-row label {
+  font-weight: 500;
+}
+
+.sales-custom-row input[type="date"] {
+  padding: 5px 8px;
+  border: 1.5px solid var(--border, #ddd);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--surface, #fff);
+  color: var(--text, #111);
+}
+
+.sales-custom-row .btn-go {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent, #e25822);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── Stat grid ───────────────────────────────────────────────────────────── */
+.sales-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+  transition: opacity 0.2s;
+}
+
+@media (max-width: 768px) {
+  .sales-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .sales-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+/* ── Stat card ───────────────────────────────────────────────────────────── */
+.sales-stat-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, #eee);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sales-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #888);
+}
+
+.sales-stat-val {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.sales-stat-val.red   { color: #d9534f; }
+.sales-stat-val.amber { color: #e8a838; }
+.sales-stat-val.blue  { color: #3b82f6; }
+.sales-stat-val.green { color: #22a06b; }
+
+.sales-stat-sub {
+  font-size: 11px;
+  color: var(--text-secondary, #888);
+  margin-top: 2px;
+}
+
+/* ── View all row ────────────────────────────────────────────────────────── */
+.sales-view-all-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
+.sales-view-all-btn {
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: 1.5px solid var(--accent, #e25822);
+  background: transparent;
+  color: var(--accent, #e25822);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sales-view-all-btn:hover {
+  background: var(--accent, #e25822);
+  color: #fff;
+}
+
+/* ── Empty / best-effort notice ──────────────────────────────────────────── */
+.sales-empty-notice {
+  font-size: 11px;
+  color: var(--text-secondary, #aaa);
+  font-style: italic;
+  text-align: center;
+  padding: 4px 0 2px;
+}
+
+/* ── Nav section label ───────────────────────────────────────────────────── */
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary, #aaa);
+  padding: 12px 20px 4px;
+  pointer-events: none;
+}
+
+/* ── Coming-soon page stub ───────────────────────────────────────────────── */
+.coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 24px;
+  gap: 12px;
+}
+
+.coming-soon-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 20px;
+  background: #fff3cd;
+  color: #856404;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid #ffc107;
+}
+
+.coming-soon-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text, #111);
+}
+
+.coming-soon-sub {
+  max-width: 380px;
+  font-size: 14px;
+  color: var(--text-secondary, #666);
+  line-height: 1.5;
+}
