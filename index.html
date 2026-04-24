@@ -27,6 +27,8 @@
 <link rel="stylesheet" href="/static/css/quote-drafts.css">
 <link rel="stylesheet" href="/static/css/customer-profile.css">
 <link rel="stylesheet" href="/static/css/ui/bottom-sheet.css">
+<link rel="stylesheet" href="/static/css/invoice-manager.css">
+<link rel="stylesheet" href="/static/css/components/date-picker.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -566,7 +568,10 @@ if (typeof marked !== 'undefined') {
     <div class="nav-item" id="nav-today" style="display:none" onclick="showPage('today')"><span class="nav-dot dot-orange"></span>Today's Gigs</div>
     <div class="nav-item" id="nav-customers" onclick="showPage('customer')" style="display:none"><span class="nav-dot dot-amber"></span>Customers</div>
     <button class="sidebar-close-btn" onclick="closeMobileSidebar()">✕</button>
-    <div class="nav-item disabled"><span class="nav-dot dot-green"></span>Invoices</div>
+    <!-- Accounting nav section (invoice_manager_v1 flag gates label + active item) -->
+    <div id="nav-accounting-label" class="nav-section-label" style="display:none">Accounting</div>
+    <div id="nav-invoices-active" class="nav-item" style="display:none" onclick="showPage('invoices')"><span class="nav-dot dot-green"></span>Invoices</div>
+    <div id="nav-invoices-stub" class="nav-item disabled"><span class="nav-dot dot-green"></span>Invoices</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Outbound Leads</div>
 
     <div class="nav-section-label">Restaurant</div>
@@ -633,8 +638,8 @@ if (typeof marked !== 'undefined') {
         </div>
       </div>
       <div class="content">
-        <!-- Stats -->
-        <div class="stats-row">
+        <!-- Stats — legacy count tiles (hidden when sales_panel_v1 is ON) -->
+        <div id="pipeline-stats-legacy" class="stats-row">
           <div class="stat-card">
             <div class="stat-label">Active Leads</div>
             <div class="stat-val red" id="stat-active">7</div>
@@ -656,6 +661,8 @@ if (typeof marked !== 'undefined') {
             <div class="stat-sub">this month</div>
           </div>
         </div>
+        <!-- Sales panel (shown when sales_panel_v1 flag is ON; rendered by invoice-manager/index.js) -->
+        <div id="pipeline-sales-panel" style="display:none"></div>
 
         <!-- Overdue widget (Group 9, flag-gated) -->
         <div id="overdue-widget-container" style="display:none;margin-bottom:12px"></div>
@@ -672,6 +679,7 @@ if (typeof marked !== 'undefined') {
 
         <!-- Kanban -->
         <div id="view-kanban">
+          <div id="kb-date-picker-row" style="display:none;padding:8px 0 4px"></div>
           <div class="kanban" id="kanban-board"></div>
         </div>
 
@@ -1073,6 +1081,7 @@ if (typeof marked !== 'undefined') {
       <div id="inq-list-view">
         <div id="inq-chips" class="inq-chips"></div>
         <div id="inq-date-chips" class="inq-chips" style="padding-top:0;border-top:none"></div>
+        <div id="inq-date-picker-row" style="display:none;padding:6px 16px 2px"></div>
         <!-- Search bar — sits between chips and cards, respects active chip filter -->
         <div style="padding:6px 16px 10px;position:relative">
           <input type="search" id="inq-search"
@@ -1306,8 +1315,22 @@ if (typeof marked !== 'undefined') {
 
     <!-- COMING SOON PAGES -->
     <div id="page-invoices" class="page">
-      <div class="topbar"><div class="topbar-title">Invoices</div></div>
-      <div class="content"><div class="coming-soon"><div class="coming-soon-badge">Coming Soon</div><div class="coming-soon-title">Invoice Manager</div><div class="coming-soon-sub">Track paid, unpaid, and overdue invoices with one-click Toast payment link integration.</div></div></div>
+      <div class="topbar">
+        <div class="topbar-left"><div>
+          <div class="topbar-title">Invoices</div>
+          <div class="topbar-sub">Billing &amp; payment tracking</div>
+        </div></div>
+        <div class="topbar-actions">
+          <button class="btn" onclick="showPage('pipeline')">← Pipeline</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="coming-soon">
+          <div class="coming-soon-badge">Under Construction</div>
+          <div class="coming-soon-title">Invoice Manager</div>
+          <div class="coming-soon-sub">Full invoice table, status filters, and payment-link actions are coming once scope is finalised. Financial summary is available now on the Pipeline page.</div>
+        </div>
+      </div>
     </div>
     <div id="page-outbound" class="page">
       <div class="topbar"><div class="topbar-title">Outbound Leads</div></div>
@@ -1723,6 +1746,7 @@ if (typeof marked !== 'undefined') {
 <script src="/static/js/menu.js"></script>
 <script src="/static/js/customer-profile.js"></script>
 <script src="/static/js/status-sync.js"></script>
+<script src="/static/js/components/date-picker/date-picker.js"></script>
 <script src="/static/js/kanban-view.js"></script>
 <script src="/static/js/list-view.js"></script>
 <!-- Wave 0.5: iOS polish UI modules -->
@@ -1782,7 +1806,7 @@ function showPage(page) {
   if (pageEl) pageEl.classList.add('active');
   if (window.innerWidth <= 768) closeMobileSidebar();
   if (page === 'scheduled') renderScheduled();
-  if (page === 'inquiries') loadInquiries();
+  if (page === 'inquiries') { loadInquiries(); initInqDatePicker(); }
   else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
   if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); if (window.overdueWidget) window.overdueWidget.init(); }
   if (page === 'customer') { if (window.customerProfile) window.customerProfile.init(); }
@@ -1954,6 +1978,19 @@ function switchTab(tab, el) {
   if (useNewKanban && pipelineInqCache) {
     if (tab === 'kanban' && kbEl && window.kanbanView) window.kanbanView.render(kbEl);
     if (tab === 'list'   && lvEl && window.listView)  window.listView.render(lvEl);
+  }
+  if (window.flags && window.flags.isEnabled('date_picker_v2')) {
+    var kbDpRow = document.getElementById('kb-date-picker-row');
+    if (tab === 'kanban') {
+      if (kbDpRow) kbDpRow.style.display = '';
+      if (window.kanbanView && window.kanbanView.initDatePicker && kbDpRow && !kbDpRow.querySelector('.dp-main-btn'))
+        window.kanbanView.initDatePicker(kbDpRow);
+      if (window.listView && window.listView.destroyDatePicker) window.listView.destroyDatePicker();
+    } else {
+      if (kbDpRow) kbDpRow.style.display = 'none';
+      if (window.kanbanView && window.kanbanView.destroyDatePicker) window.kanbanView.destroyDatePicker();
+      if (window.listView && window.listView.initDatePicker) window.listView.initDatePicker();
+    }
   }
 }
 
@@ -3479,7 +3516,25 @@ const INQ_STATUS_BADGE = {
 };
 
 let currentInqFilter = 'all';
-let currentInqDateFilter = 'all'; // C17: date-range filter
+let currentInqDateFilter = 'all';
+let _inqDpStart  = null;
+let _inqDpEnd    = null;
+let _inqDpPicker = null;
+function initInqDatePicker() {
+  if (!window.DatePickerV2 || !(window.flags && window.flags.isEnabled('date_picker_v2'))) return;
+  var row = document.getElementById('inq-date-picker-row');
+  if (!row) return;
+  var legacyRow = document.getElementById('inq-date-chips');
+  if (legacyRow) legacyRow.style.display = 'none';
+  row.style.display = '';
+  if (_inqDpPicker) return;
+  _inqDpPicker = window.DatePickerV2.create({
+    presets: ['today','yesterday','this_week','last_week','last_7_days','this_month','last_month','custom'],
+    initialPreset: 'this_month',
+    onChange: function(val) { _inqDpStart = val.start||null; _inqDpEnd = val.end||null; renderInqCards(); }
+  });
+  _inqDpPicker.mount(row);
+} // C17: date-range filter
 let inqCustomStart = null; // Date (local midnight) or null
 let inqCustomEnd   = null;
 let inqSearchTerm = '';
@@ -3582,8 +3637,18 @@ function renderInqCards() {
   const emptyEl = document.getElementById('inq-empty');
   if (!cardsEl || !inquiriesCache) return;
   let filtered = getFilteredInquiries(currentInqFilter);
-  // C17: apply date-range filter after status filter
-  if (currentInqDateFilter !== 'all') {
+  if (window.flags && window.flags.isEnabled('date_picker_v2')) {
+    if (_inqDpStart || _inqDpEnd) {
+      filtered = filtered.filter(function(i) {
+        var ts = i.email_date || i.updated_at || ''; if (!ts) return true;
+        var d = new Date(ts); if (isNaN(d.getTime())) return true;
+        var day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        if (_inqDpStart && day < _inqDpStart) return false;
+        if (_inqDpEnd   && day > _inqDpEnd)   return false;
+        return true;
+      });
+    }
+  } else if (currentInqDateFilter !== 'all') {
     filtered = filtered.filter(i => inqEventDateInRange(currentInqDateFilter, i, null, inqCustomStart, inqCustomEnd));
   }
   // Apply search within the already-filtered set (chip filter wins first)
@@ -4024,6 +4089,15 @@ async function loadPipelineInquiries() {
       const lvContainer = document.getElementById('view-list');
       if (kbContainer && window.kanbanView) window.kanbanView.render(kbContainer);
       if (lvContainer  && window.listView)  window.listView.render(lvContainer);
+      if (window.flags.isEnabled('date_picker_v2')) {
+        var kbDpRow2 = document.getElementById('kb-date-picker-row');
+        var isKanban2 = _activePipelineTab !== 'list';
+        if (isKanban2 && kbDpRow2 && window.kanbanView && window.kanbanView.initDatePicker) {
+          kbDpRow2.style.display = ''; window.kanbanView.initDatePicker(kbDpRow2);
+        } else if (!isKanban2 && window.listView && window.listView.initDatePicker) {
+          window.listView.initDatePicker();
+        }
+      }
     } else {
       renderKanban(); renderTable();
     }
@@ -5164,6 +5238,7 @@ window.addEventListener('load', function() {
     }
     if (window.overdueWidget) window.overdueWidget.init();
     if (window.customerProfile) window.customerProfile.init();
+    if (window.invoiceMgr) window.invoiceMgr.init();
   });
 });
 // focus listener removed — visibilitychange below is sufficient and avoids
@@ -5206,6 +5281,7 @@ function closeMobileSidebar() {
 <script defer src="/static/js/customer-profile.js"></script>
 <script defer src="/static/js/overdue-widget.js"></script>
 <script defer src="/static/js/quote-templates.js"></script>
+<script defer src="/static/js/invoice-manager/index.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof twInit === 'function') twInit('input[type="time"]');

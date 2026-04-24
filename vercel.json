@@ -48,7 +48,8 @@
     { "source": "/api/quotes/duplicate", "destination": "/api/quotes/duplicate.js" },
     { "source": "/api/quotes/templates", "destination": "/api/quotes/templates.js" },
     { "source": "/api/quotes/templates/:id", "destination": "/api/quotes/templates.js" },
-    { "source": "/api/cron/weekly-digest", "destination": "/api/cron/weekly-digest.js" }
+    { "source": "/api/cron/weekly-digest", "destination": "/api/cron/weekly-digest.js" },
+    { "source": "/api/invoices/summary",      "destination": "/api/invoices/summary.js" }
   ],
   "crons": [
     {
