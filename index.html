@@ -30,6 +30,7 @@
 <link rel="stylesheet" href="/static/css/widgets/todays-actions.css">
 <link rel="stylesheet" href="/static/css/customers/tag-picker.css">
 <link rel="stylesheet" href="/static/css/invoice-manager.css">
+<link rel="stylesheet" href="/static/css/components/date-picker.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -699,9 +700,12 @@ if (typeof marked !== 'undefined') {
 
         <!-- Tabs -->
         <div class="tabs">
-          <div class="tab active" onclick="switchTab('kanban',this)">Kanban</div>
-          <div class="tab" onclick="switchTab('list',this)">List View</div>
+          <div class="tab active" data-view="kanban" onclick="switchTab('kanban',this)">Kanban</div>
+          <div class="tab" data-view="list" onclick="switchTab('list',this)">List View</div>
         </div>
+
+        <!-- Date picker row (date_picker_v2 flag; sits above both kanban and list views) -->
+        <div id="kb-date-picker-row" style="display:none"></div>
 
         <!-- Kanban -->
         <div id="view-kanban">
@@ -1105,6 +1109,8 @@ if (typeof marked !== 'undefined') {
       <!-- LIST VIEW -->
       <div id="inq-list-view">
         <div id="inq-chips" class="inq-chips"></div>
+        <!-- Date picker (date_picker_v2 flag; replaces legacy date chips when ON) -->
+        <div id="inq-date-picker-row" style="display:none;padding:6px 16px 2px"></div>
         <div id="inq-date-chips" class="inq-chips" style="padding-top:0;border-top:none"></div>
         <!-- Search bar — sits between chips and cards, respects active chip filter -->
         <div style="padding:6px 16px 10px;position:relative">
@@ -1849,6 +1855,7 @@ function showPage(page) {
   if (page === 'inquiries') loadInquiries();
   else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
   if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); if (window.overdueWidget) window.overdueWidget.init(); }
+  if (page === 'calendar') { if (typeof calInit === 'function') calInit(); }
   if (page === 'customer') { if (window.customerProfile) window.customerProfile.init(); }
   if (page === 'ai') { loadChatHistory(); if (typeof chatApprovalInit === 'function') chatApprovalInit(); } // C21 + D24
   if (page === 'flags') loadFlagsPage();
@@ -2100,6 +2107,21 @@ function switchTab(tab, el) {
   if (useNewKanban && pipelineInqCache) {
     if (tab === 'kanban' && kbEl && window.kanbanView) window.kanbanView.render(kbEl);
     if (tab === 'list'   && lvEl && window.listView)  window.listView.render(lvEl);
+  }
+  // Date picker row: show above kanban when date_picker_v2 ON, destroy on list switch
+  const dpRow = document.getElementById('kb-date-picker-row');
+  if (dpRow && window.flags && window.flags.isEnabled('date_picker_v2')) {
+    if (tab === 'kanban') {
+      dpRow.style.display = '';
+      if (window.kanbanView && typeof window.kanbanView.initDatePicker === 'function') {
+        window.kanbanView.initDatePicker(dpRow);
+      }
+    } else {
+      dpRow.style.display = 'none';
+      if (window.kanbanView && typeof window.kanbanView.destroyDatePicker === 'function') {
+        window.kanbanView.destroyDatePicker();
+      }
+    }
   }
 }
 
@@ -3633,6 +3655,7 @@ let inqSearchTimer = null;
 let inquiriesCache   = null; // cached full list for re-filtering without refetch
 let _inqPerPage = parseInt(localStorage.getItem('inq_perPage') || '50', 10);
 let _inqPage    = 0;
+let _inqDpPicker = null;
 
 function setInqFilter(status) {
   currentInqFilter = status;
@@ -4214,6 +4237,16 @@ async function loadPipelineInquiries() {
       const lvContainer = document.getElementById('view-list');
       if (kbContainer && window.kanbanView) window.kanbanView.render(kbContainer);
       if (lvContainer  && window.listView)  window.listView.render(lvContainer);
+      // Init date picker on kanban if flag is ON and kanban tab is active
+      if (window.flags && window.flags.isEnabled('date_picker_v2') && _activePipelineTab === 'kanban') {
+        const dpRow = document.getElementById('kb-date-picker-row');
+        if (dpRow) {
+          dpRow.style.display = '';
+          if (window.kanbanView && typeof window.kanbanView.initDatePicker === 'function') {
+            window.kanbanView.initDatePicker(dpRow);
+          }
+        }
+      }
     } else {
       renderKanban(); renderTable();
     }
@@ -4334,6 +4367,29 @@ async function loadInquiries() {
     inquiriesCache = d.inquiries;
     renderInqChips();
     renderInqCards();
+    // Toggle date picker vs legacy chips based on flag
+    if (window.flags && window.flags.isEnabled('date_picker_v2')) {
+      const dpRow = document.getElementById('inq-date-picker-row');
+      const dateChips = document.getElementById('inq-date-chips');
+      if (dpRow) {
+        dpRow.style.display = '';
+        if (window.DatePickerV2 && !_inqDpPicker) {
+          _inqDpPicker = window.DatePickerV2.create({
+            container: dpRow,
+            presets: ['today', 'this_week', 'last_week', 'this_month', 'last_month'],
+            initialPreset: 'this_month',
+            onChange: function(range) {
+              inqCustomStart = range.start || null;
+              inqCustomEnd   = range.end   || null;
+              currentInqDateFilter = (inqCustomStart || inqCustomEnd) ? 'custom' : 'all';
+              renderInqCards();
+            }
+          });
+          _inqDpPicker.mount();
+        }
+      }
+      if (dateChips) dateChips.style.display = 'none';
+    }
   } catch(e) {
     loadEl.style.display = 'none';
     cardsEl.innerHTML = '<p style="color:var(--red);padding:16px">Failed to load: ' + e.message + '</p>';
@@ -5403,10 +5459,10 @@ function closeMobileSidebar() {
 <script defer src="/static/js/completed-orders.js"></script>
 <script defer src="/static/js/quote-drafts.js"></script>
 <script defer src="/static/js/customer-profile.js"></script>
+<script defer src="/static/js/components/date-picker/date-picker.js"></script>
 <script defer src="/static/js/invoice-manager/index.js"></script>
 <script defer src="/static/js/overdue-widget.js"></script>
 <script defer src="/static/js/quote-templates.js"></script>
-<script defer src="/static/js/invoice-manager/index.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof twInit === 'function') twInit('input[type="time"]');
