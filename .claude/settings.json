@@ -272,6 +272,12 @@
       "Bash(git push -d:*)",
       "Bash(gh pr close:*)",
       "Bash(gh issue close:*)",
+
+      "Bash(git push origin main)",
+      "Bash(git push origin main:main)",
+      "Bash(git push origin HEAD:main)",
+      "Bash(git checkout main)",
+      "Bash(git checkout origin/main)",
       "Bash(docker system prune:*)",
       "Bash(docker volume rm:*)",
       "Bash(docker image rm:*)",
