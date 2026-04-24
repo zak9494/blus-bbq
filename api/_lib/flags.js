@@ -74,6 +74,8 @@ const SEED_FLAGS = [
   { name: 'todays_actions_widget',  description: "Wave 1: Today's Actions card on dashboard home — overdue follow-ups, today's events, AI draft reviews, pending approvals", default: true },
   { name: 'customer_tags',          description: 'Wave 1: Customer tag picker on profiles + tag chips on inquiry cards (VIP, Corporate, etc.)', default: true },
   { name: 'lost_reason_capture',    description: 'Wave 1: BottomSheet for lost-reason when moving card to Lost; user-editable reasons in Settings', default: true },
+  { name: 'date_picker_v2',         description: 'Unified date-range picker on kanban, list view, and inquiries page — replaces legacy chip filters' },
+  { name: 'calendar_filters_v2',    description: 'Calendar page: replace period chips with status filter chips (Booked/Completed default ON)' },
   // Customer nav
   { name: 'customers_nav_v1',       description: 'Top-level Customers nav item in sidebar — links to customer profile page (default OFF; Zach flips when ready)' },
   // Sales Panel + Invoice Manager
