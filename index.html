@@ -1109,6 +1109,8 @@ if (typeof marked !== 'undefined') {
       <!-- LIST VIEW -->
       <div id="inq-list-view">
         <div id="inq-chips" class="inq-chips"></div>
+        <!-- Date picker (date_picker_v2 flag; replaces legacy date chips when ON) -->
+        <div id="inq-date-picker-row" style="display:none;padding:6px 16px 2px"></div>
         <div id="inq-date-chips" class="inq-chips" style="padding-top:0;border-top:none"></div>
         <!-- Search bar — sits between chips and cards, respects active chip filter -->
         <div style="padding:6px 16px 10px;position:relative">
@@ -1853,6 +1855,7 @@ function showPage(page) {
   if (page === 'inquiries') loadInquiries();
   else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
   if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); if (window.overdueWidget) window.overdueWidget.init(); }
+  if (page === 'calendar') { if (typeof calInit === 'function') calInit(); }
   if (page === 'customer') { if (window.customerProfile) window.customerProfile.init(); }
   if (page === 'ai') { loadChatHistory(); if (typeof chatApprovalInit === 'function') chatApprovalInit(); } // C21 + D24
   if (page === 'flags') loadFlagsPage();
@@ -3652,6 +3655,7 @@ let inqSearchTimer = null;
 let inquiriesCache   = null; // cached full list for re-filtering without refetch
 let _inqPerPage = parseInt(localStorage.getItem('inq_perPage') || '50', 10);
 let _inqPage    = 0;
+let _inqDpPicker = null;
 
 function setInqFilter(status) {
   currentInqFilter = status;
@@ -4363,6 +4367,29 @@ async function loadInquiries() {
     inquiriesCache = d.inquiries;
     renderInqChips();
     renderInqCards();
+    // Toggle date picker vs legacy chips based on flag
+    if (window.flags && window.flags.isEnabled('date_picker_v2')) {
+      const dpRow = document.getElementById('inq-date-picker-row');
+      const dateChips = document.getElementById('inq-date-chips');
+      if (dpRow) {
+        dpRow.style.display = '';
+        if (window.DatePickerV2 && !_inqDpPicker) {
+          _inqDpPicker = window.DatePickerV2.create({
+            container: dpRow,
+            presets: ['today', 'this_week', 'last_week', 'this_month', 'last_month'],
+            initialPreset: 'this_month',
+            onChange: function(range) {
+              inqCustomStart = range.start || null;
+              inqCustomEnd   = range.end   || null;
+              currentInqDateFilter = (inqCustomStart || inqCustomEnd) ? 'custom' : 'all';
+              renderInqCards();
+            }
+          });
+          _inqDpPicker.mount();
+        }
+      }
+      if (dateChips) dateChips.style.display = 'none';
+    }
   } catch(e) {
     loadEl.style.display = 'none';
     cardsEl.innerHTML = '<p style="color:var(--red);padding:16px">Failed to load: ' + e.message + '</p>';
