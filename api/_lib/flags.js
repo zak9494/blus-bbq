@@ -78,7 +78,7 @@ const SEED_FLAGS = [
   { name: 'customers_nav_v1',       description: 'Top-level Customers nav item in sidebar — links to customer profile page (default OFF; Zach flips when ready)' },
   // Sales Panel + Invoice Manager
   { name: 'sales_panel_v1',         description: 'Pipeline page: replace count tiles with financial sales summary panel (Past Due / Unpaid / Charges / Paid) with time-range toggle' },
-  { name: 'invoice_manager_v1',     description: 'Invoice Manager page + Accounting nav section (stub; real table/filters pending scope sign-off)' },
+  { name: 'invoice_manager_v1',     description: 'Invoice Manager: create, track, and record payments on invoices — manual flow only (default OFF)' },
   // Kanban + list overhaul (Wave 2)
   { name: 'kanban_edit_mode_v1',    description: 'Kanban: long-press column to enter edit mode — reorder, rename, add, delete columns; persisted to KV' },
   { name: 'lost_auto_hide_48h',     description: 'Kanban + list: auto-hide Lost entries 48h after losing; display filter only, data not deleted' },

@@ -589,6 +589,7 @@ if (typeof marked !== 'undefined') {
     <div class="nav-item" onclick="showPage('calendar');calInit()"><span class="nav-dot dot-green"></span>Calendar</div>
     <div class="nav-item" id="nav-today" style="display:none" onclick="showPage('today')"><span class="nav-dot dot-orange"></span>Today's Gigs</div>
     <div class="nav-item" id="nav-customers" onclick="showPage('customer')" style="display:none"><span class="nav-dot dot-amber"></span>Customers</div>
+    <div class="nav-item" id="nav-invoices" onclick="showPage('invoices')" style="display:none"><span class="nav-dot dot-green"></span>Invoices</div>
     <button class="sidebar-close-btn" onclick="closeMobileSidebar()">✕</button>
     <!-- Accounting nav section (invoice_manager_v1 flag gates label + active item) -->
     <div id="nav-accounting-label" class="nav-section-label" style="display:none">Accounting</div>
@@ -684,7 +685,7 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
         <!-- Sales panel (shown when sales_panel_v1 flag is ON; rendered by invoice-manager/index.js) -->
-        <div id="pipeline-sales-panel" style="display:none"></div>
+        <div id="pipeline-sales-panel" style="display:none;margin-bottom:12px"></div>
 
         <!-- Today's Actions widget (Wave 1, flag: todays_actions_widget) -->
         <div id="todays-actions-container" style="display:none;margin-bottom:12px"></div>
@@ -1337,21 +1338,22 @@ if (typeof marked !== 'undefined') {
 
     <!-- COMING SOON PAGES -->
     <div id="page-invoices" class="page">
-      <div class="topbar">
-        <div class="topbar-left"><div>
-          <div class="topbar-title">Invoices</div>
-          <div class="topbar-sub">Billing &amp; payment tracking</div>
-        </div></div>
+      <div class="inv-topbar topbar">
+        <div class="topbar-left"><div class="inv-topbar-title topbar-title">Invoices</div></div>
         <div class="topbar-actions">
-          <button class="btn" onclick="showPage('pipeline')">← Pipeline</button>
+          <button class="inv-create-btn" onclick="if(window.invoiceMgr)window.invoiceMgr.openCreate()">+ Create</button>
         </div>
       </div>
-      <div class="content">
-        <div class="coming-soon">
-          <div class="coming-soon-badge">Under Construction</div>
-          <div class="coming-soon-title">Invoice Manager</div>
-          <div class="coming-soon-sub">Full invoice table, status filters, and payment-link actions are coming once scope is finalised. Financial summary is available now on the Pipeline page.</div>
-        </div>
+      <div class="content" style="padding:0">
+        <div id="inv-summary-section"></div>
+        <div id="inv-filters-row"></div>
+        <div id="inv-bulk-bar" hidden></div>
+        <div id="inv-table-wrap"></div>
+        <div id="inv-pagination"></div>
+      </div>
+      <!-- Invoice modal overlay -->
+      <div id="inv-modal-overlay" hidden onclick="if(event.target===this)window.invoiceMgr&&window.invoiceMgr.closeModal()">
+        <div id="inv-modal-content"></div>
       </div>
     </div>
     <div id="page-outbound" class="page">
@@ -1853,6 +1855,7 @@ function showPage(page) {
   if (page === 'notifications' && typeof notifPanelRenderPage === 'function') notifPanelRenderPage();
   if (page === 'today') { if (typeof loadEventDayView === 'function') loadEventDayView(); }
   if (page === 'settings') initLostReasonsSettings();
+  if (page === 'invoices' && window.invoiceMgr) window.invoiceMgr.initPage();
   // customer profile is rendered on-demand by openCustomerProfile(); no init needed here
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
@@ -5353,7 +5356,13 @@ window.addEventListener('load', function() {
     }
     if (window.overdueWidget) window.overdueWidget.init();
     if (window.customerProfile) window.customerProfile.init();
-    if (window.invoiceMgr) window.invoiceMgr.init();
+    if (window.flags.isEnabled('invoice_manager_v1')) {
+      var navInv = document.getElementById('nav-invoices');
+      if (navInv) navInv.style.display = '';
+      var spPanel = document.getElementById('pipeline-sales-panel');
+      if (spPanel) spPanel.style.display = '';
+      if (window.invoiceMgr) window.invoiceMgr.init();
+    }
   });
 });
 // focus listener removed — visibilitychange below is sufficient and avoids
@@ -5394,6 +5403,7 @@ function closeMobileSidebar() {
 <script defer src="/static/js/completed-orders.js"></script>
 <script defer src="/static/js/quote-drafts.js"></script>
 <script defer src="/static/js/customer-profile.js"></script>
+<script defer src="/static/js/invoice-manager/index.js"></script>
 <script defer src="/static/js/overdue-widget.js"></script>
 <script defer src="/static/js/quote-templates.js"></script>
 <script defer src="/static/js/invoice-manager/index.js"></script>
