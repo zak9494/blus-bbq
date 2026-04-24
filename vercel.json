@@ -50,7 +50,8 @@
     { "source": "/api/quotes/templates/:id", "destination": "/api/quotes/templates.js" },
     { "source": "/api/cron/weekly-digest", "destination": "/api/cron/weekly-digest.js" },
     { "source": "/api/customers/tags",      "destination": "/api/customers/tags.js" },
-    { "source": "/api/settings/lost-reasons", "destination": "/api/settings/lost-reasons.js" }
+    { "source": "/api/settings/lost-reasons", "destination": "/api/settings/lost-reasons.js" },
+    { "source": "/api/invoices/summary",      "destination": "/api/invoices/summary.js" }
   ],
   "crons": [
     {

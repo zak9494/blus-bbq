@@ -79,6 +79,9 @@ const SEED_FLAGS = [
   // Sales Panel + Invoice Manager
   { name: 'sales_panel_v1',         description: 'Pipeline page: replace count tiles with financial sales summary panel (Past Due / Unpaid / Charges / Paid) with time-range toggle' },
   { name: 'invoice_manager_v1',     description: 'Invoice Manager page + Accounting nav section (stub; real table/filters pending scope sign-off)' },
+  // Date picker + calendar filters
+  { name: 'date_picker_v2',         description: 'Unified date-range picker on kanban, list view, and inquiries page — replaces legacy chip filters' },
+  { name: 'calendar_filters_v2',    description: 'Calendar page: replace period chips with status filter chips (Booked/Completed default ON)' },
 ];
 
 async function getFlag(name, defaultValue) {
