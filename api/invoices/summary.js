@@ -1,137 +1,101 @@
-/* ===== INVOICE SUMMARY ENDPOINT
-   GET /api/invoices/summary?period=this_month|ytd|last_week|last_month
-   GET /api/invoices/summary?from=YYYY-MM-DD&to=YYYY-MM-DD
-
-   Best-effort roll-up from KV inquiry/quote data:
-     charged = sum of quote.total for booked/completed inquiries in range
-     paid    = sum of quote.total where rec.paid === true
-     pastDue = 0 (until payment provider integration)
-     unpaid  = charged - paid
-
-   Gated: returns 403 when invoice_manager_v1 flag is OFF.
+/* ===== GET /api/invoices/summary?period=month|quarter|ytd|custom&from=YYYY-MM-DD&to=YYYY-MM-DD
+   Returns sales summary metrics.
+   Backwards-compatible: always returns pastDue, unpaid, charged, paid (used by sales panel).
+   New fields: lostDollars, invoiceCount, avgTicket.
    ===== */
 'use strict';
-const https = require('https');
-const { getFlag } = require('../_lib/flags.js');
+const { requireFlag, loadIndex, kvGet } = require('./_lib.js');
 
-function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
-function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
-
-function kvGet(key) {
-  return new Promise((resolve, reject) => {
-    const url = kvUrl(), tok = kvToken();
-    if (!url) return resolve(null);
-    const u = new URL(url + '/get/' + encodeURIComponent(key));
-    const req = https.request({
-      hostname: u.hostname, path: u.pathname + u.search,
-      method: 'GET', headers: { Authorization: 'Bearer ' + tok },
-    }, r => {
-      let d = ''; r.on('data', c => d += c);
-      r.on('end', () => { try { resolve(JSON.parse(d).result); } catch { resolve(null); } });
-    });
-    req.on('error', () => resolve(null));
-    req.end();
-  });
-}
-
-function isoDate(d) {
-  return d.toISOString().slice(0, 10);
-}
-
-function resolveDateRange(period, fromParam, toParam) {
+function startOf(period) {
   const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth(); // 0-based
-
-  if (fromParam && toParam) {
-    return { from: fromParam, to: toParam, period: 'custom' };
+  if (period === 'month') {
+    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
   }
-
-  switch (period) {
-    case 'ytd':
-      return { from: `${y}-01-01`, to: isoDate(now), period: 'ytd' };
-    case 'last_week': {
-      const day = now.getDay(); // 0=Sun
-      const startOfLastWeek = new Date(now);
-      startOfLastWeek.setDate(now.getDate() - day - 7);
-      const endOfLastWeek = new Date(startOfLastWeek);
-      endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
-      return { from: isoDate(startOfLastWeek), to: isoDate(endOfLastWeek), period: 'last_week' };
-    }
-    case 'last_month': {
-      const firstOfLastMonth = new Date(y, m - 1, 1);
-      const lastOfLastMonth  = new Date(y, m, 0);
-      return { from: isoDate(firstOfLastMonth), to: isoDate(lastOfLastMonth), period: 'last_month' };
-    }
-    default: {
-      // this_month
-      const firstOfMonth = new Date(y, m, 1);
-      return { from: isoDate(firstOfMonth), to: isoDate(now), period: 'this_month' };
-    }
+  if (period === 'quarter') {
+    const q = Math.floor(now.getMonth() / 3);
+    return new Date(now.getFullYear(), q * 3, 1).toISOString().slice(0, 10);
   }
+  if (period === 'ytd') {
+    return new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+  }
+  return null;
 }
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (!await requireFlag(res)) return;
 
-  // Flag gate
-  const enabled = await getFlag('invoice_manager_v1');
-  if (!enabled) return res.status(403).json({ error: 'invoice_manager_v1 flag is OFF' });
+  const q = req.query || {};
+  const period = q.period || 'month';
 
-  const { period, from: fromParam, to: toParam } = req.query || {};
-  const range = resolveDateRange(period || 'this_month', fromParam, toParam);
+  let from = q.from || null;
+  let to   = q.to   || null;
 
-  // Load index
-  let index = [];
-  try {
-    const raw = await kvGet('inquiries:index');
-    index = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : [];
-    if (!Array.isArray(index)) index = [];
-  } catch { index = []; }
-
-  // Filter to range by event_date
-  const inRange = index.filter(inq => {
-    const d = inq.event_date || inq.eventDate || '';
-    return d >= range.from && d <= range.to;
-  });
-
-  // Fetch full records in batches of 20
-  const bookedStatuses = new Set(['booked', 'completed']);
-  let charged = 0;
-  let paid    = 0;
-
-  const BATCH = 20;
-  for (let i = 0; i < inRange.length; i += BATCH) {
-    const batch = inRange.slice(i, i + BATCH);
-    const records = await Promise.all(
-      batch.map(inq => kvGet('inquiries:' + inq.threadId).catch(() => null))
-    );
-    for (const rec of records) {
-      if (!rec) continue;
-      const parsed = typeof rec === 'string' ? JSON.parse(rec) : rec;
-      if (!bookedStatuses.has(parsed.status)) continue;
-      const total = parsed.quote && typeof parsed.quote.total === 'number'
-        ? parsed.quote.total : 0;
-      charged += total;
-      if (parsed.paid === true) paid += total;
-    }
+  if (period !== 'custom') {
+    from = startOf(period);
+    to   = new Date().toISOString().slice(0, 10);
   }
 
-  const unpaid = Math.max(0, charged - paid);
+  const index = await loadIndex();
+
+  // Filter by issue date (fall back to event date) within period
+  const inRange = (inv) => {
+    const d = inv.issueDate || inv.eventDate;
+    if (!d) return true;
+    if (from && d < from) return false;
+    if (to   && d > to)   return false;
+    return true;
+  };
+
+  const relevant = index.filter(inRange);
+
+  let charged    = 0;
+  let paid       = 0;
+  let unpaid     = 0;
+  let pastDue    = 0;
+  let invoiceCount = 0;
+
+  for (const inv of relevant) {
+    if (inv.status === 'void') continue;
+    invoiceCount++;
+    charged += (inv.total || 0);
+    paid    += (inv.amountPaid || 0);
+    if ((inv.balance || 0) > 0.005) unpaid += (inv.balance || 0);
+    if (inv.status === 'past_due')  pastDue += (inv.balance || 0);
+  }
+
+  const avgTicket = invoiceCount > 0 ? charged / invoiceCount : 0;
+
+  // lostDollars: sum of quote totals on declined/archived inquiries in range
+  let lostDollars = 0;
+  try {
+    const inqRaw = await kvGet('inquiries:index');
+    if (inqRaw) {
+      const inqIndex = typeof inqRaw === 'string' ? JSON.parse(inqRaw) : inqRaw;
+      for (const inq of (inqIndex || [])) {
+        if (!['declined', 'archived'].includes(inq.status)) continue;
+        const d = inq.eventDate || inq.created_at;
+        if (from && d && d.slice(0, 10) < from) continue;
+        if (to   && d && d.slice(0, 10) > to)   continue;
+        if (inq.quoteTotal) lostDollars += Number(inq.quoteTotal) || 0;
+      }
+    }
+  } catch (_) {}
 
   return res.status(200).json({
-    ok:      true,
-    pastDue: 0,
-    unpaid,
-    charged,
-    paid,
-    from:    range.from,
-    to:      range.to,
-    period:  range.period,
-    _empty:  charged === 0,
+    ok: true,
+    period,
+    from,
+    to,
+    charged:      Math.round(charged      * 100) / 100,
+    paid:         Math.round(paid         * 100) / 100,
+    unpaid:       Math.round(unpaid       * 100) / 100,
+    pastDue:      Math.round(pastDue      * 100) / 100,
+    lostDollars:  Math.round(lostDollars  * 100) / 100,
+    invoiceCount,
+    avgTicket:    Math.round(avgTicket    * 100) / 100,
   });
 };
