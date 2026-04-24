@@ -88,9 +88,10 @@ test.describe('date_picker_v2 OFF — legacy chips on kanban', () => {
         if (window.flags) await window.flags.load();
         if (typeof showPage === 'function') await showPage('pipeline');
       });
-      // Date picker row should be hidden when flag is OFF
+      // Date picker row should be absent or hidden when flag is OFF
       const dpRow = page.locator('#kb-date-picker-row');
-      const isHidden = await dpRow.evaluate(el => el.style.display === 'none' || !el.offsetParent);
+      const count = await dpRow.count();
+      const isHidden = count === 0 || !(await dpRow.isVisible());
       expect(isHidden).toBe(true);
       await page.screenshot({ path: `${OUT}/flag-off-kanban-${vp.name}.png` });
     });
