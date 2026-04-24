@@ -702,6 +702,9 @@ if (typeof marked !== 'undefined') {
           <div class="tab" onclick="switchTab('list',this)">List View</div>
         </div>
 
+        <!-- Date picker row (date_picker_v2 flag; sits above both kanban and list views) -->
+        <div id="kb-date-picker-row" style="display:none"></div>
+
         <!-- Kanban -->
         <div id="view-kanban">
           <div class="kanban" id="kanban-board"></div>
@@ -2097,6 +2100,21 @@ function switchTab(tab, el) {
   if (useNewKanban && pipelineInqCache) {
     if (tab === 'kanban' && kbEl && window.kanbanView) window.kanbanView.render(kbEl);
     if (tab === 'list'   && lvEl && window.listView)  window.listView.render(lvEl);
+  }
+  // Date picker row: show above kanban when date_picker_v2 ON, destroy on list switch
+  const dpRow = document.getElementById('kb-date-picker-row');
+  if (dpRow && window.flags && window.flags.isEnabled('date_picker_v2')) {
+    if (tab === 'kanban') {
+      dpRow.style.display = '';
+      if (window.kanbanView && typeof window.kanbanView.initDatePicker === 'function') {
+        window.kanbanView.initDatePicker(dpRow);
+      }
+    } else {
+      dpRow.style.display = 'none';
+      if (window.kanbanView && typeof window.kanbanView.destroyDatePicker === 'function') {
+        window.kanbanView.destroyDatePicker();
+      }
+    }
   }
 }
 
@@ -4211,6 +4229,16 @@ async function loadPipelineInquiries() {
       const lvContainer = document.getElementById('view-list');
       if (kbContainer && window.kanbanView) window.kanbanView.render(kbContainer);
       if (lvContainer  && window.listView)  window.listView.render(lvContainer);
+      // Init date picker on kanban if flag is ON and kanban tab is active
+      if (window.flags && window.flags.isEnabled('date_picker_v2') && _activePipelineTab === 'kanban') {
+        const dpRow = document.getElementById('kb-date-picker-row');
+        if (dpRow) {
+          dpRow.style.display = '';
+          if (window.kanbanView && typeof window.kanbanView.initDatePicker === 'function') {
+            window.kanbanView.initDatePicker(dpRow);
+          }
+        }
+      }
     } else {
       renderKanban(); renderTable();
     }
