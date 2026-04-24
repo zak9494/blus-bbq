@@ -204,7 +204,7 @@
 
     var perPageSel = '<select class="lv-per-page-sel" id="lv-per-page">'
       + PER_PAGE_OPTIONS.map(function(n){
-          return '<option value="'+n+'"+(_perPage===n?' selected':'')+'>'+n+' / page</option>';
+          return '<option value="'+n+'"'+(_perPage===n?' selected':'')+'>'+n+' / page</option>';
         }).join('')
       + '</select>';
 
@@ -287,7 +287,7 @@
       ? '<div class="lv-paging">'
           + '<button class="lv-page-btn" data-paction="prev"'+((_page===0)?' disabled':'')+'>← Prev</button>'
           + ' <span class="lv-page-info">Page '+(_page+1)+' of '+totalPages+' ('+items.length+' total)</span> '
-          + '<button class="lv-page-btn" data-paction="next"+((_page>=totalPages-1)?' disabled':'')+'>Next →</button>'
+          + '<button class="lv-page-btn" data-paction="next"'+(_page>=totalPages-1?' disabled':'')+'>Next →</button>'
         + '</div>'
       : '<div class="lv-paging"><span class="lv-page-info">'+items.length+' results</span></div>';
 
