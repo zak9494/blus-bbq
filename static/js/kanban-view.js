@@ -36,6 +36,9 @@
   /* ── State ── */
   var _dragThreadId = null;
   var _dragSrcCol   = null;
+  var _dpStart      = null;
+  var _dpEnd        = null;
+  var _dpPicker     = null;
   var _rcCache      = {};   // email → { status, count, bookedCount, lastEventDate, lastAmount }
   var _rcPending    = {};   // email → true while fetch is in-flight
 
@@ -118,6 +121,7 @@
     var dot    = inq.has_unreviewed_update
       ? '<span class="inq-update-dot" title="New reply"></span>' : '';
     var email  = getCustomerEmail(inq);
+    var ctpHtml = (window.tagPicker && email) ? window.tagPicker.renderChips(email) : '';
 
     // Tags
     var tags = '';
@@ -159,9 +163,6 @@
     div.setAttribute('data-tid', inq.threadId);
     div.setAttribute('data-email', email);
     div.__inq__ = inq; // keep reference for popup
-    // Customer tag chips (Wave 1)
-    var ctpHtml = (window.tagPicker && email) ? window.tagPicker.renderChips(email) : '';
-
     div.innerHTML =
       '<div class="kb-card-name">' + dot + name + '</div>'
       + '<div class="kb-card-meta">' + escHtml(ev) + escHtml(guests) + '</div>'
@@ -208,7 +209,7 @@
           openLostModal(inq.threadId, inq.status, function (reason) {
             _commitStatus(inq.threadId, newStatus, reason);
           }, function () {
-            sel.value = inq.status;
+            sel.value = inq.status; // cancel → restore
           });
         } else {
           _commitStatus(inq.threadId, newStatus, null);
@@ -321,7 +322,7 @@
         if (window.lostReasonSheet) {
           window.lostReasonSheet.open(tid, function (reason) {
             _commitStatus(tid, newStatus, reason);
-          }, function () { /* cancel — no change */ });
+          }, function () {});
         } else {
           openLostModal(tid, _dragSrcCol, function (reason) {
             _commitStatus(tid, newStatus, reason);
@@ -382,6 +383,21 @@
         var d = new Date(ts);
         if (isNaN(d.getTime())) return true;
         return d.getFullYear() * 100 + d.getMonth() === nowKey;
+      });
+    }
+
+    // Date-picker filter (date_picker_v2 flag)
+    if (_dpStart || _dpEnd) {
+      Object.keys(groups).forEach(function (s) {
+        groups[s] = groups[s].filter(function (inq) {
+          if (!inq.event_date) return true;
+          var parts = String(inq.event_date).split('-');
+          var d = new Date(+parts[0], +parts[1]-1, +parts[2]);
+          if (isNaN(d.getTime())) return true;
+          if (_dpStart && d < _dpStart) return false;
+          if (_dpEnd   && d > _dpEnd)   return false;
+          return true;
+        });
       });
     }
 
@@ -586,9 +602,39 @@
 
   /* ── Public API ── */
 
+  function setDateFilter(start, end) {
+    _dpStart = start || null;
+    _dpEnd   = end   || null;
+  }
+
+  function initDatePicker(containerEl) {
+    if (!containerEl || !window.DatePickerV2) return;
+    if (_dpPicker) { _dpPicker.destroy(); _dpPicker = null; }
+    _dpPicker = window.DatePickerV2.create({
+      container: containerEl,
+      presets: ['today','yesterday','this_week','last_week','last_7_days','this_month'],
+      initialPreset: 'this_month',
+      onChange: function (range) {
+        setDateFilter(range.start, range.end);
+        var c = document.getElementById('kb-board-inner');
+        if (c && c.parentElement) render(c.parentElement);
+      }
+    });
+    _dpPicker.mount();
+  }
+
+  function destroyDatePicker() {
+    if (_dpPicker) { _dpPicker.destroy(); _dpPicker = null; }
+    _dpStart = null;
+    _dpEnd   = null;
+  }
+
   window.kanbanView = {
     render: render,
     destroy: destroy,
+    setDateFilter: setDateFilter,
+    initDatePicker: initDatePicker,
+    destroyDatePicker: destroyDatePicker,
     _closePopup: closeCustomerPopup,
     _openPopup: openCustomerPopup,
     _rcCache: _rcCache,

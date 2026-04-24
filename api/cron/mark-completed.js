@@ -80,7 +80,7 @@ module.exports = async (req, res) => {
 
     for (const entry of index) {
       const { threadId, status } = entry;
-      if (!threadId || TERMINAL.has(status)) continue;
+      if (!threadId || TERMINAL.has(status) || status !== 'booked') continue;
       scanned++;
 
       // Load the full inquiry record to get event_date
