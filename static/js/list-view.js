@@ -243,7 +243,7 @@
         : '';
 
       return '<tr data-tid="' + escHtml(inq.threadId) + '">'
-        + '<td><div class="td-name">' + dot + name + ' ' + rcBadge + '</div><div class="td-email">' + email + '</div></td>'
+        + '<td><div class="td-name lv-name-popup" data-popup-tid="' + escHtml(inq.threadId) + '" title="Click for quick info">' + dot + name + ' ' + rcBadge + '</div><div class="td-email">' + email + '</div></td>'
         + '<td style="white-space:nowrap">' + evDate + '</td>'
         + '<td>' + guests + '</td>'
         + '<td>' + sel + '</td>'
@@ -380,6 +380,23 @@
         var tid = btn.getAttribute('data-tid');
         _expandedNotes.delete(tid);
         _draw();
+      });
+    });
+
+    // Customer name → quick card popup (same component as kanban)
+    _container.querySelectorAll('.lv-name-popup').forEach(function (el) {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', function (e) {
+        var tid   = el.getAttribute('data-popup-tid');
+        var cache = window.pipelineInqCache || [];
+        var inq   = null;
+        for (var i = 0; i < cache.length; i++) {
+          if (cache[i].threadId === tid) { inq = cache[i]; break; }
+        }
+        if (!inq) return;
+        if (window.kanbanView && typeof window.kanbanView._openPopup === 'function') {
+          window.kanbanView._openPopup(inq, e);
+        }
       });
     });
 
