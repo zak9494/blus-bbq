@@ -700,6 +700,7 @@ if (typeof marked !== 'undefined') {
     <div id="page-quotes" class="page">
       <div class="topbar">
         <div class="topbar-left">
+          <button id="qb-back-btn" class="btn" style="display:none;margin-right:10px" onclick="qbGoBack()">&#8592; Back</button>
           <div>
             <div class="topbar-title">Quote Builder</div>
             <div class="topbar-sub">Build, price &amp; send catering quotes</div>
@@ -1750,7 +1751,30 @@ let qbTaxExempt = false;  // standalone quote builder tax-exempt state
 let chatHistory = [];
 
 /* ===== MODULE: NAVIGATION ===== */
+
+// QB back-button routing state
+var _activePipelineTab  = 'kanban'; // updated by switchTab()
+var _quoteReturnTo      = null;     // page to return to when pressing QB ← Back
+var _quoteReturnScrollY = 0;        // .main scrollTop saved before entering QB
+
 function showPage(page) {
+  // Capture currently-active page before switching so QB back button knows where to return
+  if (page === 'quotes') {
+    var _curActive = null;
+    document.querySelectorAll('.page.active').forEach(function(p) {
+      _curActive = p.id.replace('page-', '');
+    });
+    _quoteReturnTo = _curActive || null;
+    var _mainEl = document.querySelector('.main');
+    _quoteReturnScrollY = _mainEl ? _mainEl.scrollTop : (window.scrollY || 0);
+    var _qbBack = document.getElementById('qb-back-btn');
+    if (_qbBack) _qbBack.style.display = (_quoteReturnTo === 'pipeline') ? '' : 'none';
+  } else {
+    _quoteReturnTo = null;
+    var _qbBack2 = document.getElementById('qb-back-btn');
+    if (_qbBack2) _qbBack2.style.display = 'none';
+  }
+
   if (window.innerWidth <= 768) closeMobileSidebar();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1918,6 +1942,7 @@ async function toggleFlag(name, enabled, description) {
 }
 
 function switchTab(tab, el) {
+  _activePipelineTab = tab; // track for QB back-button routing
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   const kbEl = document.getElementById('view-kanban');
@@ -1929,6 +1954,28 @@ function switchTab(tab, el) {
   if (useNewKanban && pipelineInqCache) {
     if (tab === 'kanban' && kbEl && window.kanbanView) window.kanbanView.render(kbEl);
     if (tab === 'list'   && lvEl && window.listView)  window.listView.render(lvEl);
+  }
+}
+
+function qbGoBack() {
+  var dest       = _quoteReturnTo || 'pipeline';
+  var savedScroll = _quoteReturnScrollY;
+  showPage(dest);
+  if (dest === 'pipeline') {
+    // Restore the pipeline tab (kanban or list) that was active when user left
+    if (_activePipelineTab === 'list') {
+      var kbEl     = document.getElementById('view-kanban');
+      var lvEl     = document.getElementById('view-list');
+      var tabEl    = document.querySelector('.tab[onclick*="list"]');
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      if (tabEl) tabEl.classList.add('active');
+      if (kbEl)  kbEl.style.display = 'none';
+      if (lvEl)  lvEl.style.display = 'block';
+      var useNewKanban = window.flags && window.flags.isEnabled('kanban_restructure');
+      if (useNewKanban && window.listView && lvEl) window.listView.render(lvEl);
+    }
+    var mainEl = document.querySelector('.main');
+    if (mainEl) mainEl.scrollTop = savedScroll;
   }
 }
 
@@ -5101,7 +5148,7 @@ window.addEventListener('load', function() {
     var navToday = document.getElementById('nav-today');
     if (navToday && window.flags.isEnabled('event_day_view')) navToday.style.display = '';
     const navCust = document.getElementById('nav-customers');
-    if (navCust && window.flags && window.flags.isEnabled('customer_profile_v2')) navCust.style.display = '';
+    if (navCust && window.flags && (window.flags.isEnabled('customers_nav_v1') || window.flags.isEnabled('customer_profile_v2'))) navCust.style.display = '';
     initCompletedOrdersToggle();
     if (window.flags.isEnabled('quote_builder_v2')) {
       var qbDraftsBtn     = document.getElementById('qb-drafts-btn');

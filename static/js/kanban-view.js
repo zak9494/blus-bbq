@@ -390,9 +390,10 @@
     closeCustomerPopup();
 
     var ef = inq.extracted_fields || {};
-    var name  = escHtml(ef.customer_name || inq.customer_name || inq.from || 'Unknown');
-    var email = escHtml(getCustomerEmail(inq) || inq.from || '');
-    var phone = escHtml(ef.customer_phone || inq.phone || '—');
+    var name     = escHtml(ef.customer_name || inq.customer_name || inq.from || 'Unknown');
+    var rawEmail = getCustomerEmail(inq) || inq.from || '';
+    var email    = escHtml(rawEmail);
+    var phone    = escHtml(ef.customer_phone || inq.phone || '—');
 
     var rc = _rcCache[getCustomerEmail(inq)] || {};
     var count     = rc.count || 0;
@@ -439,6 +440,23 @@
         + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);margin-bottom:6px">History</div>'
         + historyHtml
       + '</div>';
+
+    // "More info" button — navigates to customer profile page
+    if (rawEmail) {
+      var _moreRow = document.createElement('div');
+      _moreRow.style.cssText = 'margin-top:10px;text-align:right';
+      var _moreBtn = document.createElement('button');
+      _moreBtn.className = 'btn btn-sm';
+      _moreBtn.textContent = 'More info';
+      _moreBtn.addEventListener('click', function () {
+        closeCustomerPopup();
+        if (window.customerProfile && typeof window.customerProfile.show === 'function') {
+          window.customerProfile.show(rawEmail);
+        }
+      });
+      _moreRow.appendChild(_moreBtn);
+      _popup.appendChild(_moreRow);
+    }
 
     // Position near trigger
     document.body.appendChild(_popup);
@@ -548,6 +566,8 @@
     render: render,
     destroy: destroy,
     _closePopup: closeCustomerPopup,
+    _openPopup: openCustomerPopup,
+    _rcCache: _rcCache,
     /* Expose for Playwright tests */
     _KANBAN_COLS: KANBAN_COLS,
     _KANBAN_LABELS: KANBAN_LABELS
