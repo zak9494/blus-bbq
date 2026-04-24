@@ -133,6 +133,10 @@ const STATIC_MODULE_FILES = [
   'static/css/customers/tag-picker.css',
   'api/customers/tags.js',
   'api/settings/lost-reasons.js',
+  // Sales Panel + Invoice Manager
+  'static/js/invoice-manager/index.js',
+  'static/css/invoice-manager.css',
+  'api/invoices/summary.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
