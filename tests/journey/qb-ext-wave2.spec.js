@@ -191,7 +191,7 @@ test.describe('QB Wave 2 — Maps directions link', () => {
     await expect(mapsLink).toBeVisible({ timeout: 3000 });
     const href = await mapsLink.getAttribute('href');
     expect(href).toContain('maps.google.com');
-    expect(href).toContain('Main+St');
+    expect(href).toContain('Main%20St');
     await page.screenshot({ path: `${OUT}/maps-link-desktop.png` });
   });
 });
