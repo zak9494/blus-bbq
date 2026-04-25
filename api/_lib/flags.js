@@ -85,6 +85,8 @@ const SEED_FLAGS = [
   // Date picker + calendar filters
   { name: 'date_picker_v2',         description: 'Unified date-range picker on kanban, list view, and inquiries page — replaces legacy chip filters' },
   { name: 'calendar_filters_v2',    description: 'Calendar page: replace period chips with status filter chips (Booked/Completed default ON)' },
+  // Wave 2 — Quote Builder extensions (default OFF)
+  { name: 'qb_ext_wave2',           description: 'QB Wave 2: discount field, setup fee, due date + deposit %, tax rate override, quarter-chicken suggest, Maps directions link' },
 ];
 
 async function getFlag(name, defaultValue) {

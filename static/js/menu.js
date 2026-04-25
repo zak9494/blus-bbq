@@ -12,6 +12,7 @@ window.MENU = {
     { id:'pulled-pork',         name:'Pulled Pork',                  unit:'lbs',        price:22.99 },
     { id:'sausage-pb',          name:'Sausage (pork & beef)',        unit:'lbs',        price:22.99 },
     { id:'sausage-bj',          name:'Sausage (beef & jalapeño)',    unit:'lbs',        price:22.99 },
+    { id:'chicken-quarter',     name:'Chicken - Quarter',            unit:'ea',         price:5.5   },
     { id:'chicken-half',        name:'Chicken - Half',               unit:'ea',         price:11    },
     { id:'chicken-whole',       name:'Chicken - Whole',              unit:'ea',         price:18    },
     { id:'burnt-ends-brisket',  name:'Burnt Ends (brisket)',         unit:'lbs',        price:31.99 },
