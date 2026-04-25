@@ -67,7 +67,7 @@ async function setupBaseMocks(page) {
 async function setupFlagsMock(page, notifSettingsEnabled) {
   await page.route('**/api/flags', r =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ flags: [
-      { name: 'nav_v2',                   enabled: true,  description: '' },
+      { name: 'nav_v2',                   enabled: false, description: '' },
       { name: 'ios_polish_v1',            enabled: true,  description: '' },
       { name: 'lost_reason_capture',      enabled: false, description: '' },
       { name: 'notification_settings_v1', enabled: notifSettingsEnabled, description: '' },
@@ -99,8 +99,10 @@ async function setupSettingsMock(page, settings) {
 async function loadApp(page) {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('load');
-  // Allow flag loading to settle
-  await page.waitForTimeout(500);
+  await page.waitForFunction(
+    () => window.flags && window.flags.isEnabled && typeof window.flags.isEnabled('notification_settings_v1') === 'boolean',
+    { timeout: 10000 }
+  );
 }
 
 /* ─────────────────────────────────────────────────────────────
