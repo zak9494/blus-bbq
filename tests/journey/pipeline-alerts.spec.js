@@ -35,13 +35,15 @@ for (const vp of VIEWPORTS) {
     await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('load');
 
-    // Pipeline is the default landing page; ensure it's active.
+    // pipelineAlertsInit fires from showPage('pipeline'). Arm the response-wait BEFORE
+    // triggering the action so we never race the fetch.
+    const alertsRespPromise = page.waitForResponse(
+      r => r.url().includes('/api/pipeline/alerts'),
+      { timeout: 15000 }
+    );
     await page.evaluate(() => window.showPage && window.showPage('pipeline'));
     await expect(page.locator('#page-pipeline')).toHaveClass(/active/, { timeout: 5000 });
-
-    // Wait for the alerts call to land. The endpoint is fired by pipelineAlertsInit()
-    // which runs from showPage('pipeline').
-    await page.waitForResponse(r => r.url().includes('/api/pipeline/alerts'), { timeout: 10000 });
+    await alertsRespPromise;
 
     // Kanban tab is the default-active view.
     const kanbanTab = page.locator('.tab[data-view="kanban"]');
