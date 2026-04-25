@@ -152,6 +152,7 @@ const STATIC_MODULE_FILES = [
   'api/invoices/pdf.js',
   'api/invoices/export.js',
   // Wave 4 — Maps
+  'api/_lib/shop-origin.js',
   'api/maps/distance.js',
   'static/js/maps/mapbox-distance.js',
   'static/css/maps.css',

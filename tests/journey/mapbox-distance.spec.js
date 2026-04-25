@@ -24,7 +24,7 @@ const MOCK_DISTANCE = {
   miles: 12.4,
   freeFlowMin: 18,
   trafficMin: 27,
-  origin: '17630 Preston Rd, Dallas TX 75252',
+  origin: '123 Test St, Test City TX 12345',
 };
 
 const MOCK_EVENT = {
@@ -63,6 +63,9 @@ async function setupCommonMocks(page) {
   await page.route('**/api/events/today*', r =>
     r.fulfill({ status: 200, contentType: 'application/json',
       body: JSON.stringify({ ok: true, date: '2026-05-20', events: [MOCK_EVENT] }) }));
+  await page.route('**/api/settings/shop-origin*', r =>
+    r.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ address: '123 Test St, Test City TX 12345' }) }));
 }
 
 // Navigate to the event-day view (Today tab)

@@ -8,8 +8,8 @@
   'use strict';
 
   var _cache = {};
-  // Updated from first successful API response (server resolves BLUS_BBQ_ORIGIN_ADDRESS)
-  var _shopAddr = '17630 Preston Rd, Dallas TX 75252';
+  // Populated from first successful API response (server resolves shop address from KV)
+  var _shopAddr = '';
 
   function bucket15(isoStr) {
     if (!isoStr) return '';
@@ -48,8 +48,10 @@
   }
 
   function mapsViewUrl(destination) {
+    var origin = _shopAddr || (window.shopOriginAddress || '');
+    if (!origin) return null;
     return 'https://www.google.com/maps/dir/?api=1'
-      + '&origin=' + encodeURIComponent(_shopAddr)
+      + '&origin=' + encodeURIComponent(origin)
       + '&destination=' + encodeURIComponent(destination);
   }
 

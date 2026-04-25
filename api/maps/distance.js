@@ -2,14 +2,15 @@
 /* ===== MAPS: Distance + Drive Time Proxy
    GET /api/maps/distance?destination=...&departAt=...
    Returns { ok, miles, freeFlowMin, trafficMin, origin }
-   Requires MAPBOX_TOKEN env var. Reads BLUS_BBQ_ORIGIN_ADDRESS (fallback hardcoded).
+   Requires MAPBOX_TOKEN env var. Origin address read from KV via getShopOriginAddress().
+   Returns { ok: false, error: 'no_origin_address' } when address is not configured.
    Gated by maps_v1 flag.
    ===== */
 const https = require('https');
 const { getFlag } = require('../_lib/flags.js');
+const { getShopOriginAddress } = require('../_lib/shop-origin.js');
 
 const MAPBOX_BASE = 'https://api.mapbox.com';
-const ORIGIN_ADDR = process.env.BLUS_BBQ_ORIGIN_ADDRESS || '17630 Preston Rd, Dallas TX 75252';
 
 // Module-level cache: geocode results live for the process lifetime
 const _geocodeCache = new Map();
@@ -72,6 +73,11 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: false, error: 'no_token' });
     }
 
+    const originAddr = await getShopOriginAddress();
+    if (!originAddr) {
+      return res.status(200).json({ ok: false, error: 'no_origin_address' });
+    }
+
     const { destination, departAt } = req.query;
     if (!destination) {
       return res.status(400).json({ ok: false, error: 'missing_destination' });
@@ -88,7 +94,7 @@ module.exports = async (req, res) => {
     }
 
     const [originCoords, destCoords] = await Promise.all([
-      geocode(ORIGIN_ADDR, token),
+      geocode(originAddr, token),
       geocode(destination, token),
     ]);
 
@@ -102,7 +108,7 @@ module.exports = async (req, res) => {
       miles: Math.round(freeFlow.miles * 10) / 10,
       freeFlowMin: freeFlow.minutes,
       trafficMin: traffic.minutes,
-      origin: ORIGIN_ADDR,
+      origin: originAddr,
     });
 
   } catch (err) {
