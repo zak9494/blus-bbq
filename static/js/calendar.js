@@ -149,7 +149,7 @@
     if (!threadIds.length) return;
     await Promise.all(threadIds.map(async function (tid) {
       try {
-        var r = await fetch('/api/inquiries/get?threadId=' + encodeURIComponent(tid));
+        var r = await fetch('/api/inquiries/get?threadId=' + encodeURIComponent(tid) + '&secret=' + encodeURIComponent(getSecret()));
         if (!r.ok) return;
         var d = await r.json();
         if (d.inquiry && d.inquiry.status) calInqStatusMap[tid] = d.inquiry.status;
@@ -829,11 +829,10 @@
     setError('');
     setLoading(true);
     try {
-      var tasks = [ensureLoaded()];
-      if (window.flags && window.flags.isEnabled('calendar_v2')) {
-        tasks.push(loadInqStatuses());
+      await ensureLoaded();
+      if (window.flags && (window.flags.isEnabled('calendar_v2') || window.flags.isEnabled('calendar_filters_v2'))) {
+        await loadInqStatuses();
       }
-      await Promise.all(tasks);
     } catch (e) {
       setError('Could not load calendar: ' + e.message);
     }
