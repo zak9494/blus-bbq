@@ -11,14 +11,15 @@ const { test, expect } = require('@playwright/test');
 const BASE_URL = process.env.SMOKE_BASE_URL || 'https://blus-bbq.vercel.app';
 
 async function setupBaseFlags(page, overrides = {}) {
-  const flags = {
+  const baseObj = {
     kanban_restructure: true,
     date_picker_v2: true,
     invoice_manager_v1: false,
     kanban_edit_mode_v1: false,
     ...overrides
   };
-  await page.route('**/api/flags**', r => r.fulfill({ status: 200, json: flags }));
+  const flagsArr = Object.entries(baseObj).map(([name, enabled]) => ({ name, enabled, description: '' }));
+  await page.route('**/api/flags**', r => r.fulfill({ status: 200, json: { flags: flagsArr } }));
   await page.route('**/api/**', r => r.fulfill({ status: 200, json: {} }));
   await page.route('**/api/inquiries/list**', r => r.fulfill({
     status: 200, json: { inquiries: [], total: 0 }
