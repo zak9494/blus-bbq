@@ -177,15 +177,7 @@ for (const vp of VIEWPORTS) {
 
     // First load: sms toggle is ON
     let savedBody = null;
-    await page.route('**/api/notification-settings/save', async r => {
-      savedBody = await r.request().postDataJSON().catch(() => null);
-      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-        ok: true, tenantId: 'default',
-        settings: { channels: { push: true, in_app: true, email: true, sms: false },
-                    events: MOCK_SETTINGS.events },
-      }) });
-    });
-
+    // Register GET mock first so the save mock (registered after) wins in LIFO for /save POSTs
     await page.route('**/api/notification-settings**', async r => {
       if (r.request().method() === 'GET') {
         return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
@@ -196,6 +188,15 @@ for (const vp of VIEWPORTS) {
         }) });
       }
       return r.continue();
+    });
+
+    await page.route('**/api/notification-settings/save', async r => {
+      savedBody = await r.request().postDataJSON().catch(() => null);
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        ok: true, tenantId: 'default',
+        settings: { channels: { push: true, in_app: true, email: true, sms: false },
+                    events: MOCK_SETTINGS.events },
+      }) });
     });
 
     await loadApp(page);
