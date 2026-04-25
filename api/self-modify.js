@@ -118,6 +118,8 @@ const STATIC_MODULE_FILES = [
   'api/quotes/duplicate.js',
   'api/quotes/templates.js',
   'api/settings/digest-recipient.js',
+  'api/settings/shop-origin.js',
+  'api/_lib/shop-origin.js',
   'api/cron/weekly-digest.js',
   // Wave 0.5 — iOS polish UI modules
   'static/js/ui/scroll-lock.js',
