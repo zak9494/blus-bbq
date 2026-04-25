@@ -376,7 +376,6 @@
 
 /* ── Column header right side ── */
 .kb-col-hdr-right { display: flex; align-items: center; gap: 6px; }
-.kb-col-total { font-size: 10px; font-weight: 700; color: var(--green); background: rgba(74,222,128,0.10); border-radius: 8px; padding: 1px 6px; }
 /* ── Phone line on card ── */
 .kb-card-phone { font-size: 11px; color: var(--text3); margin-top: 2px; }
 /* ── Toolbar ── */

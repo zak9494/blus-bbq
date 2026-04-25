@@ -79,11 +79,6 @@
     } catch (_) { return d; }
   }
 
-  function fmtCurrency(n) {
-    if (!n) return '';
-    return '$' + Math.round(n).toLocaleString('en-US');
-  }
-
   function getServiceType(inq) {
     var ef = inq.extracted_fields || {};
     return (ef.service_type || inq.service_type || '').toLowerCase().replace(/[\s&]/g, '_');
@@ -335,18 +330,16 @@
 
   /* ── Column builder ── */
 
-  function buildColumn(status, cards, dollarTotal) {
+  function buildColumn(status, cards) {
     var col = document.createElement('div');
     col.className = 'kb-col' + (cards.length === 0 ? ' kb-col-empty' : '');
     col.setAttribute('data-col', status);
 
     var hdr = document.createElement('div');
     hdr.className = 'kb-col-hdr';
-    var totalHtml = dollarTotal
-      ? '<span class="kb-col-total">' + escHtml(fmtCurrency(dollarTotal)) + '</span>' : '';
     hdr.innerHTML =
       '<span class="kb-col-title">' + escHtml(_colLabel(status)) + '</span>'
-      + '<div class="kb-col-hdr-right">' + totalHtml
+      + '<div class="kb-col-hdr-right">'
         + '<span class="kb-col-count">' + cards.length + '</span>'
       + '</div>';
 
@@ -528,8 +521,7 @@
 
     effectiveCols.forEach(function (s) {
       var colInqs = groups[s] || [];
-      var dollarTotal = colInqs.reduce(function (sum, inq) { return sum + (parseFloat(inq.quote_total) || 0); }, 0);
-      board.appendChild(buildColumn(s, colInqs.map(buildCard), dollarTotal));
+      board.appendChild(buildColumn(s, colInqs.map(buildCard)));
     });
 
     return board;
