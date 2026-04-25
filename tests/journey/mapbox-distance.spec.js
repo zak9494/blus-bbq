@@ -121,7 +121,7 @@ for (const vp of VIEWPORTS) {
       const viewBtn = page.locator('.maps-view-btn').first();
       await expect(viewBtn).toBeVisible();
       const href = await viewBtn.getAttribute('href');
-      expect(href).toContain('maps.google.com');
+      expect(href).toContain('google.com/maps');
       expect(href).toContain('origin=');
       expect(href).toContain('destination=');
 
