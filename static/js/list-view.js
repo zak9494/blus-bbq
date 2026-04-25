@@ -46,9 +46,27 @@
   var _dpPicker    = null;
   var _perPage     = parseInt(localStorage.getItem('lv_perPage') || '50', 10);
   var _page        = 0;
+  var _colConfigListener = null;
 
   function _dpEnabled() {
     return !!(window.flags && typeof window.flags.isEnabled === 'function' && window.flags.isEnabled('date_picker_v2'));
+  }
+
+  function _flagOn(name) {
+    return !!(window.flags && typeof window.flags.isEnabled === 'function' && window.flags.isEnabled(name));
+  }
+
+  function _getStatusConfig() {
+    var cfg = window.kanbanView && typeof window.kanbanView.getColConfig === 'function'
+      ? window.kanbanView.getColConfig() : null;
+    var order = (cfg && Array.isArray(cfg.order)) ? cfg.order : STATUSES.slice();
+    var labels = {};
+    STATUSES.forEach(function(s) { labels[s] = STATUS_LABELS[s] || s; });
+    if (cfg && cfg.labels) {
+      Object.keys(cfg.labels).forEach(function(k) { if (cfg.labels[k]) labels[k] = cfg.labels[k]; });
+    }
+    var hidden = (cfg && cfg.hidden) || {};
+    return { order: order, labels: labels, hidden: hidden };
   }
 
   function escHtml(s) {
@@ -151,6 +169,9 @@
   function render(container) {
     _container = container;
     _page = 0;
+    if (_colConfigListener) document.removeEventListener('kbColConfigChanged', _colConfigListener);
+    _colConfigListener = function() { _draw(); };
+    document.addEventListener('kbColConfigChanged', _colConfigListener);
     _draw();
   }
 
@@ -176,8 +197,11 @@
           noPastDates: true,
           initialPreset: 'this_month',
           onChange: function (range) {
-            _dpStart = range.start || null;
-            _dpEnd   = range.end   || null;
+            var start = range.start || null;
+            var end   = range.end   || null;
+            if (start && end && end < start) return;
+            _dpStart = start;
+            _dpEnd   = end;
             _page = 0;
             _draw();
           }
@@ -188,13 +212,21 @@
   }
 
   function _buildToolbar(data) {
-    var statusChips = [{ val:'', lbl:'All' }].concat(
-      STATUSES.map(function(s){ return { val:s, lbl:STATUS_LABELS[s]||s }; })
-    ).map(function(c){
+    var sconfig = _getStatusConfig();
+    var chipDefs = [{ val:'', lbl:'All' }].concat(
+      sconfig.order
+        .filter(function(s){ return !sconfig.hidden[s]; })
+        .map(function(s){ return { val:s, lbl:sconfig.labels[s]||s }; })
+    );
+    var statusChips = chipDefs.map(function(c){
       var cnt = c.val ? data.filter(function(i){ return i.status===c.val; }).length : data.length;
       var act = _filters.status === c.val;
       return '<button class="lv-chip'+(act?' active':'')+'" data-status="'+escHtml(c.val)+'">'+escHtml(c.lbl)+' ('+cnt+')</button>';
     }).join('');
+
+    var editColsBtn = _flagOn('kanban_edit_mode_v1')
+      ? '<button class="btn btn-sm" id="lv-edit-cols-btn" title="Edit columns">Edit Columns</button>'
+      : '';
 
     var svcSelect = '<select class="lv-service-sel" id="lv-svc-sel">'
       + SERVICE_OPTIONS.map(function(o){
@@ -217,6 +249,7 @@
         + '<input class="lv-search form-input" id="lv-search" placeholder="Search name, email, notes\u2026" value="'+escHtml(_search)+'">'
         + svcSelect
         + perPageSel
+        + editColsBtn
       + '</div>'
       + '<div class="lv-toolbar-row">'+statusChips+'</div>'
       + (dateSection ? '<div class="lv-toolbar-row">'+dateSection+'</div>' : '')
@@ -407,10 +440,23 @@
         if(typeof openInquiry==='function')openInquiry(tid);
       });
     });
+
+    var editColsBtn = _container.querySelector('#lv-edit-cols-btn');
+    if (editColsBtn) {
+      editColsBtn.addEventListener('click', function() {
+        if (window.kanbanView && typeof window.kanbanView.openColEditModal === 'function') {
+          window.kanbanView.openColEditModal();
+        }
+      });
+    }
   }
 
   function destroy() {
     if(_dpPicker){_dpPicker.destroy();_dpPicker=null;}
+    if (_colConfigListener) {
+      document.removeEventListener('kbColConfigChanged', _colConfigListener);
+      _colConfigListener = null;
+    }
     _container=null; _expandedNotes.clear();
   }
 
