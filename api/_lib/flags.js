@@ -95,6 +95,8 @@ const SEED_FLAGS = [
   { name: 'qb_quarter_chicken_3meat', description: 'Quote Builder: show Quarter Chicken meat option (auto-disabled until 3+ meats selected)' },
   // Wave 4 — iMessage-style email/SMS thread view
   { name: 'email_thread_v2',        description: 'iMessage-style email/SMS thread view on inquiry detail — replaces single View Email modal (default OFF)' },
+  // Wave 1.5 — Lost system
+  { name: 'lost_reasons_v1',        description: 'Wave 1.5: past-event visual flag, Mark Lost modal (7-reason enum picker), Lost Reasons dashboard widget' },
 ];
 
 async function getFlag(name, defaultValue) {

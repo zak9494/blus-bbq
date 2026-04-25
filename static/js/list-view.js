@@ -239,11 +239,28 @@
     if (_page >= totalPages) _page = totalPages - 1;
     var pageItems = items.slice(_page * _perPage, (_page + 1) * _perPage);
 
+    var lostReasonsOn = window.flags && typeof window.flags.isEnabled === 'function'
+      && window.flags.isEnabled('lost_reasons_v1');
+
     var rows = pageItems.map(function (inq) {
       var name   = escHtml(inq.customer_name || inq.from || 'Unknown');
       var email  = escHtml(getCustomerEmail(inq));
       var dot    = inq.has_unreviewed_update ? '<span class="inq-update-dot"></span>' : '';
-      var evDate = escHtml(fmtDate(inq.event_date) || '—');
+
+      // Past-event detection (Wave 1.5)
+      var isPastEvent = false;
+      if (lostReasonsOn && inq.event_date && inq.status !== 'completed' && inq.status !== 'declined') {
+        var _parts = String(inq.event_date).split('-');
+        var _evD = new Date(+_parts[0], +_parts[1] - 1, +_parts[2]);
+        var _today = new Date(); _today.setHours(0,0,0,0);
+        isPastEvent = _evD < _today;
+      }
+
+      var evDateRaw = fmtDate(inq.event_date) || '—';
+      var evDate = isPastEvent
+        ? '<span class="lv-past-event-date">' + escHtml(evDateRaw) + '</span>'
+          + '<span class="lv-chip-past-event">Past</span>'
+        : escHtml(evDateRaw);
       var guests = escHtml(String(inq.guest_count || '—'));
       var amount = inq.quote_total
         ? '$' + parseFloat(inq.quote_total).toLocaleString()
@@ -405,6 +422,21 @@
         var tid=btn.getAttribute('data-open');
         if(typeof showPage==='function')showPage('inquiries');
         if(typeof openInquiry==='function')openInquiry(tid);
+      });
+    });
+
+    // Past Event chip → Mark Lost modal (Wave 1.5)
+    _container.querySelectorAll('.lv-chip-past-event').forEach(function(chip){
+      chip.style.cursor='pointer';
+      chip.addEventListener('click', function(e){
+        e.stopPropagation();
+        var row=chip.closest('tr');
+        if(!row)return;
+        var tid=row.getAttribute('data-tid');
+        if(!tid||!window.markLostModal)return;
+        window.markLostModal.open(tid, function(){
+          if(typeof loadPipelineInquiries==='function')loadPipelineInquiries();
+        }, null);
       });
     });
   }
