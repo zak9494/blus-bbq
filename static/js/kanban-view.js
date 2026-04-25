@@ -335,11 +335,21 @@
     col.className = 'kb-col' + (cards.length === 0 ? ' kb-col-empty' : '');
     col.setAttribute('data-col', status);
 
+    var totalSum = 0;
+    cards.forEach(function (c) {
+      var t = c && c.__inq__ ? parseFloat(c.__inq__.quote_total) : NaN;
+      if (!isNaN(t)) totalSum += t;
+    });
+    var totalHtml = totalSum > 0
+      ? '<span class="kb-col-total">$' + totalSum.toLocaleString('en-US') + '</span>'
+      : '';
+
     var hdr = document.createElement('div');
     hdr.className = 'kb-col-hdr';
     hdr.innerHTML =
       '<span class="kb-col-title">' + escHtml(_colLabel(status)) + '</span>'
       + '<div class="kb-col-hdr-right">'
+        + totalHtml
         + '<span class="kb-col-count">' + cards.length + '</span>'
       + '</div>';
 
