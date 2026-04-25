@@ -607,8 +607,35 @@
     document.getElementById('cal-em-time').textContent    = timeRange;
 
     var locEl = document.getElementById('cal-em-loc');
-    locEl.textContent    = ev.location || '';
-    locEl.style.display  = ev.location ? '' : 'none';
+    locEl.style.display = ev.location ? '' : 'none';
+    if (ev.location) {
+      var mapsEnabled = window.flags && window.flags.isEnabled('maps_v1');
+      if (mapsEnabled && window.mapboxDistance) {
+        var gmUrl = window.mapboxDistance.mapsViewUrl(ev.location);
+        locEl.innerHTML = '<div class="cal-em-loc-row">'
+          + '<span class="cal-em-loc-text">' + escHtml(ev.location) + '</span>'
+          + '<a class="maps-view-btn" id="cal-em-view-map" href="' + escHtml(gmUrl) + '" target="_blank" rel="noopener">View Map</a>'
+          + '<span class="maps-dist-chip maps-loading" id="cal-em-dist-chip">\u2026</span>'
+          + '</div>';
+        var departAt = (ev.start && ev.start.dateTime) ? ev.start.dateTime : null;
+        window.mapboxDistance.fetch('default', ev.location, departAt)
+          .then(function (result) {
+            var chip = document.getElementById('cal-em-dist-chip');
+            if (!chip) return;
+            if (result) {
+              chip.textContent = window.mapboxDistance.fmtChip(result);
+              chip.classList.remove('maps-loading');
+              chip.title = 'Free-flow: ' + result.freeFlowMin + ' min \u00b7 With traffic: ' + result.trafficMin + ' min';
+              var btn = document.getElementById('cal-em-view-map');
+              if (btn) btn.href = window.mapboxDistance.mapsViewUrl(ev.location);
+            } else {
+              chip.style.display = 'none';
+            }
+          });
+      } else {
+        locEl.textContent = ev.location;
+      }
+    }
 
     var descEl = document.getElementById('cal-em-desc');
     descEl.textContent   = desc;
