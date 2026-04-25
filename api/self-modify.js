@@ -118,6 +118,8 @@ const STATIC_MODULE_FILES = [
   'api/quotes/duplicate.js',
   'api/quotes/templates.js',
   'api/settings/digest-recipient.js',
+  'api/settings/shop-origin.js',
+  'api/_lib/shop-origin.js',
   'api/cron/weekly-digest.js',
   // Wave 0.5 — iOS polish UI modules
   'static/js/ui/scroll-lock.js',
@@ -151,6 +153,15 @@ const STATIC_MODULE_FILES = [
   'api/invoices/remind.js',
   'api/invoices/pdf.js',
   'api/invoices/export.js',
+  // Wave 4 — Maps
+  'api/_lib/shop-origin.js',
+  'api/maps/distance.js',
+  'static/js/maps/mapbox-distance.js',
+  'static/css/maps.css',
+  // Wave 4 — iMessage-style thread view
+  'static/js/thread-view.js',
+  'static/css/thread-view.css',
+  'api/inquiries/thread.js',
   // Wave 2 — Quote Builder: Quarter Chicken 3+ meat gate
   'static/js/qb-quarter-chicken-gate.js',
 ];

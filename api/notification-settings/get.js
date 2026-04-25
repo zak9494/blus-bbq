@@ -69,10 +69,6 @@ module.exports = async (req, res) => {
   const enabled = await getFlag('notification_settings_v1');
   if (!enabled) return res.status(403).json({ error: 'Feature disabled' });
 
-  const secret = process.env.GMAIL_READ_SECRET;
-  const provided = (req.query && req.query.secret) || req.headers['x-secret'];
-  if (!secret || provided !== secret) return res.status(401).json({ error: 'Unauthorized' });
-
   const tenantId = (req.query && req.query.tenantId) || DEFAULT_TENANT;
   const settings = await getSettings(tenantId);
   return res.status(200).json({ ok: true, tenantId, settings, channels: CHANNELS, events: EVENTS });
