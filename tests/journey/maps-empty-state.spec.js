@@ -103,14 +103,15 @@ test.describe('Maps empty state — notice in place of View Map button', () => {
       await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
       await openEventDayView(page);
 
-      // Notice should be present on the card
+      // Notice should appear after the distance fetch resolves with no_origin_address.
+      // Auto-retry waits for the async swap (button + chip removed; notice inserted).
       const notice = page.locator('[data-testid="maps-empty-notice"]').first();
-      await expect(notice).toBeVisible();
+      await expect(notice).toBeVisible({ timeout: 5000 });
       const noticeText = await notice.textContent();
       expect(noticeText).toMatch(/Set your shop address/i);
       expect(noticeText).toMatch(/Settings/);
 
-      // No View Map button or distance chip when origin is unset
+      // After swap: no View Map button or distance chip on the card
       await expect(page.locator('.maps-view-btn')).toHaveCount(0);
       await expect(page.locator('.maps-dist-chip')).toHaveCount(0);
 
