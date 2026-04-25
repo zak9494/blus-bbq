@@ -46,7 +46,10 @@
   .nav-v2-active > .main       { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 }
 @media (min-width: 769px) {
-  .nav-v2-active { grid-template-columns: 1fr; }
+  /* !important needed: inline <style> block comes after this file in the document
+     and has equal specificity, so without it the 220px 1fr default wins and the
+     hidden sidebar still occupies a ghost 220px column, collapsing .main. */
+  .nav-v2-active { grid-template-columns: 1fr !important; }
   .nav-v2-active > .main { margin-left: 64px; transition: margin-left 0.2s ease; }
   .nav-v2-active.nav2-sidebar-expanded > .main { margin-left: 200px; }
 }

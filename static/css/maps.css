@@ -1,0 +1,48 @@
+/* ===== Maps: distance chip + View Map button (maps_v1) ===== */
+
+.maps-dist-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-secondary, #666);
+  background: var(--bg-chip, #f0f0f0);
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.maps-dist-chip.maps-loading {
+  opacity: 0.45;
+}
+
+.maps-view-btn {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent, #1a73e8);
+  text-decoration: none;
+  padding: 2px 0;
+  margin-left: 6px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.maps-view-btn:hover {
+  text-decoration: underline;
+}
+
+/* Calendar modal: location row with inline map actions */
+.cal-em-loc-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cal-em-loc-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
