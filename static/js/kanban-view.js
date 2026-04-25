@@ -188,6 +188,20 @@
     }
   }
 
+  /* ── Past-event detection (Wave 1.5) ── */
+
+  function _isPastEvent(inq) {
+    if (!inq.event_date) return false;
+    if (inq.status === 'completed' || inq.status === 'declined') return false;
+    var lostReasonsOn = window.flags && typeof window.flags.isEnabled === 'function'
+      && window.flags.isEnabled('lost_reasons_v1');
+    if (!lostReasonsOn) return false;
+    var parts = String(inq.event_date).split('-');
+    var evDate = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+    var today = new Date(); today.setHours(0,0,0,0);
+    return evDate < today;
+  }
+
   /* ── Card builder ── */
 
   function buildCard(inq) {
@@ -200,9 +214,16 @@
       ? '<span class="inq-update-dot" title="New reply"></span>' : '';
     var email  = getCustomerEmail(inq);
     var ctpHtml = (window.tagPicker && email) ? window.tagPicker.renderChips(email) : '';
+    var pastEvent = _isPastEvent(inq);
 
     var tags = '';
 
+    // Past Event flag (Wave 1.5, flag: lost_reasons_v1)
+    if (pastEvent) {
+      tags += '<span class="kb-tag-past-event" title="Event date has passed — click to mark Lost">&#9888; Past Event</span>';
+    }
+
+    // Quote Sent: Scheduled vs Sent tag
     if (inq.status === 'quote_sent') {
       var isScheduled = inq.scheduled_send_at && new Date(inq.scheduled_send_at) > new Date();
       tags += isScheduled
@@ -229,7 +250,7 @@
     }).join('');
 
     var div = document.createElement('div');
-    div.className = 'kb-card';
+    div.className = 'kb-card' + (pastEvent ? ' kb-past-event' : '');
     div.draggable = true;
     div.setAttribute('data-tid', inq.threadId);
     div.setAttribute('data-email', email);
@@ -264,6 +285,26 @@
       });
     }
 
+    // Past Event pill click → Mark Lost modal (Wave 1.5)
+    var pastPill = div.querySelector('.kb-tag-past-event');
+    if (pastPill) {
+      pastPill.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (window.markLostModal) {
+          window.markLostModal.open(inq.threadId, function (reason) {
+            div.classList.remove('kb-past-event');
+            pastPill.remove();
+            inq.status = 'declined';
+            div.classList.add('kb-col-declined');
+            if (typeof window.loadPipelineInquiries === 'function') {
+              setTimeout(function () { window.loadPipelineInquiries(); }, 600);
+            }
+          }, null);
+        }
+      });
+    }
+
+    // Status select change — use cardStatusDropdown module (Wave 1) if available
     var sel = div.querySelector('.kb-status-sel');
     if (window.cardStatusDropdown) {
       window.cardStatusDropdown.wire(sel, inq, function (newStatus, lostReason) {

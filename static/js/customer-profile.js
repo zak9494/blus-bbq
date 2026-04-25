@@ -9,6 +9,53 @@
   let _notesTimer   = null;
   let _lastNotes    = '';
 
+  const STORAGE_KEY = 'cp:lastEmail';
+
+  function emailFromUrl() {
+    try {
+      const h = (window.location.hash || '').replace(/^#/, '');
+      const mh = /^customer\/(.+)$/.exec(h);
+      if (mh && mh[1]) return decodeURIComponent(mh[1]);
+      const q = new URLSearchParams(window.location.search || '');
+      const c = q.get('customer');
+      if (c) return c;
+      const mp = (window.location.pathname || '').match(/^\/customers\/(.+)$/);
+      if (mp && mp[1]) return decodeURIComponent(mp[1]);
+    } catch (_) { /* ignore */ }
+    return null;
+  }
+
+  function persistEmail(email) {
+    try {
+      if (email) sessionStorage.setItem(STORAGE_KEY, email);
+      else sessionStorage.removeItem(STORAGE_KEY);
+    } catch (_) { /* ignore */ }
+    try {
+      const target = email ? '#customer/' + encodeURIComponent(email) : '';
+      if ((window.location.hash || '') !== target) {
+        const newUrl = window.location.pathname + window.location.search + target;
+        history.replaceState(null, '', newUrl);
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  function renderEmptyState() {
+    const page = document.getElementById('page-customer');
+    if (!page) return;
+    const content = page.querySelector('.content');
+    if (!content) return;
+    content.innerHTML = `
+      <button class="cp-back-btn" onclick="window.customerProfile.back()">← Back to Pipeline</button>
+      <div data-cp-empty="1" style="padding:48px 24px;text-align:center;color:var(--text2)">
+        <div style="font-size:42px;margin-bottom:12px">👤</div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:6px">No customer selected</div>
+        <div style="font-size:13px;color:var(--text3);max-width:360px;margin:0 auto">
+          Open a customer profile from the Pipeline or an inquiry to see their history, notes, and past quotes.
+        </div>
+      </div>
+    `;
+  }
+
   function secret() {
     return (typeof INQ_SECRET !== 'undefined' ? INQ_SECRET : '') ||
            (typeof window.INQ_SECRET !== 'undefined' ? window.INQ_SECRET : '');
@@ -187,11 +234,14 @@
 
   function show(email) {
     _currentEmail = email;
+    persistEmail(email);
     if (typeof window.showPage === 'function') window.showPage('customer');
     loadProfile(email);
   }
 
   function back() {
+    _currentEmail = null;
+    persistEmail(null);
     if (typeof window.showPage === 'function') window.showPage('pipeline');
   }
 
@@ -230,7 +280,25 @@
     }
   }
 
-  function init() { /* no-op — page renders on show() */ }
+  function init() {
+    // If show() is mid-flight (it sets _currentEmail before calling showPage,
+    // which re-enters init()), let loadProfile() handle the render.
+    if (_currentEmail) return;
+
+    let email = emailFromUrl();
+    if (!email) {
+      try { email = sessionStorage.getItem(STORAGE_KEY); } catch (_) { email = null; }
+    }
+    if (email) {
+      show(email);
+      return;
+    }
+
+    // Only paint the empty state when the customer page is actually visible —
+    // init() also runs once at app boot, when page-customer is hidden.
+    const page = document.getElementById('page-customer');
+    if (page && page.classList.contains('active')) renderEmptyState();
+  }
 
   window.customerProfile = { show, back, openEvent, duplicateQuote, init };
 })();

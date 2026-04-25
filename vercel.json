@@ -29,6 +29,12 @@
     { "source": "/api/notifications/subscribe", "destination": "/api/notifications/subscribe.js" },
     { "source": "/api/notifications/send", "destination": "/api/notifications/send.js" },
     { "source": "/api/notifications/vapid-key", "destination": "/api/notifications/vapid-key.js" },
+    { "source": "/api/notifications", "destination": "/api/notifications/index.js" },
+    { "source": "/api/notifications/counts", "destination": "/api/notifications/counts.js" },
+    { "source": "/api/notifications/types", "destination": "/api/notifications/types.js" },
+    { "source": "/api/notifications/mark-all-read", "destination": "/api/notifications/mark-all-read.js" },
+    { "source": "/api/notifications/cadence-tick", "destination": "/api/notifications/cadence-tick.js" },
+    { "source": "/api/notifications/:id", "destination": "/api/notifications/[id].js" },
     { "source": "/api/flags",      "destination": "/api/flags.js" },
     { "source": "/api/flags/:name", "destination": "/api/flags.js" },
     { "source": "/api/ai/regenerate", "destination": "/api/ai/regenerate.js" },
@@ -39,7 +45,6 @@
     { "source": "/api/cron/post-event-archive", "destination": "/api/cron/post-event-archive.js" },
     { "source": "/api/settings/guest-count-lockin", "destination": "/api/settings/guest-count-lockin.js" },
     { "source": "/api/events/today", "destination": "/api/events/today.js" },
-    { "source": "/api/inquiries/completed", "destination": "/api/inquiries/completed.js" },
     { "source": "/api/cron/mark-completed",  "destination": "/api/cron/mark-completed.js" },
     { "source": "/api/customer/profile",     "destination": "/api/customer/profile.js" },
     { "source": "/api/settings/digest-recipient", "destination": "/api/settings/digest-recipient.js" },
@@ -64,7 +69,9 @@
     { "source": "/api/notification-settings",      "destination": "/api/notification-settings/get.js" },
     { "source": "/api/notification-settings/save", "destination": "/api/notification-settings/save.js" },
     { "source": "/api/maps/distance",              "destination": "/api/maps/distance.js" },
-    { "source": "/api/inquiries/thread", "destination": "/api/inquiries/thread.js" }
+    { "source": "/api/inquiries/thread",           "destination": "/api/inquiries/thread.js" },
+    { "source": "/api/invoices/lost-reasons",      "destination": "/api/invoices/lost-reasons.js" },
+    { "source": "/api/orders/mark-lost",           "destination": "/api/orders/mark-lost.js" }
   ],
   "crons": [
     {

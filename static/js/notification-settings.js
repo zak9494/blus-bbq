@@ -26,7 +26,8 @@
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
   function getSecret() {
-    return (window._appSecret || window.APP_SECRET || '');
+    return (typeof INQ_SECRET !== 'undefined' ? INQ_SECRET : '') ||
+           (typeof window.INQ_SECRET !== 'undefined' ? window.INQ_SECRET : '');
   }
 
   function isEnabled(group, key) {
