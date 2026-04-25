@@ -4,7 +4,7 @@ _Source of truth for the full backlog. Updated by Claude after every state chang
 _For a daily glance, see [STATUS.md](./STATUS.md)._
 
 ## Wave 1 — Core UX + iOS feel  (1/2 complete)
-- [ ] "Missed" highlight for past event dates — in PR #68 (open, CI green)
+- [ ] "Missed" highlight for past event dates — in PR #68 (open, CI green, blocked behind #64-67)
 - [x] ~~quote_total on kanban cards~~ — DROPPED 2026-04-25 by Zach: "Not doing it." Code removed from PR #65.
 
 ## Wave 2 — Quote Builder + infrastructure  (3/10 complete)
@@ -15,12 +15,13 @@ _For a daily glance, see [STATUS.md](./STATUS.md)._
 - [ ] Setup fee conditional input — in PR #61
 - [ ] Due date + deposit % + 2nd due date — in PR #61
 - [ ] Tax rate override (currently hardcoded 8.25% in `quote-engine.js`) — in PR #61
-- [ ] Quarter chicken 3+ meat logic — in PR #75 (open, CI green)
+- [ ] Quarter chicken 3+ meat logic — in PR #75 (open, CI green, DIRTY conflict)
 - [ ] SMS scaffold (`api/sms/`) — in PR #62
 - [ ] Payment link abstraction (`api/payments/`) — in PR #63
 
-## Wave 3 — AI + Notifications UX  (3/7 complete)
+## Wave 3 — AI + Notifications UX  (4/8 complete)
 - [x] Notification Settings page — shipped in PR #70
+- [x] Notification Settings as Settings sub-page (replaces nav-slot decision) — shipped in PR #78
 - [x] Regenerate button in AI approval UI — shipped in PR #71
 - [x] Add Details button in AI approval UI — shipped in PR #71
 - [ ] "Post Catering Emails" subsection in Scheduled view
@@ -45,6 +46,10 @@ _For a daily glance, see [STATUS.md](./STATUS.md)._
 ## Recently shipped (last 14 days, rolling)
 _Most recent first. Auto-archived from STATUS.md "Last 24h" section._
 
+- 2026-04-25 · #76 — STATUS.md + ROADMAP.md as single source of truth
+- 2026-04-25 · #78 — Notifications sub-page entry under Settings
+- 2026-04-25 · #64 — Calendar v2 filters fix (events not rendering)
+- 2026-04-25 · #77 — notif-settings 401 on load + duplicate hamburger nav hotfix
 - 2026-04-25 · #74 — Configurable shop origin address (remove hardcoded Dallas)
 - 2026-04-25 · #73 — iMessage-style email thread view (`email_thread_v2`)
 - 2026-04-25 · #72 — Mapbox distance + traffic-aware drive time (`maps_v1`)
