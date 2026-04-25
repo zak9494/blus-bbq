@@ -4322,6 +4322,12 @@ const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_
 
 async function loadPipelineInquiries() {
   try {
+    // init() calls this synchronously from the inline script before defer'd flags.js
+    // has populated its cache; await flags.load() so the kanban_restructure gate
+    // sees a hydrated cache on first paint.
+    if (window.flags && typeof window.flags.load === 'function') {
+      await window.flags.load();
+    }
     const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
     const d = await r.json();
     // Stage 2: only approved, non-archived; exclude test records unless showTestData is on

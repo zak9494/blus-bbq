@@ -1,10 +1,3 @@
-/* ===== NOTIFICATIONS INDEX
-   GET  /api/notifications        — list notifications (public, flag-gated)
-     query: limit, offset, unread_only, type
-   POST /api/notifications        — create notification (requires SELF_MODIFY_SECRET)
-     body: { secret, type, title, body, metadata?, customerId?, inquiryId?,
-             severity?, sound?, icon? }
-   ===== */
 'use strict';
 const { getFlag }            = require('../_lib/flags.js');
 const { createNotification, listNotifications } = require('../_lib/notifications.js');
@@ -17,10 +10,11 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const enabled = await getFlag('notifications_center', false);
-  if (!enabled) return res.status(404).json({ error: 'Not found' });
 
-  // ── GET /api/notifications ────────────────────────────────────────────────
   if (req.method === 'GET') {
+    if (!enabled) {
+      return res.status(200).json({ ok: true, notifications: [], total: 0, unread_count: 0 });
+    }
     const q           = req.query || {};
     const limit       = Math.min(parseInt(q.limit,  10) || 50, 200);
     const offset      = Math.max(parseInt(q.offset, 10) || 0,   0);
@@ -35,8 +29,8 @@ module.exports = async (req, res) => {
     }
   }
 
-  // ── POST /api/notifications ───────────────────────────────────────────────
   if (req.method === 'POST') {
+    if (!enabled) return res.status(404).json({ error: 'Not found' });
     const expected = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN;
     const body     = req.body || {};
     if (!expected || body.secret !== expected) {
