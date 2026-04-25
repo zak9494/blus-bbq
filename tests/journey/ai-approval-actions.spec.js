@@ -163,9 +163,11 @@ for (const vp of VIEWPORTS) {
     const card = page.locator('[data-approval-id="ap-test-001"]');
     await expect(card.locator('.approval-regen')).toBeVisible({ timeout: 4000 });
 
-    // Click Regenerate — use dispatchEvent to fire directly on the element,
-    // bypassing hit-test (a sibling/overlay intercepts at some viewport widths)
-    await card.locator('.approval-regen').dispatchEvent('click');
+    // Click Regenerate — use native element.click() in page context to reliably
+    // fire the registered listener regardless of viewport or element overlap
+    await page.evaluate(() => {
+      document.querySelector('[data-approval-id="ap-test-001"] .approval-regen')?.click();
+    });
     const regenRow = card.locator('.approval-regen-row');
     await expect(regenRow).toBeVisible({ timeout: 2000 });
 
@@ -217,8 +219,11 @@ for (const vp of VIEWPORTS) {
     const card = page.locator('[data-approval-id="ap-test-001"]');
     await expect(card.locator('.approval-add-details')).toBeVisible({ timeout: 4000 });
 
-    // Click Add Details — use dispatchEvent to fire directly on the element
-    await card.locator('.approval-add-details').dispatchEvent('click');
+    // Click Add Details — use native element.click() in page context to reliably
+    // fire the registered listener regardless of viewport or element overlap
+    await page.evaluate(() => {
+      document.querySelector('[data-approval-id="ap-test-001"] .approval-add-details')?.click();
+    });
     const detailsRow = card.locator('.approval-details-row');
     await expect(detailsRow).toBeVisible({ timeout: 2000 });
 
