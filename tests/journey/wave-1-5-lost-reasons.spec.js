@@ -27,6 +27,8 @@ const PAST_INQ = {
   customer_name: 'Past Event Customer',
   from: 'past@example.com',
   status: 'quote_sent',
+  approved: true,
+  has_unreviewed_update: false,
   event_date: YESTERDAY,
   guest_count: 50,
   quote_total: '1200',
