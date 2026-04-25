@@ -83,7 +83,7 @@ test.describe('Shop origin — settings input + save', () => {
 
       // Fill and save
       await input.fill(TEST_ADDRESS);
-      await page.locator('button', { hasText: 'Save' }).first().click();
+      await page.locator('button[onclick="saveShopAddress()"]').click();
       await page.waitForTimeout(400);
 
       // Global should be updated
