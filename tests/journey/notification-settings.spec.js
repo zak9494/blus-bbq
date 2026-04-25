@@ -191,7 +191,7 @@ for (const vp of VIEWPORTS) {
     });
 
     await page.route('**/api/notification-settings/save', async r => {
-      savedBody = await r.request().postDataJSON().catch(() => null);
+      try { savedBody = r.request().postDataJSON(); } catch (e) { savedBody = null; }
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
         ok: true, tenantId: 'default',
         settings: { channels: { push: true, in_app: true, email: true, sms: false },
