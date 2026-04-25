@@ -219,7 +219,7 @@
     var el = qs('#inv-filters-row');
     if (!el) return;
     el.innerHTML =
-      (window.DatePickerV2
+      (window.DatePickerV2 && window.flags && window.flags.isEnabled('date_picker_v2')
         ? '<div class="inv-filter-group"><div id="inv-dp-container"></div></div>'
         : '<div class="inv-filter-group">' +
             '<label>From <input type="date" id="inv-f-from" value="' + esc(inv.filterFrom) + '" onchange="window.invoiceMgr._filterDate()"></label>' +
@@ -259,7 +259,7 @@
           '<input type="checkbox" ' + (inv.pastDueOnly?'checked':'') + ' onchange="window.invoiceMgr._filterToggle(\'pastdue\',this.checked)"> Past due only</label>' +
       '</div>' +
       '<button class="inv-filter-reset" onclick="window.invoiceMgr._resetFilters()">Reset</button>';
-    if (window.DatePickerV2) {
+    if (window.DatePickerV2 && window.flags && window.flags.isEnabled('date_picker_v2')) {
       if (_invDpPicker) { _invDpPicker.destroy(); _invDpPicker = null; }
       var dpCont = qs('#inv-dp-container');
       if (dpCont) {
