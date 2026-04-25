@@ -19,8 +19,8 @@ async function setupBaseFlags(page, overrides = {}) {
     ...overrides
   };
   const flagsArr = Object.entries(baseObj).map(([name, enabled]) => ({ name, enabled, description: '' }));
-  await page.route('**/api/flags**', r => r.fulfill({ status: 200, json: { flags: flagsArr } }));
   await page.route('**/api/**', r => r.fulfill({ status: 200, json: {} }));
+  await page.route('**/api/flags**', r => r.fulfill({ status: 200, json: { flags: flagsArr } }));
   await page.route('**/api/inquiries/list**', r => r.fulfill({
     status: 200, json: { inquiries: [], total: 0 }
   }));

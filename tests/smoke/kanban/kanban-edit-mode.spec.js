@@ -69,7 +69,7 @@ async function setupMocks(page) {
 
 async function goToKanban(page) {
   await page.goto(BASE_URL);
-  await page.waitForLoadState('networkidle');
+  await page.waitForFunction(() => window.flags && typeof window.flags.isEnabled === 'function', { timeout: 5000 });
   await page.waitForSelector('.kb-board', { timeout: 10000 });
   await page.waitForTimeout(500);
 }
