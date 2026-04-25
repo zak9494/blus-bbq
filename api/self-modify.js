@@ -151,6 +151,8 @@ const STATIC_MODULE_FILES = [
   'api/invoices/remind.js',
   'api/invoices/pdf.js',
   'api/invoices/export.js',
+  // Wave 2 — Quote Builder: Quarter Chicken 3+ meat gate
+  'static/js/qb-quarter-chicken-gate.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

@@ -87,6 +87,8 @@ const SEED_FLAGS = [
   { name: 'calendar_filters_v2',    description: 'Calendar page: replace period chips with status filter chips (Booked/Completed default ON)' },
   // Wave 3 — Notification Settings
   { name: 'notification_settings_v1', description: 'Notification Settings page — per-channel and per-event toggles, persisted to KV' },
+  // Wave 2 — Quote Builder: Quarter Chicken availability gated by 3+ meats
+  { name: 'qb_quarter_chicken_3meat', description: 'Quote Builder: show Quarter Chicken meat option (auto-disabled until 3+ meats selected)' },
 ];
 
 async function getFlag(name, defaultValue) {
