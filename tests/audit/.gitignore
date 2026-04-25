@@ -1,0 +1,4 @@
+# Per-test intermediate JSON output (regenerated each run by live-deploy-audit.spec.js)
+.findings/
+# Local debug helpers
+_*.js
