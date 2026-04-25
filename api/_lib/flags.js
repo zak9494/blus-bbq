@@ -85,6 +85,8 @@ const SEED_FLAGS = [
   // Date picker + calendar filters
   { name: 'date_picker_v2',         description: 'Unified date-range picker on kanban, list view, and inquiries page — replaces legacy chip filters' },
   { name: 'calendar_filters_v2',    description: 'Calendar page: replace period chips with status filter chips (Booked/Completed default ON)' },
+  // Wave 3 — AI approval actions
+  { name: 'ai_approval_actions_v1', description: 'AI approval: Regenerate + Add Details inline actions on draft approval cards (default OFF)' },
 ];
 
 async function getFlag(name, defaultValue) {
