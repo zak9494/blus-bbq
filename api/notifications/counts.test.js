@@ -118,11 +118,14 @@ describe('GET /api/notifications/counts', () => {
     setFlagEnabled('notifications_center', true);
   });
 
-  it('returns 404 when flag is off', async () => {
+  it('returns ok with zero counts when flag is off (graceful empty state)', async () => {
     setFlagEnabled('notifications_center', false);
     const res = makeRes();
     await handler(makeReq(), res);
-    assert.equal(res._status, 404);
+    assert.equal(res._status, 200);
+    assert.ok(res._body.ok);
+    assert.equal(res._body.unread_count, 0);
+    assert.deepEqual(res._body.by_type, {});
   });
 
   it('returns ok with zero counts when store is empty', async () => {
