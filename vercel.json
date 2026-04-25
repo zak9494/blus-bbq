@@ -51,6 +51,7 @@
     { "source": "/api/cron/weekly-digest", "destination": "/api/cron/weekly-digest.js" },
     { "source": "/api/customers/tags",      "destination": "/api/customers/tags.js" },
     { "source": "/api/settings/lost-reasons", "destination": "/api/settings/lost-reasons.js" },
+    { "source": "/api/settings/shop-origin", "destination": "/api/settings/shop-origin.js" },
     { "source": "/api/invoices/summary", "destination": "/api/invoices/summary.js" },
     { "source": "/api/invoices/list",    "destination": "/api/invoices/list.js" },
     { "source": "/api/invoices/create",  "destination": "/api/invoices/create.js" },
