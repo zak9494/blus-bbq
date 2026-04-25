@@ -4323,8 +4323,12 @@ const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_
 async function loadPipelineInquiries() {
   try {
     // init() calls this synchronously from the inline script before defer'd flags.js
-    // has populated its cache; await flags.load() so the kanban_restructure gate
-    // sees a hydrated cache on first paint.
+    // has even defined window.flags. Wait for the flags client to appear and hydrate,
+    // so the kanban_restructure gate sees a populated cache on first paint.
+    const _flagsWaitStart = Date.now();
+    while (!window.flags && (Date.now() - _flagsWaitStart) < 3000) {
+      await new Promise(function (r) { setTimeout(r, 50); });
+    }
     if (window.flags && typeof window.flags.load === 'function') {
       await window.flags.load();
     }
