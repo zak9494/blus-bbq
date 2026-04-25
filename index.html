@@ -1838,7 +1838,7 @@ function showPage(page) {
     var _mainEl = document.querySelector('.main');
     _quoteReturnScrollY = _mainEl ? _mainEl.scrollTop : (window.scrollY || 0);
     var _qbBack = document.getElementById('qb-back-btn');
-    if (_qbBack) _qbBack.style.display = (_quoteReturnTo === 'pipeline') ? '' : 'none';
+    if (_qbBack) _qbBack.style.display = (_quoteReturnTo === 'pipeline' || _quoteReturnTo === 'inquiries') ? '' : 'none';
   } else {
     _quoteReturnTo = null;
     var _qbBack2 = document.getElementById('qb-back-btn');
@@ -5414,7 +5414,13 @@ window.addEventListener('load', function() {
     if (window.customerProfile) window.customerProfile.init();
     if (window.flags.isEnabled('invoice_manager_v1')) {
       var navInv = document.getElementById('nav-invoices');
-      if (navInv) navInv.style.display = '';
+      if (navInv) navInv.style.display = 'none';
+      var navInvStub = document.getElementById('nav-invoices-stub');
+      if (navInvStub) navInvStub.style.display = 'none';
+      var navAcctLabel = document.getElementById('nav-accounting-label');
+      if (navAcctLabel) navAcctLabel.style.display = '';
+      var navInvActive = document.getElementById('nav-invoices-active');
+      if (navInvActive) navInvActive.style.display = '';
       var spPanel = document.getElementById('pipeline-sales-panel');
       if (spPanel) spPanel.style.display = '';
       if (window.invoiceMgr) window.invoiceMgr.init();
