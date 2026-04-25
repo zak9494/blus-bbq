@@ -10,6 +10,10 @@
 'use strict';
 const https = require('https');
 
+// Dashboard access secret — same value embedded in index.html (not a server secret).
+// Accepted alongside SELF_MODIFY_SECRET so the pipeline alerts banner works on Kanban + List views.
+const INQ_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
+
 function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
 function kvToken() { return process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN; }
 
@@ -43,9 +47,10 @@ module.exports = async (req, res) => {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const q = req.query || {};
-  const secret   = q.secret;
-  const expected = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN;
-  if (!expected || secret !== expected) return res.status(401).json({ error: 'Unauthorized' });
+  const secret       = q.secret;
+  const serverSecret = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN;
+  const isValid      = secret === INQ_SECRET || (serverSecret && secret === serverSecret);
+  if (!isValid) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
     const indexRaw = await kvGet('inquiries:index');

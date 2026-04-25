@@ -35,6 +35,9 @@
 <!-- Wave 4: Maps -->
 <link rel="stylesheet" href="/static/css/maps.css">
 <link rel="stylesheet" href="/static/css/thread-view.css">
+<!-- Wave 1.5: Lost system -->
+<link rel="stylesheet" href="/static/css/mark-lost-modal.css">
+<link rel="stylesheet" href="/static/css/lost-reasons-widget.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -698,6 +701,9 @@ if (typeof marked !== 'undefined') {
 
         <!-- Overdue widget (Group 9, flag-gated) -->
         <div id="overdue-widget-container" style="display:none;margin-bottom:12px"></div>
+
+        <!-- Lost Reasons widget (Wave 1.5, flag: lost_reasons_v1) -->
+        <div id="lost-reasons-widget-container" style="display:none;margin-bottom:12px"></div>
 
         <!-- Alerts: hidden (stale hardcoded data replaced by dynamic recent-replies-section) -->
         <div class="alerts-section" id="alerts-section" style="display:none"></div>
@@ -1847,6 +1853,9 @@ if (typeof marked !== 'undefined') {
 <script src="/static/js/notification-settings.js"></script>
 <!-- Wave 4: Maps -->
 <script src="/static/js/maps/mapbox-distance.js"></script>
+<!-- Wave 1.5: Lost system -->
+<script src="/static/js/pipeline/mark-lost-modal.js"></script>
+<script src="/static/js/pipeline/lost-reasons-widget.js"></script>
 <script>
 /* ===== MODULE: CONSTANTS & STATIC DATA ===== */
 // D22: MENU is now loaded from /static/js/menu.js (window.MENU).
@@ -1902,7 +1911,7 @@ function showPage(page) {
   if (page === 'scheduled') renderScheduled();
   if (page === 'inquiries') loadInquiries();
   else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
-  if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); if (window.overdueWidget) window.overdueWidget.init(); }
+  if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); if (window.overdueWidget) window.overdueWidget.init(); if (window.lostReasonsWidget) window.lostReasonsWidget.init(); }
   if (page === 'calendar') { if (typeof calInit === 'function') calInit(); }
   if (page === 'customer') { if (window.customerProfile) window.customerProfile.init(); }
   if (page === 'ai') { loadChatHistory(); if (typeof chatApprovalInit === 'function') chatApprovalInit(); } // C21 + D24
@@ -5515,6 +5524,7 @@ window.addEventListener('load', function() {
       if (bar && window.flags && window.flags.isEnabled('quote_templates')) bar.style.display = '';
     }
     if (window.overdueWidget) window.overdueWidget.init();
+    if (window.lostReasonsWidget) window.lostReasonsWidget.init();
     if (window.customerProfile) window.customerProfile.init();
     if (window.flags.isEnabled('invoice_manager_v1')) {
       var navInv = document.getElementById('nav-invoices');
