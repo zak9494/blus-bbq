@@ -164,3 +164,44 @@ test('calendar_filters_v2 ON — Needs More Info chip reveals needs_info event',
   await expect(page.locator('.cal-event-name', { hasText: 'Jones Corporate Lunch' })).toBeVisible();
   await page.screenshot({ path: `${OUT}/needs-chip-on.png` });
 });
+
+// ── Mobile (iPhone 375px) month grid: 5 chips + booked event visible ─────────
+// Captures the production bug Zach reported: at iPhone width with v2 filters ON,
+// the month grid was empty regardless of chip state. After the fix:
+// - all 5 status chips render
+// - the Booked chip is active by default → Smith Family BBQ event renders on
+//   the month grid BEFORE any user interaction.
+test('calendar_filters_v2 ON — iPhone 375px month grid: 5 chips + event renders before any interaction', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await setupMocks(page, [
+    { name: 'calendar_filters_v2', enabled: true, description: '' },
+  ]);
+  await page.goto(BASE_URL + '/', { waitUntil: 'load' });
+  await page.evaluate(async () => {
+    if (window.flags) await window.flags.load();
+    if (typeof showPage === 'function') showPage('calendar');
+    // Mobile defaults to day view; the reported bug was on the month grid,
+    // so explicitly switch to month view before asserting.
+    if (typeof window.calSetView === 'function') window.calSetView('month');
+  });
+  await page.waitForSelector('#cal-status-chips-bar', { timeout: 15000 });
+  await page.waitForSelector('.cal-month-view', { timeout: 10000 });
+
+  const chipBar = page.locator('#cal-status-chips-bar');
+  await expect(chipBar).toBeVisible();
+  await expect(chipBar.locator('.cal-status-chip')).toHaveCount(5);
+
+  for (const label of ['Needs More Info', 'Quote Drafted', 'Quote Sent', 'Booked', 'Completed']) {
+    await expect(chipBar.locator('.cal-status-chip', { hasText: label })).toHaveCount(1);
+  }
+
+  // Booked chip active by default → at least one event renders on the month grid
+  // BEFORE any chip interaction. This is the user-visible regression: the grid
+  // was previously empty regardless of chip state.
+  // (At 375px the .cal-event-name text gets clipped by overflow:hidden on narrow
+  // day cells, so we assert on the .cal-event parent and the cal-has-events
+  // marker class — both signal "events render on the grid".)
+  await expect(page.locator('.cal-month-view .cal-day.cal-has-events').first()).toBeVisible();
+  expect(await page.locator('.cal-month-view .cal-event').count()).toBeGreaterThan(0);
+  await page.screenshot({ path: `${OUT}/iphone-month-grid.png`, fullPage: true });
+});
