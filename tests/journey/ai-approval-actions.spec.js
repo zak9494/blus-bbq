@@ -143,7 +143,7 @@ for (const vp of VIEWPORTS) {
     let regenRequestBody = null;
 
     await page.route('**/api/ai/regenerate', async r => {
-      regenRequestBody = await r.request().postDataJSON().catch(() => null);
+      try { regenRequestBody = r.request().postDataJSON(); } catch { regenRequestBody = null; }
       return r.fulfill({ status: 200, contentType: 'application/json',
         body: JSON.stringify({ ok: true, body: UPDATED_BODY, draftType: 'email' }) });
     });
@@ -196,7 +196,7 @@ for (const vp of VIEWPORTS) {
     let detailsRequestBody = null;
 
     await page.route('**/api/ai/add-details', async r => {
-      detailsRequestBody = await r.request().postDataJSON().catch(() => null);
+      try { detailsRequestBody = r.request().postDataJSON(); } catch { detailsRequestBody = null; }
       return r.fulfill({ status: 200, contentType: 'application/json',
         body: JSON.stringify({ ok: true, body: UPDATED_BODY, draftType: 'email' }) });
     });
