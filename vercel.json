@@ -59,7 +59,9 @@
     { "source": "/api/invoices/void",    "destination": "/api/invoices/void.js" },
     { "source": "/api/invoices/remind",  "destination": "/api/invoices/remind.js" },
     { "source": "/api/invoices/pdf",     "destination": "/api/invoices/pdf.js" },
-    { "source": "/api/invoices/export",  "destination": "/api/invoices/export.js" }
+    { "source": "/api/invoices/export",  "destination": "/api/invoices/export.js" },
+    { "source": "/api/sms/send",   "destination": "/api/sms/send.js" },
+    { "source": "/api/sms/status", "destination": "/api/sms/status.js" }
   ],
   "crons": [
     {
