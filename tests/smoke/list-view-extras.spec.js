@@ -47,7 +47,10 @@ async function setupMocks(page) {
 
 async function goToListView(page) {
   await page.goto(BASE_URL);
-  await page.waitForLoadState('networkidle');
+  await page.waitForFunction(
+    () => window.flags && window.flags.isEnabled && window.flags.isEnabled('kanban_restructure') === true,
+    { timeout: 10000 }
+  );
   await page.waitForSelector('.kb-board', { timeout: 10000 });
   await page.locator('.tab', { hasText: 'List View' }).click();
   await page.waitForSelector('.lv-toolbar', { timeout: 8000 });

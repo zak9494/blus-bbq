@@ -85,7 +85,10 @@ async function setupMocks(page) {
 }
 
 async function waitForFlags(page) {
-  await page.waitForFunction(() => window.flags && typeof window.flags.isEnabled === 'function', { timeout: 5000 });
+  await page.waitForFunction(
+    () => window.flags && window.flags.isEnabled && window.flags.isEnabled('kanban_restructure') === true,
+    { timeout: 10000 }
+  );
 }
 
 async function goToPipeline(page) {
@@ -210,8 +213,10 @@ test.describe('Wave 1.5 — past-event chip on list view', () => {
 
       // Switch to list view
       await page.evaluate(() => {
-        if (typeof switchTab === 'function') switchTab('list', null);
-        else if (window.listView && typeof window.listView.render === 'function') {
+        if (typeof switchTab === 'function') {
+          const tab = document.querySelector('.tab[data-view="list"]');
+          if (tab) switchTab('list', tab);
+        } else if (window.listView && typeof window.listView.render === 'function') {
           const c = document.getElementById('view-list');
           if (c) window.listView.render(c, window.pipelineInqCache || []);
         }
