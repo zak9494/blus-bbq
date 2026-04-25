@@ -83,13 +83,24 @@ async function setupFlagsMock(page, actionsEnabled) {
 async function loadAppAndOpenAI(page) {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('load');
-  await page.waitForTimeout(500);
+  await page.waitForFunction(
+    () => window.flags && window.flags.isEnabled && typeof window.flags.isEnabled('ai_approval_actions_v1') === 'boolean',
+    { timeout: 10000 }
+  );
   // Navigate to AI chat page and trigger chatApprovalInit
   await page.evaluate(() => {
     if (window.showPage) window.showPage('ai');
     if (window.chatApprovalInit) window.chatApprovalInit();
   });
   await page.waitForTimeout(600);
+  // At desktop widths the chat-sidebar-panel overlays approval cards — hide it
+  const vw = page.viewportSize();
+  if (vw && vw.width >= 769) {
+    await page.evaluate(() => {
+      const panel = document.querySelector('.chat-sidebar-panel');
+      if (panel) panel.style.display = 'none';
+    });
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
