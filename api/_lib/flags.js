@@ -87,6 +87,8 @@ const SEED_FLAGS = [
   { name: 'calendar_filters_v2',    description: 'Calendar page: replace period chips with status filter chips (Booked/Completed default ON)' },
   // Wave 3 — Notification Settings
   { name: 'notification_settings_v1', description: 'Notification Settings page — per-channel and per-event toggles, persisted to KV' },
+  // Wave 3 — AI approval actions
+  { name: 'ai_approval_actions_v1', description: 'AI approval: Regenerate + Add Details inline actions on draft approval cards (default OFF)' },
   // Wave 4 — Maps
   { name: 'maps_v1',                description: 'Mapbox distance + traffic-aware drive time on event cards; View Map button (default OFF)' },
   // Wave 2 — Quote Builder: Quarter Chicken availability gated by 3+ meats
