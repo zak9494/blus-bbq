@@ -232,4 +232,21 @@ test.describe('customer-nav-routing journeys', () => {
     await page.screenshot({ path: path.join(OUT, '6b-customer-page-active.png') });
     console.log('✓ Journey 6: customers_nav_v1 flag → nav visible + routes to customer page');
   });
+
+  // ── Journey 7: Customers nav — loading state resolves (regression) ─────
+  test('customers nav: does not hang on loading — shows empty state', async ({ page }) => {
+    const navCustomers = page.locator('#nav-customers');
+    await expect(navCustomers).toBeVisible({ timeout: 3000 });
+
+    await navCustomers.click();
+    await page.waitForTimeout(500);
+
+    const content = page.locator('#page-customer .content');
+    // Must NOT show "Loading…" indefinitely
+    await expect(content).not.toContainText('Loading…');
+    // Must show the empty-state prompt
+    await expect(content).toContainText('Select a customer from the Pipeline');
+    await page.screenshot({ path: path.join(OUT, '7-customers-empty-state.png') });
+    console.log('✓ Journey 7: customers nav → empty state (no hanging loading)');
+  });
 });

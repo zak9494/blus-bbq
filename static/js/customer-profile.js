@@ -230,7 +230,13 @@
     }
   }
 
-  function init() { /* no-op — page renders on show() */ }
+  function init() {
+    if (_currentEmail) return; // profile already loaded; leave it in place
+    const page = document.getElementById('page-customer');
+    if (!page) return;
+    const content = page.querySelector('.content');
+    if (content) content.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">Select a customer from the Pipeline to view their profile.</div>';
+  }
 
   window.customerProfile = { show, back, openEvent, duplicateQuote, init };
 })();
