@@ -85,6 +85,8 @@ const SEED_FLAGS = [
   // Date picker + calendar filters
   { name: 'date_picker_v2',         description: 'Unified date-range picker on kanban, list view, and inquiries page — replaces legacy chip filters' },
   { name: 'calendar_filters_v2',    description: 'Calendar page: replace period chips with status filter chips (Booked/Completed default ON)' },
+  // Wave 1.5 — Lost system
+  { name: 'lost_reasons_v1',        description: 'Wave 1.5: past-event visual flag, Mark Lost modal (7-reason enum picker), Lost Reasons dashboard widget' },
 ];
 
 async function getFlag(name, defaultValue) {
