@@ -32,6 +32,8 @@
 <link rel="stylesheet" href="/static/css/invoice-manager.css">
 <link rel="stylesheet" href="/static/css/components/date-picker.css">
 <link rel="stylesheet" href="/static/css/notification-settings.css">
+<!-- Wave 4: Maps -->
+<link rel="stylesheet" href="/static/css/maps.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -1829,6 +1831,8 @@ if (typeof marked !== 'undefined') {
 <script src="/static/js/widgets/todays-actions.js"></script>
 <script src="/static/js/customers/tag-picker.js"></script>
 <script src="/static/js/notification-settings.js"></script>
+<!-- Wave 4: Maps -->
+<script src="/static/js/maps/mapbox-distance.js"></script>
 <script>
 /* ===== MODULE: CONSTANTS & STATIC DATA ===== */
 // D22: MENU is now loaded from /static/js/menu.js (window.MENU).
@@ -5495,6 +5499,7 @@ window.addEventListener('load', function() {
       var navNS = document.getElementById('nav-notif-settings');
       if (navNS) navNS.style.display = 'flex';
     }
+    if (window.qbQuarterChickenGate) window.qbQuarterChickenGate.init();
   });
 });
 // focus listener removed — visibilitychange below is sufficient and avoids
@@ -5539,6 +5544,7 @@ function closeMobileSidebar() {
 <script defer src="/static/js/invoice-manager/index.js"></script>
 <script defer src="/static/js/overdue-widget.js"></script>
 <script defer src="/static/js/quote-templates.js"></script>
+<script defer src="/static/js/qb-quarter-chicken-gate.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof twInit === 'function') twInit('input[type="time"]');

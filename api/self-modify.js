@@ -153,6 +153,11 @@ const STATIC_MODULE_FILES = [
   'api/invoices/remind.js',
   'api/invoices/pdf.js',
   'api/invoices/export.js',
+  // Wave 4 — Maps
+  'api/_lib/shop-origin.js',
+  'api/maps/distance.js',
+  'static/js/maps/mapbox-distance.js',
+  'static/css/maps.css',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
