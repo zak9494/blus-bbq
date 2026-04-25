@@ -158,6 +158,10 @@ const STATIC_MODULE_FILES = [
   'api/maps/distance.js',
   'static/js/maps/mapbox-distance.js',
   'static/css/maps.css',
+  // Wave 4 — iMessage-style thread view
+  'static/js/thread-view.js',
+  'static/css/thread-view.css',
+  'api/inquiries/thread.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

@@ -63,7 +63,8 @@
     { "source": "/api/invoices/export",  "destination": "/api/invoices/export.js" },
     { "source": "/api/notification-settings",      "destination": "/api/notification-settings/get.js" },
     { "source": "/api/notification-settings/save", "destination": "/api/notification-settings/save.js" },
-    { "source": "/api/maps/distance",              "destination": "/api/maps/distance.js" }
+    { "source": "/api/maps/distance",              "destination": "/api/maps/distance.js" },
+    { "source": "/api/inquiries/thread", "destination": "/api/inquiries/thread.js" }
   ],
   "crons": [
     {
