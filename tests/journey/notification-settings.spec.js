@@ -229,6 +229,10 @@ for (const vp of VIEWPORTS) {
     await page.evaluate(() => { if (window.notifSettings) window.notifSettings.reload(); });
     await page.waitForTimeout(600);
 
+    // Re-navigate to notif-settings — reload may not surface the panel automatically
+    await page.evaluate(() => { if (window.showPage) window.showPage('notif-settings'); });
+    await expect(page.locator('#page-notif-settings')).toHaveClass(/active/, { timeout: 4000 });
+
     // SMS toggle should now be unchecked
     const smsToggle = page.locator('#ns-toggle-ch-sms');
     await expect(smsToggle).not.toBeChecked({ timeout: 3000 });
