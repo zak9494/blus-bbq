@@ -56,11 +56,19 @@
       var mapsEnabled = window.flags && window.flags.isEnabled('maps_v1');
       var distExtra = '';
       if (mapsEnabled) {
-        var gmUrl = window.mapboxDistance
-          ? window.mapboxDistance.mapsViewUrl(inq.delivery_address)
-          : 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(inq.delivery_address);
-        distExtra = ' <a class="maps-view-btn" href="' + h(gmUrl) + '" target="_blank" rel="noopener">View Map</a>'
-          + '<span class="maps-dist-chip maps-loading" id="ed-dist-' + h(inq.threadId) + '">\u2026</span>';
+        var hasOrigin = !!(window.shopOriginAddress && String(window.shopOriginAddress).trim());
+        if (hasOrigin) {
+          var gmUrl = window.mapboxDistance
+            ? window.mapboxDistance.mapsViewUrl(inq.delivery_address)
+            : 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(inq.delivery_address);
+          distExtra = ' <a class="maps-view-btn" href="' + h(gmUrl) + '" target="_blank" rel="noopener">View Map</a>'
+            + '<span class="maps-dist-chip maps-loading" id="ed-dist-' + h(inq.threadId) + '">\u2026</span>';
+        } else {
+          distExtra = ' <span class="maps-empty-notice" data-testid="maps-empty-notice">'
+            + 'Set your shop address in '
+            + '<a href="#" class="maps-empty-link" onclick="window.openShopAddressSetting&&window.openShopAddressSetting();return false;">Settings &rarr; Shop Info</a>'
+            + ' to enable maps &amp; drive times.</span>';
+        }
       }
       addressHtml = '<div class="ed-info-row">'
         + '<span class="ed-info-label">Address</span>'

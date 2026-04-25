@@ -1527,6 +1527,10 @@ if (typeof marked !== 'undefined') {
                 <button class="btn btn-primary" onclick="saveShopAddress()">Save</button>
               </div>
               <div id="settings-shop-address-status" style="font-size:12px;color:var(--text3);margin-top:6px"></div>
+              <div id="settings-shop-address-warning" class="maps-shop-warn" data-testid="maps-shop-warn" style="display:none">
+                <span class="maps-shop-warn-icon" aria-hidden="true">&#9888;&#65039;</span>
+                Maps &amp; drive time features are disabled until this is set.
+              </div>
             </div>
           </div>
         </div>
@@ -3688,6 +3692,7 @@ async function loadShopOriginAddress() {
     if (addrEl) addrEl.textContent = window.shopOriginAddress;
     const inputEl = document.getElementById('settings-shop-address');
     if (inputEl) inputEl.value = window.shopOriginAddress;
+    updateShopAddressWarning();
   } catch (_) {}
 }
 
@@ -3708,11 +3713,31 @@ async function saveShopAddress() {
     window.shopOriginAddress = address;
     const addrEl = document.getElementById('quote-preview-shop-addr');
     if (addrEl) addrEl.textContent = window.shopOriginAddress;
+    updateShopAddressWarning();
     if (status) { status.textContent = 'Saved \u2713'; setTimeout(() => { if (status) status.textContent = ''; }, 2500); }
   } catch (e) {
     if (status) status.textContent = 'Error: ' + e.message;
   }
 }
+
+function updateShopAddressWarning() {
+  const warn = document.getElementById('settings-shop-address-warning');
+  if (!warn) return;
+  const empty   = !(window.shopOriginAddress && String(window.shopOriginAddress).trim());
+  const mapsOn  = !!(window.flags && window.flags.isEnabled && window.flags.isEnabled('maps_v1'));
+  warn.style.display = (empty && mapsOn) ? '' : 'none';
+}
+
+window.openShopAddressSetting = function () {
+  if (typeof showPage === 'function') showPage('settings');
+  setTimeout(function () {
+    const input = document.getElementById('settings-shop-address');
+    if (input) {
+      try { input.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+      try { input.focus(); } catch (_) {}
+    }
+  }, 150);
+};
 let currentInquiry = null;
 
 const INQ_STATUS_LABELS = {
@@ -5480,6 +5505,7 @@ window.addEventListener('load', function() {
   if (typeof notifInit === 'function') notifInit();
   if (typeof notifPanelInit === 'function') notifPanelInit();
   if (window.flags) window.flags.load().then(function() {
+    if (typeof updateShopAddressWarning === 'function') updateShopAddressWarning();
     if (window.testMode) window.testMode.init();
     if (window.navV2) window.navV2.init();
     var navToday = document.getElementById('nav-today');
