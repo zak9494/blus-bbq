@@ -28,12 +28,18 @@ async function setupMocks(page) {
   await page.route('**/api/inquiries/list**', r => r.fulfill({
     status: 200, json: { inquiries: MOCK_INQS, total: MOCK_INQS.length }
   }));
-  await page.route('**/api/flags**', r => r.fulfill({ status: 200, json: {
-    kanban_restructure: true, kanban_edit_mode_v1: true, lost_auto_hide_48h: false,
-    date_picker_v2: true, sales_panel_v1: false, completed_eom_hide: false,
-    invoice_manager_v1: false, customer_profile_v2: false,
-    todays_actions_widget: false, overdue_widget: false,
-  }}));
+  await page.route('**/api/flags**', r => r.fulfill({ status: 200, json: { flags: [
+    { name: 'kanban_restructure',    enabled: true,  description: '' },
+    { name: 'kanban_edit_mode_v1',   enabled: true,  description: '' },
+    { name: 'lost_auto_hide_48h',    enabled: false, description: '' },
+    { name: 'date_picker_v2',        enabled: true,  description: '' },
+    { name: 'sales_panel_v1',        enabled: false, description: '' },
+    { name: 'completed_eom_hide',    enabled: false, description: '' },
+    { name: 'invoice_manager_v1',    enabled: false, description: '' },
+    { name: 'customer_profile_v2',   enabled: false, description: '' },
+    { name: 'todays_actions_widget', enabled: false, description: '' },
+    { name: 'overdue_widget',        enabled: false, description: '' },
+  ] }}));
   await page.route('**/api/pipeline/alerts**', r => r.fulfill({ status: 200, json: { alerts: [] } }));
   await page.route('**/api/pipeline/customer-history**', r => r.fulfill({ status: 200, json: { status: 'none', count: 0 } }));
   await page.route('**/api/tags**', r => r.fulfill({ status: 200, json: { tags: [] } }));
