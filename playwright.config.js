@@ -4,6 +4,9 @@ const { defineConfig } = require('@playwright/test');
 module.exports = defineConfig({
   timeout: 60000,  // 60s per test — Vercel preview cold starts take 25-30s on first hit
   workers: 4,
+  // Flat snapshot path: removes browser/platform suffix so goldens are platform-agnostic.
+  // Layout regressions are dramatic (220px blank column) so 5% pixel tolerance is enough.
+  snapshotPathTemplate: 'tests/smoke/__screenshots__/{arg}{ext}',
   use: {
     // Pass the Vercel automation bypass header when running against a protected preview.
     // Set VERCEL_AUTOMATION_BYPASS_SECRET in repo secrets (Vercel → Project → Settings →
