@@ -57,16 +57,17 @@
     if (!cb) return;
     var enabled = selectedNonQuarterMeatCount() >= MIN_MEATS;
     var label   = cb.closest('.menu-item-check');
+    // Clear orphaned selection BEFORE disabling — click() on a disabled
+    // checkbox is a no-op, so we need the inline onchange to fire while
+    // the element is still interactive.
+    if (!enabled && cb.checked) {
+      cb.click();
+    }
     cb.disabled = !enabled;
     cb.setAttribute('data-meat-gated', enabled ? 'enabled' : 'disabled');
     if (label) {
       label.classList.toggle('qb-quarter-disabled', !enabled);
       label.title = enabled ? '' : DISABLED_TIP;
-    }
-    if (!enabled && cb.checked) {
-      // Toggle off via click() so the inline onchange handler updates
-      // selectedItems and refreshes the preview.
-      cb.click();
     }
   }
 
