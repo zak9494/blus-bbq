@@ -146,6 +146,10 @@ const STATIC_MODULE_FILES = [
   'api/invoices/remind.js',
   'api/invoices/pdf.js',
   'api/invoices/export.js',
+  // Wave 4 — iMessage-style thread view
+  'static/js/thread-view.js',
+  'static/css/thread-view.css',
+  'api/inquiries/thread.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 

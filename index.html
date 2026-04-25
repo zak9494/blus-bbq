@@ -31,6 +31,7 @@
 <link rel="stylesheet" href="/static/css/customers/tag-picker.css">
 <link rel="stylesheet" href="/static/css/invoice-manager.css">
 <link rel="stylesheet" href="/static/css/components/date-picker.css">
+<link rel="stylesheet" href="/static/css/thread-view.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -1151,6 +1152,11 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
         <div class="content inq-detail-scroll">
+
+          <!-- Thread view (Wave 4: email_thread_v2 flag) -->
+          <div class="inq-section" id="inq-thread-section" style="display:none;padding:0">
+            <div id="inq-thread-container"></div>
+          </div>
 
           <!-- Customer info (editable) -->
           <div class="inq-section">
@@ -4407,6 +4413,13 @@ async function openInquiry(threadId) {
     if (typeof depositsInit === 'function') depositsInit(d.inquiry);
     if (typeof repeatCustomerInit === 'function') repeatCustomerInit(d.inquiry);
     if (typeof customerProfileInit === 'function') customerProfileInit(d.inquiry);
+    // Wave 4: iMessage thread view (email_thread_v2 flag)
+    var tvEnabled = window.flags && window.flags.isEnabled('email_thread_v2');
+    var tvSection = document.getElementById('inq-thread-section');
+    var tvEmailBtn = document.getElementById('inq-view-email-btn');
+    if (tvSection) tvSection.style.display = tvEnabled ? '' : 'none';
+    if (tvEmailBtn) tvEmailBtn.style.display = tvEnabled ? 'none' : '';
+    if (tvEnabled && window.threadView) window.threadView.init('inq-thread-container', d.inquiry);
     document.getElementById('inq-list-view').style.display = 'none';
     document.getElementById('inq-list-topbar').style.display = 'none';
     document.getElementById('inq-detail-view').style.display = 'block';
@@ -4438,6 +4451,7 @@ function initCompletedOrdersToggle() {
 }
 
 function showInquiryList() {
+  if (window.threadView) window.threadView.destroy();
   currentInquiry = null;
   document.getElementById('inq-list-view').style.display = 'block';
   document.getElementById('inq-list-topbar').style.display = 'flex';
@@ -5459,6 +5473,7 @@ function closeMobileSidebar() {
 <script defer src="/static/js/completed-orders.js"></script>
 <script defer src="/static/js/quote-drafts.js"></script>
 <script defer src="/static/js/customer-profile.js"></script>
+<script defer src="/static/js/thread-view.js"></script>
 <script defer src="/static/js/components/date-picker/date-picker.js"></script>
 <script defer src="/static/js/invoice-manager/index.js"></script>
 <script defer src="/static/js/overdue-widget.js"></script>

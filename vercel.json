@@ -59,7 +59,8 @@
     { "source": "/api/invoices/void",    "destination": "/api/invoices/void.js" },
     { "source": "/api/invoices/remind",  "destination": "/api/invoices/remind.js" },
     { "source": "/api/invoices/pdf",     "destination": "/api/invoices/pdf.js" },
-    { "source": "/api/invoices/export",  "destination": "/api/invoices/export.js" }
+    { "source": "/api/invoices/export",  "destination": "/api/invoices/export.js" },
+    { "source": "/api/inquiries/thread", "destination": "/api/inquiries/thread.js" }
   ],
   "crons": [
     {
