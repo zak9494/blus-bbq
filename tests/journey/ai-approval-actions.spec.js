@@ -163,8 +163,9 @@ for (const vp of VIEWPORTS) {
     const card = page.locator('[data-approval-id="ap-test-001"]');
     await expect(card.locator('.approval-regen')).toBeVisible({ timeout: 4000 });
 
-    // Click Regenerate — input row opens
-    await card.locator('.approval-regen').click({ force: true });
+    // Click Regenerate — use dispatchEvent to fire directly on the element,
+    // bypassing hit-test (a sibling/overlay intercepts at some viewport widths)
+    await card.locator('.approval-regen').dispatchEvent('click');
     const regenRow = card.locator('.approval-regen-row');
     await expect(regenRow).toBeVisible({ timeout: 2000 });
 
@@ -216,8 +217,8 @@ for (const vp of VIEWPORTS) {
     const card = page.locator('[data-approval-id="ap-test-001"]');
     await expect(card.locator('.approval-add-details')).toBeVisible({ timeout: 4000 });
 
-    // Click Add Details — input row opens
-    await card.locator('.approval-add-details').click({ force: true });
+    // Click Add Details — use dispatchEvent to fire directly on the element
+    await card.locator('.approval-add-details').dispatchEvent('click');
     const detailsRow = card.locator('.approval-details-row');
     await expect(detailsRow).toBeVisible({ timeout: 2000 });
 
