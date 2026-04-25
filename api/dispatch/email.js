@@ -4,8 +4,9 @@ module.exports.config = { api: { bodyParser: false } };
 const https = require('https');
 const crypto = require('crypto');
 const { getTestModeEmail } = require('../_lib/settings.js');
+const { getAllowedAccounts, isAllowedAccount } = require('../_lib/allowed-accounts');
 
-const CANONICAL_SENDER = 'info@blusbarbeque.com';
+const CANONICAL_SENDER = getAllowedAccounts()[0];
 const KV_TOKENS_KEY = `gmail:${CANONICAL_SENDER}`;
 const KV_TOKENS_KEY_LEGACY = 'gmail:tokens';
 
@@ -187,10 +188,10 @@ module.exports = async (req, res) => {
 
   let tokens = typeof tokensRaw === 'string' ? JSON.parse(tokensRaw) : tokensRaw;
 
-  // ── TOKEN ACCOUNT GUARD: stored email must match canonical sender ──────────────────────────────────────────────
-  if (tokens.email && tokens.email !== CANONICAL_SENDER) {
+  // ── TOKEN ACCOUNT GUARD: stored email must be in the allowed accounts list ──────────────────────────────────────────────
+  if (tokens.email && !isAllowedAccount(tokens.email)) {
     return res.status(400).json({
-      error: `Sender locked to ${CANONICAL_SENDER}. Tokens are for ${tokens.email}. Re-auth at /api/auth/init.`
+      error: `Tokens are for ${tokens.email}, which is not in the allowed accounts list. Re-auth at /api/auth/init.`
     });
   }
 

@@ -22,8 +22,9 @@ module.exports.config = { maxDuration: 60 };
 const https  = require('https');
 const { getFlag }            = require('../_lib/flags.js');
 const { getTestModeEmail }   = require('../_lib/settings.js');
+const { getAllowedAccounts, isAllowedAccount } = require('../_lib/allowed-accounts');
 
-const CANONICAL_SENDER = 'info@blusbarbeque.com';
+const CANONICAL_SENDER = getAllowedAccounts()[0];
 const KV_TOKENS_KEY    = 'gmail:' + CANONICAL_SENDER;
 
 function kvUrl()   { return process.env.KV_REST_API_URL   || process.env.UPSTASH_REDIS_REST_URL; }
@@ -85,8 +86,8 @@ async function sendGmail(accessToken, to, subject, htmlBody) {
     req.on('error', reject); req.end();
   });
   const senderEmail = (profileRes.emailAddress || '').toLowerCase();
-  if (senderEmail !== CANONICAL_SENDER) {
-    throw new Error('Sender mismatch: ' + senderEmail + ' !== ' + CANONICAL_SENDER);
+  if (!isAllowedAccount(senderEmail)) {
+    throw new Error('Sender not in allowlist: ' + senderEmail);
   }
 
   const raw = [

@@ -7,7 +7,7 @@
  * Tokens land in /api/auth/callback → stored in Upstash KV.
  */
 
-const REQUIRED_EMAIL = 'info@blusbarbeque.com';
+const { getAllowedAccounts } = require('../_lib/allowed-accounts');
 
 module.exports = (req, res) => {
   const clientId = process.env.GMAIL_CLIENT_ID;
@@ -35,7 +35,7 @@ module.exports = (req, res) => {
   url.searchParams.set('access_type', 'offline');
   // Force the account picker and pre-select the required sender
   url.searchParams.set('prompt', 'consent select_account');
-  url.searchParams.set('login_hint', REQUIRED_EMAIL);
+  url.searchParams.set('login_hint', getAllowedAccounts()[0]);
 
   return res.redirect(302, url.toString());
 };
