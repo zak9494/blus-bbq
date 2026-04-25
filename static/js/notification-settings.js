@@ -99,9 +99,8 @@
     var el = document.getElementById('ns-page-body');
     if (el) el.innerHTML = '<div class="ns-empty">Loading…</div>';
     try {
-      var secret = getSecret();
-      var url = '/api/notification-settings' + (secret ? '?secret=' + encodeURIComponent(secret) : '');
-      if (_tenantId !== 'default') url += '&tenantId=' + encodeURIComponent(_tenantId);
+      var url = '/api/notification-settings';
+      if (_tenantId !== 'default') url += '?tenantId=' + encodeURIComponent(_tenantId);
       var r = await fetch(url);
       var d = await r.json();
       if (!d.ok) throw new Error(d.error || 'Failed');
