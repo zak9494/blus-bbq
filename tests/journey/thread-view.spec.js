@@ -6,7 +6,7 @@
  */
 const { test, expect } = require('@playwright/test');
 
-const BASE_URL  = process.env.BASE_URL  || 'https://blus-bbq.vercel.app';
+const BASE_URL  = process.env.SMOKE_BASE_URL || process.env.BASE_URL  || 'https://blus-bbq.vercel.app';
 const SECRET    = process.env.INQ_SECRET || 'c857eb539774b63cf0b0a09303adc78d';
 
 // ── Flag helpers ──────────────────────────────────────────────────────────────
