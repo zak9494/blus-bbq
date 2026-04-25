@@ -201,10 +201,11 @@ for (const vp of VIEWPORTS) {
     await loadApp(page);
     await page.evaluate(() => { if (window.showPage) window.showPage('notif-settings'); });
     await expect(page.locator('#page-notif-settings')).toHaveClass(/active/, { timeout: 4000 });
-    await expect(page.locator('#ns-toggle-ch-sms')).toBeAttached({ timeout: 5000 });
+    // The switch input is opacity:0/zero-size by CSS design; wait for the visible slider
+    await expect(page.locator('#ns-toggle-ch-sms + .ns-slider')).toBeVisible({ timeout: 5000 });
 
-    // Toggle SMS off
-    await page.locator('#ns-toggle-ch-sms').click();
+    // Toggle SMS off — click the visible slider (the hidden input cannot be directly clicked)
+    await page.locator('#ns-toggle-ch-sms + .ns-slider').click();
 
     // Save request must have been fired with sms: false
     await page.waitForTimeout(600);
