@@ -1422,6 +1422,7 @@ if (typeof marked !== 'undefined') {
     <!-- NOTIFICATION SETTINGS PAGE (notification_settings_v1 flag) -->
     <div id="page-notif-settings" class="page">
       <div class="topbar">
+        <button class="ns-back-btn btn" onclick="showPage('settings')" aria-label="Back to Settings">&#8592; Settings</button>
         <div class="topbar-title">Notification Settings</div>
       </div>
       <div class="ns-page-content">
@@ -1547,6 +1548,14 @@ if (typeof marked !== 'undefined') {
           </div>
           <div class="settings-row settings-row-tap" onclick="showPage('ai')">
             <div><div class="settings-row-label">Push Notifications</div><div class="settings-row-sub">Enable browser push alerts</div></div>
+            <div class="settings-row-right"><span class="settings-row-arrow">›</span></div>
+          </div>
+        </div>
+
+        <div class="settings-section" id="settings-preferences-section" style="display:none">
+          <div class="settings-section-title">Preferences</div>
+          <div class="settings-row settings-row-tap" id="settings-row-notifications" onclick="showPage('notif-settings')">
+            <div><div class="settings-row-label">Notifications</div><div class="settings-row-sub">Choose which events alert you and how</div></div>
             <div class="settings-row-right"><span class="settings-row-arrow">›</span></div>
           </div>
         </div>
@@ -5537,6 +5546,8 @@ window.addEventListener('load', function() {
     if (window.flags.isEnabled('notification_settings_v1')) {
       var navNS = document.getElementById('nav-notif-settings');
       if (navNS) navNS.style.display = 'flex';
+      var prefSection = document.getElementById('settings-preferences-section');
+      if (prefSection) prefSection.style.display = '';
     }
     if (window.qbQuarterChickenGate) window.qbQuarterChickenGate.init();
   });
