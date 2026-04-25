@@ -93,13 +93,6 @@ async function loadAppAndOpenAI(page) {
     if (window.chatApprovalInit) window.chatApprovalInit();
   });
   await page.waitForTimeout(600);
-  // At desktop widths the chat-sidebar-panel overlays approval cards — remove it
-  const vw = page.viewportSize();
-  if (vw && vw.width >= 769) {
-    await page.evaluate(() => {
-      document.querySelector('.chat-sidebar-panel')?.remove();
-    });
-  }
 }
 
 /* ─────────────────────────────────────────────────────────────
