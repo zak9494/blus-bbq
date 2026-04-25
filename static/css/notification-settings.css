@@ -1,5 +1,17 @@
 /* Notification Settings page styles */
 
+#page-notif-settings .topbar { display: flex; align-items: center; gap: 12px; }
+#page-notif-settings .ns-back-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+#page-notif-settings .ns-back-btn:hover { background: var(--surface2); }
+
 #page-notif-settings .ns-page-content {
   max-width: 560px;
   margin: 0 auto;
