@@ -133,6 +133,11 @@ const STATIC_MODULE_FILES = [
   'static/css/customers/tag-picker.css',
   'api/customers/tags.js',
   'api/settings/lost-reasons.js',
+  // Wave 3 — Notification Settings
+  'static/js/notification-settings.js',
+  'static/css/notification-settings.css',
+  'api/notification-settings/get.js',
+  'api/notification-settings/save.js',
   // Invoice Manager (full implementation)
   'static/js/invoice-manager/index.js',
   'static/css/invoice-manager.css',

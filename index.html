@@ -31,6 +31,7 @@
 <link rel="stylesheet" href="/static/css/customers/tag-picker.css">
 <link rel="stylesheet" href="/static/css/invoice-manager.css">
 <link rel="stylesheet" href="/static/css/components/date-picker.css">
+<link rel="stylesheet" href="/static/css/notification-settings.css">
 <link rel="stylesheet" href="/static/css/thread-view.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -620,6 +621,7 @@ if (typeof marked !== 'undefined') {
     <div class="nav-section-label">Settings</div>
     <div class="nav-item" id="theme-toggle-btn" onclick="themeToggle()" title="Toggle light/dark mode"><span class="theme-icon">☾</span><span class="theme-label">Dark Mode</span></div>
     <div class="nav-item" onclick="showPage('flags')"><span class="nav-dot dot-amber"></span>Feature Flags</div>
+    <div class="nav-item" id="nav-notif-settings" onclick="showPage('notif-settings')" style="display:none"><span class="nav-dot dot-blue"></span>Notification Settings</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Integrations</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Account</div>
 
@@ -1415,6 +1417,18 @@ if (typeof marked !== 'undefined') {
       </div>
     </div>
 
+    <!-- NOTIFICATION SETTINGS PAGE (notification_settings_v1 flag) -->
+    <div id="page-notif-settings" class="page">
+      <div class="topbar">
+        <button class="hamburger-btn" onclick="openMobileSidebar()">&#9776;</button>
+        <div class="topbar-title">Notification Settings</div>
+      </div>
+      <div class="ns-page-content">
+        <div id="ns-save-status" class="ns-save-status"></div>
+        <div id="ns-page-body"></div>
+      </div>
+    </div>
+
     <!-- FEATURE FLAGS PAGE -->
     <div id="page-flags" class="page">
       <div class="topbar">
@@ -1805,6 +1819,7 @@ if (typeof marked !== 'undefined') {
 <script src="/static/js/kanban/card-status-dropdown.js"></script>
 <script src="/static/js/widgets/todays-actions.js"></script>
 <script src="/static/js/customers/tag-picker.js"></script>
+<script src="/static/js/notification-settings.js"></script>
 <script>
 /* ===== MODULE: CONSTANTS & STATIC DATA ===== */
 // D22: MENU is now loaded from /static/js/menu.js (window.MENU).
@@ -1866,6 +1881,7 @@ function showPage(page) {
   if (page === 'ai') { loadChatHistory(); if (typeof chatApprovalInit === 'function') chatApprovalInit(); } // C21 + D24
   if (page === 'flags') loadFlagsPage();
   if (page === 'notifications' && typeof notifPanelRenderPage === 'function') notifPanelRenderPage();
+  if (page === 'notif-settings' && window.notifSettings) window.notifSettings.init();
   if (page === 'today') { if (typeof loadEventDayView === 'function') loadEventDayView(); }
   if (page === 'settings') initLostReasonsSettings();
   if (page === 'invoices' && window.invoiceMgr) window.invoiceMgr.initPage();
@@ -5432,6 +5448,10 @@ window.addEventListener('load', function() {
       var spPanel = document.getElementById('pipeline-sales-panel');
       if (spPanel) spPanel.style.display = '';
       if (window.invoiceMgr) window.invoiceMgr.init();
+    }
+    if (window.flags.isEnabled('notification_settings_v1')) {
+      var navNS = document.getElementById('nav-notif-settings');
+      if (navNS) navNS.style.display = 'flex';
     }
   });
 });
