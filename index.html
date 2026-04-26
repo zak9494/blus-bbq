@@ -1285,6 +1285,19 @@ if (typeof marked !== 'undefined') {
           <!-- Deposit tracker (C14) -->
           <div class="inq-section" id="inq-deposit-section" style="display:none"></div>
 
+          <!-- Staff notes editor (Wave 3 — flag inquiry_notes_editor_v1, default OFF) -->
+          <div class="inq-section" id="inq-notes-section" style="display:none">
+            <div class="inq-section-title" style="display:flex;align-items:center;justify-content:space-between">
+              Notes
+              <span style="font-weight:400;font-style:italic;font-size:10px;text-transform:none;color:var(--text3)">staff-only annotations</span>
+            </div>
+            <textarea class="form-input special-request-input" id="inq-notes" placeholder="Free-text notes about this inquiry — visible to staff only."></textarea>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+              <button class="btn btn-primary" id="inq-notes-save-btn" onclick="saveInquiryNotes()" style="font-size:12px;padding:6px 14px">💾 Save Notes</button>
+              <div id="inq-notes-status" style="font-size:11px;color:var(--text3)" role="status" aria-live="polite"></div>
+            </div>
+          </div>
+
           <!-- Activity log -->
           <div class="inq-section" id="inq-activity-log" style="display:none">
             <div class="inq-section-title" style="display:flex;align-items:center;justify-content:space-between">
@@ -4936,6 +4949,21 @@ function renderInquiryDetail(inq) {
     if (reviseBtn2) reviseBtn2.style.display = 'none';
   }
 
+  // Notes editor (Wave 3 — flag inquiry_notes_editor_v1, default OFF)
+  const notesSec = document.getElementById('inq-notes-section');
+  const notesTa  = document.getElementById('inq-notes');
+  const notesSt  = document.getElementById('inq-notes-status');
+  const notesOn  = !!(window.flags && window.flags.isEnabled && window.flags.isEnabled('inquiry_notes_editor_v1'));
+  if (notesSec && notesTa) {
+    if (notesOn) {
+      notesSec.style.display = 'block';
+      notesTa.value = inq.notes || '';
+      if (notesSt) { notesSt.textContent = ''; notesSt.style.color = 'var(--text3)'; }
+    } else {
+      notesSec.style.display = 'none';
+    }
+  }
+
   // Activity log section
   const actLog = inq.activity_log || [];
   const actLogEl = document.getElementById('inq-activity-log');
@@ -5224,6 +5252,40 @@ async function saveInquiryDraft() {
     if (d.ok) { showToast('Draft saved ✓'); currentInquiry.extracted_fields = ef; }
     else showToast('Save failed: ' + (d.error || 'unknown'));
   } catch(e) { showToast('Error: ' + e.message); }
+}
+
+async function saveInquiryNotes() {
+  if (!currentInquiry) return;
+  const ta  = document.getElementById('inq-notes');
+  const st  = document.getElementById('inq-notes-status');
+  const btn = document.getElementById('inq-notes-save-btn');
+  if (!ta) return;
+  const notes = ta.value;
+  if (st) { st.textContent = 'Saving…'; st.style.color = 'var(--text3)'; }
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch('/api/inquiries/save?secret=' + INQ_SECRET, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        threadId: currentInquiry.threadId,
+        notes: notes,
+        history_entry: { action: 'notes_updated', actor: 'user' }
+      })
+    });
+    let d = null;
+    try { d = await r.json(); } catch(_) {}
+    if (r.ok && d && d.ok) {
+      currentInquiry.notes = notes;
+      if (st) { st.textContent = 'Saved ✓'; st.style.color = '#6ee7b7'; }
+    } else {
+      const detail = (d && (d.error || d.detail)) || ('HTTP ' + r.status);
+      if (st) { st.textContent = "Couldn't save notes — " + detail; st.style.color = 'var(--red)'; }
+    }
+  } catch(e) {
+    if (st) { st.textContent = "Couldn't save notes — " + (e.message || String(e)); st.style.color = 'var(--red)'; }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function approveInquiryQuote() {
