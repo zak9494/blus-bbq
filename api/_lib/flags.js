@@ -99,6 +99,8 @@ const SEED_FLAGS = [
   { name: 'email_thread_v2',        description: 'iMessage-style email/SMS thread view on inquiry detail — replaces single View Email modal (default OFF)' },
   // Wave 1.5 — Lost system
   { name: 'lost_reasons_v1',        description: 'Wave 1.5: past-event visual flag, Mark Lost modal (7-reason enum picker), Lost Reasons dashboard widget' },
+  // Payment link abstraction
+  { name: 'payment_links_v1',       description: 'Payment processing via provider-agnostic adapter (PAYMENT_PROVIDER=stripe|square|stub); default OFF' },
 ];
 
 async function getFlag(name, defaultValue) {
