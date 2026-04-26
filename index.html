@@ -4785,6 +4785,15 @@ async function openInquiry(threadId) {
     const r = await fetch('/api/inquiries/get?secret=' + INQ_SECRET + '&threadId=' + encodeURIComponent(threadId));
     const d = await r.json();
     if (!d.ok) { showToast('Error: ' + (d.error||'unknown')); return; }
+    // Route inquiries that already have a quote into the Quote Builder revise flow,
+    // not the inquiries detail view. Statuses with a draft/approved/sent quote belong
+    // in the revise modal so the user can edit pricing instead of re-reading the email.
+    var reviseStatuses = ['quote_drafted', 'quote_approved', 'quote_sent'];
+    if (d.inquiry && reviseStatuses.indexOf(d.inquiry.status) !== -1 && typeof window.quoteReviseOpen === 'function') {
+      currentInquiry = d.inquiry;
+      window.quoteReviseOpen(d.inquiry);
+      return;
+    }
     currentInquiry = d.inquiry;
     renderInquiryDetail(d.inquiry);
     if (typeof depositsInit === 'function') depositsInit(d.inquiry);
