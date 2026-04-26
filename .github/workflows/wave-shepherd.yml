@@ -1,0 +1,61 @@
+name: Wave Shepherd (PR triage)
+
+on:
+  schedule:
+    # Every 30 minutes. GitHub may delay scheduled runs under load — this is
+    # best-effort, not strict-cadence.
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Set to "1" to log gh calls without executing mutations'
+        required: false
+        default: '0'
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: wave-shepherd
+  cancel-in-progress: true
+
+jobs:
+  shepherd:
+    name: Triage open PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run wave-shepherd
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry_run || '0' }}
+          SUMMARY_DIR: ${{ runner.temp }}
+        run: |
+          bash scripts/wave-shepherd.sh
+          # Stash the summary path for the upload step. The script writes a
+          # single file matching shepherd-summary-*.md in $SUMMARY_DIR.
+          echo "summary_glob=${{ runner.temp }}/shepherd-summary-*.md" >> "$GITHUB_ENV"
+
+      - name: Upload shepherd summary artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shepherd-summary-${{ github.run_id }}
+          path: ${{ runner.temp }}/shepherd-summary-*.md
+          if-no-files-found: warn
+          retention-days: 14
