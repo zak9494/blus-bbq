@@ -246,6 +246,29 @@ Unit test files live next to their source:
 
 ---
 
+## Runbooks
+
+Documented incident-response playbooks live under `docs/runbooks/`. Each one covers a concrete failure mode we have seen (or expect) with copy-pasteable triage commands.
+
+**When a hotfix task starts, the FIRST step is to check if a runbook exists for that scenario.** If yes, follow it. If no, write one as part of the fix — the runbook becomes part of the deliverable. The shape (Symptoms → Immediate action → Diagnose → Root cause checklist → Fix → Verify → Post-incident) is enforced by `scripts/runbooks.test.js`.
+
+Index: [`docs/runbooks/README.md`](./docs/runbooks/README.md)
+
+Current playbooks:
+
+- `post-merge-smoke-failed.md` — prod smoke cron pinged red
+- `vercel-deploy-failed.md` — deploy errored
+- `secret-rotation.md` — rotate `INQ_SECRET` / `SELF_MODIFY_SECRET` / similar
+- `customer-profile-v2-flag.md` — flipping `customer_profile_v2` ON broke things
+- `parallel-branch-contention.md` — PR diff polluted by foreign commits
+- `pr-stuck-in-bucket.md` — PR red / stalled > 2h
+- `calendar-shows-wrong-events.md` — calendar render disagrees with KV
+- `notifications-page-broken.md` — `/notifications` broken in any of the known ways
+
+Process feedback wired in: Wave Shepherd's failure pings should include a link to the relevant runbook. Post-merge prod smoke failures auto-include the runbook link in the push notification body.
+
+---
+
 ## Destructive Action Explanations
 
 Before requesting user approval for any action that could delete, destroy, overwrite, or irreversibly change state — including but not limited to: `rm`, `sudo`, `git push --force`, `git reset --hard`, `git branch -D`, `git clean -fd`, `git push --delete`, `drop table`, `truncate`, `delete from`, `uninstall`, `shutdown`, `reboot`, `crontab -r`, `docker volume rm`, `docker system prune`, `brew uninstall`, `pip uninstall`, `npm uninstall --global`, `npm publish`, `gh repo delete`, `gh release delete`, `find ... -delete`, `find ... -exec rm` — first output a plain-English explanation block in the chat covering:
