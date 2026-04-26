@@ -63,6 +63,46 @@ function httpsPost(hostname, path, headers, body) {
   });
 }
 
+function httpsGet(hostname, path, headers) {
+  return new Promise((resolve, reject) => {
+    const req = https.request({ hostname, path, method: 'GET', headers }, r => {
+      let d = '';
+      r.on('data', c => d += c);
+      r.on('end', () => { try { resolve({ status: r.statusCode, body: JSON.parse(d) }); }
+                          catch { resolve({ status: r.statusCode, body: d }); } });
+    });
+    req.on('error', reject); req.end();
+  });
+}
+
+// Pull RFC822 Message-Id headers from the latest message in a Gmail thread.
+// Used to set In-Reply-To/References so customer mail clients also thread the reply.
+// Returns { messageId, references } where messageId is the latest Message-Id and
+// references is the chained References header to send. Returns null on any failure
+// — caller falls back to threadId-only joining (Gmail-side threading still works).
+async function fetchThreadHeaders(token, threadId) {
+  try {
+    const r = await httpsGet('gmail.googleapis.com',
+      '/gmail/v1/users/me/threads/' + encodeURIComponent(threadId)
+        + '?format=metadata&metadataHeaders=Message-Id&metadataHeaders=References',
+      { Authorization: 'Bearer ' + token });
+    if (r.status !== 200 || !r.body || !Array.isArray(r.body.messages) || !r.body.messages.length) return null;
+    const last = r.body.messages[r.body.messages.length - 1];
+    const headers = (last.payload && last.payload.headers) || [];
+    const get = (name) => {
+      const h = headers.find(h => h.name && h.name.toLowerCase() === name.toLowerCase());
+      return h ? h.value : '';
+    };
+    const messageId = get('Message-Id') || get('Message-ID');
+    if (!messageId) return null;
+    const prevRefs = get('References');
+    const references = (prevRefs ? prevRefs + ' ' : '') + messageId;
+    return { messageId, references };
+  } catch {
+    return null;
+  }
+}
+
 function secretGate(req, res) {
   const secret   = process.env.GMAIL_READ_SECRET;
   const provided = (req.query && req.query.secret) || req.headers['x-secret'];
@@ -105,14 +145,25 @@ function wrapBase64(b64) {
   return b64.match(/.{1,76}/g).join('\r\n');
 }
 
+// Reply headers that make customer mail clients thread the message correctly.
+// `threadHeaders` is null when we couldn't fetch the parent thread; passing
+// threadId in the Gmail API body is enough for Gmail's own threading.
+function replyHeaderLines(threadHeaders) {
+  if (!threadHeaders) return [];
+  const lines = ['In-Reply-To: ' + threadHeaders.messageId];
+  if (threadHeaders.references) lines.push('References: ' + threadHeaders.references);
+  return lines;
+}
+
 /**
  * Build a plain-text MIME message (no attachment).
  */
-function buildPlainMIME(toHeader, subject, textBody) {
+function buildPlainMIME(toHeader, subject, textBody, threadHeaders) {
   const lines = [
     'From: Blu\'s Barbeque <' + CANONICAL_SENDER + '>',
     'To: ' + toHeader,
     'Subject: ' + subject,
+    ...replyHeaderLines(threadHeaders),
     'MIME-Version: 1.0',
     'Content-Type: text/plain; charset=utf-8',
     '',
@@ -124,12 +175,13 @@ function buildPlainMIME(toHeader, subject, textBody) {
 /**
  * Build a multipart/mixed MIME message with a plain-text body and PDF attachment.
  */
-function buildMultipartMIME(toHeader, subject, textBody, pdfBuf, filename) {
+function buildMultipartMIME(toHeader, subject, textBody, pdfBuf, filename, threadHeaders) {
   const b64pdf = wrapBase64(pdfBuf.toString('base64'));
   const lines = [
     'From: Blu\'s Barbeque <' + CANONICAL_SENDER + '>',
     'To: ' + toHeader,
     'Subject: ' + subject,
+    ...replyHeaderLines(threadHeaders),
     'MIME-Version: 1.0',
     'Content-Type: multipart/mixed; boundary="' + BOUNDARY + '"',
     '',
@@ -159,7 +211,7 @@ module.exports = async (req, res) => {
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid JSON' }); } }
   body = body || {};
 
-  const { to, subject, body: emailBody, name, quote } = body;
+  const { to, subject, body: emailBody, name, quote, threadId } = body;
   if (!to || !subject || !emailBody) return res.status(400).json({ error: 'to, subject, and body are required' });
 
   let atk;
@@ -168,6 +220,13 @@ module.exports = async (req, res) => {
 
   const toHeader = (name && name.trim()) ? name.trim() + ' <' + to + '>' : to;
 
+  // If we're replying into an existing Gmail thread, fetch its latest Message-Id
+  // so we can set In-Reply-To/References. Without this, Gmail still threads our
+  // outbound message (via threadId), but the customer's reply spawns a NEW thread
+  // because their mail client has no header to thread against — which is the
+  // root cause of the "missing inbound emails" bug Zach hit on the Amy thread.
+  const threadHeaders = threadId ? await fetchThreadHeaders(atk, threadId) : null;
+
   let raw;
   if (quote && quote.line_items && quote.line_items.length) {
     // Generate PDF and send as attachment
@@ -175,22 +234,24 @@ module.exports = async (req, res) => {
       const pdfBuf = generateQuotePDF(quote, name || '');
       const firstName = (name || '').split(' ')[0] || '';
       const filename = 'Blus-BBQ-Quote' + (firstName ? '-' + firstName : '') + '.pdf';
-      raw = buildMultipartMIME(toHeader, subject, emailBody, pdfBuf, filename);
+      raw = buildMultipartMIME(toHeader, subject, emailBody, pdfBuf, filename, threadHeaders);
     } catch (pdfErr) {
       // Fallback: send plain text if PDF generation fails
       console.error('PDF gen failed, falling back to plain text:', pdfErr.message);
-      raw = buildPlainMIME(toHeader, subject, emailBody);
+      raw = buildPlainMIME(toHeader, subject, emailBody, threadHeaders);
     }
   } else {
-    raw = buildPlainMIME(toHeader, subject, emailBody);
+    raw = buildPlainMIME(toHeader, subject, emailBody, threadHeaders);
   }
+
+  const sendBody = threadId ? { raw, threadId } : { raw };
 
   try {
     const result = await httpsPost(
       'gmail.googleapis.com',
       '/gmail/v1/users/me/messages/send',
       { Authorization: 'Bearer ' + atk, 'Content-Type': 'application/json' },
-      JSON.stringify({ raw })
+      JSON.stringify(sendBody)
     );
     if (result.status >= 300) {
       return res.status(500).json({ error: 'Gmail API error ' + result.status, detail: JSON.stringify(result.body).slice(0, 300) });

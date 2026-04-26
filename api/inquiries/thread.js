@@ -92,17 +92,76 @@ function gmailGet(token, path) {
   });
 }
 
+function decodeBase64url(data) {
+  if (!data) return '';
+  return Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
+}
+
+// Strip HTML to plain text for bubble display. Preserves line breaks.
+function htmlToText(html) {
+  if (!html) return '';
+  return html
+    // line-break-bearing block tags first
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|tr|h[1-6]|blockquote)>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '\n• ')
+    // strip the rest
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    // decode the most common entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&rsquo;/g, '’')
+    .replace(/&lsquo;/g, '‘')
+    .replace(/&rdquo;/g, '”')
+    .replace(/&ldquo;/g, '“')
+    .replace(/&hellip;/g, '…')
+    .replace(/&mdash;/g, '—')
+    .replace(/&ndash;/g, '–')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+    // collapse runs of blank lines
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// Recursively extract a readable plain-text body. Prefers text/plain, falls
+// back to HTML (stripped). Mirrors api/gmail/list-inquiries.js extractBody so
+// HTML-only senders (Apple Mail, most modern clients) don't render as empty bubbles.
 function getBodyText(payload) {
   if (!payload) return '';
-  if (payload.mimeType === 'text/plain' && payload.body && payload.body.data) {
-    return Buffer.from(payload.body.data, 'base64').toString('utf-8');
+
+  // Single-part: body.data lives directly on the payload
+  if ((!payload.parts || !payload.parts.length) && payload.body && payload.body.data) {
+    const decoded = decodeBase64url(payload.body.data);
+    return /^text\/html\b/i.test(payload.mimeType || '') ? htmlToText(decoded) : decoded;
   }
+
   if (payload.parts) {
+    // Prefer text/plain at this level
     for (const part of payload.parts) {
-      const text = getBodyText(part);
-      if (text) return text;
+      if (part.mimeType === 'text/plain' && part.body && part.body.data) {
+        return decodeBase64url(part.body.data);
+      }
+    }
+    // Fall back to text/html at this level
+    for (const part of payload.parts) {
+      if (part.mimeType === 'text/html' && part.body && part.body.data) {
+        return htmlToText(decodeBase64url(part.body.data));
+      }
+    }
+    // Recurse into nested multipart (e.g. multipart/mixed → multipart/alternative)
+    for (const part of payload.parts) {
+      const nested = getBodyText(part);
+      if (nested) return nested;
     }
   }
+
   return '';
 }
 
@@ -172,7 +231,7 @@ function fallbackMessages(rec) {
   }];
 }
 
-module.exports = async (req, res) => {
+const handler = async (req, res) => {
   if (req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
   if (!secretGate(req, res)) return;
 
@@ -208,3 +267,12 @@ module.exports = async (req, res) => {
   const messages = threadResp.body.messages.map(parseMessage);
   return res.status(200).json({ ok: true, messages });
 };
+
+module.exports = handler;
+// Re-attach Vercel function config (the `module.exports = handler` line above
+// would otherwise drop the maxDuration set at the top of this file).
+module.exports.config = { maxDuration: 15 };
+// Exposed for unit tests (tests/audit/... or api/inquiries/thread.test.js)
+module.exports.getBodyText = getBodyText;
+module.exports.htmlToText = htmlToText;
+module.exports.parseMessage = parseMessage;
