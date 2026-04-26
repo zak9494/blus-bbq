@@ -218,6 +218,11 @@ function fallbackMessages(rec) {
   if (!rec.raw_email) return [];
   const ef = rec.extracted_fields || {};
   const fromRaw = rec.from || rec.raw_email.from || '';
+  const rawBody = rec.raw_email.body || '';
+  // raw_email.body is whatever the cron stored; for many clients (Apple Mail,
+  // iCloud, Outlook) that's HTML. Strip it so the bubble doesn't show
+  // "<html …><body …>Hi Zach…</body></html>" as raw text.
+  const looksHtml = /<\s*(html|body|div|p|br|table|head)\b/i.test(rawBody);
   return [{
     id: rec.messageId || 'raw-0',
     direction: 'inbound',
@@ -226,7 +231,7 @@ function fallbackMessages(rec) {
     to: CANONICAL_SENDER,
     subject: rec.subject || rec.raw_email.subject || '',
     date: rec.date || rec.raw_email.date || rec.created_at || new Date().toISOString(),
-    body: rec.raw_email.body || '',
+    body: looksHtml ? htmlToText(rawBody) : rawBody,
     attachments: [],
   }];
 }
