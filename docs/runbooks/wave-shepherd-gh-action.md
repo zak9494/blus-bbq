@@ -32,16 +32,16 @@ local Claude scheduled tasks. It now runs on GitHub Actions:
 ## Manual trigger
 
 ```bash
-gh workflow run wave-shepherd.yml --repo zachblume/blus-bbq
+gh workflow run wave-shepherd.yml --repo zak9494/blus-bbq
 # Dry run (no comments, no merges, no issue creation):
-gh workflow run wave-shepherd.yml --repo zachblume/blus-bbq -f dry_run=1
+gh workflow run wave-shepherd.yml --repo zak9494/blus-bbq -f dry_run=1
 ```
 
 Watch:
 
 ```bash
-gh run list --repo zachblume/blus-bbq --workflow wave-shepherd.yml --limit 5
-gh run view <run-id> --repo zachblume/blus-bbq --log
+gh run list --repo zak9494/blus-bbq --workflow wave-shepherd.yml --limit 5
+gh run view <run-id> --repo zak9494/blus-bbq --log
 ```
 
 ## Reading the artifact
@@ -50,7 +50,7 @@ Each run uploads `shepherd-summary-<run_id>` containing a single markdown file.
 Download:
 
 ```bash
-gh run download <run-id> --repo zachblume/blus-bbq --name shepherd-summary-<run-id>
+gh run download <run-id> --repo zak9494/blus-bbq --name shepherd-summary-<run-id>
 ```
 
 The summary lists every PR per bucket so you can scan what was acted on. The
@@ -62,7 +62,7 @@ daily alert issue.
 Auto-merge is **opt-in per PR** via the `auto-merge-ok` label. To enable:
 
 ```bash
-gh pr edit <number> --repo zachblume/blus-bbq --add-label auto-merge-ok
+gh pr edit <number> --repo zak9494/blus-bbq --add-label auto-merge-ok
 ```
 
 The shepherd will only squash-merge if **all** are true:
@@ -91,7 +91,7 @@ If a workflow run fails:
 3. To reproduce locally with no side effects:
    ```bash
    cd /Users/zach/Documents/blus-bbq
-   DRY_RUN=1 REPO=zachblume/blus-bbq bash scripts/wave-shepherd.sh
+   DRY_RUN=1 REPO=zak9494/blus-bbq bash scripts/wave-shepherd.sh
    ```
    Requires `gh` authenticated (`gh auth login`) and `jq`.
 

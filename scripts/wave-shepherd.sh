@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-REPO="${REPO:-${GITHUB_REPOSITORY:-zachblume/blus-bbq}}"
+REPO="${REPO:-${GITHUB_REPOSITORY:-zak9494/blus-bbq}}"
 DRY_RUN="${DRY_RUN:-0}"
 SUMMARY_DIR="${SUMMARY_DIR:-.}"
 ALERT_LABEL="${ALERT_LABEL:-wave-shepherd}"
@@ -111,12 +111,16 @@ while IFS=$'\t' read -r NUMBER TITLE URL HEADREF MERGE_STATE IS_DRAFT UPDATED_AT
 
   # Aggregate check status from statusCheckRollup. Each entry is either a
   # CheckRun (status/conclusion fields) or a StatusContext (state field).
-  FAIL_COUNT=$(echo "$CHECKS_JSON" | jq '[.[] | select((.conclusion // "") | IN("FAILURE","TIMED_OUT","ERROR","CANCELLED","STARTUP_FAILURE")) , .[] | select((.state // "") | IN("FAILURE","ERROR"))] | length')
-  PENDING_COUNT=$(echo "$CHECKS_JSON" | jq '[.[] | select((.status // "") | IN("IN_PROGRESS","QUEUED","PENDING")) , .[] | select((.state // "") | IN("PENDING","EXPECTED"))] | length')
+  FAIL_COUNT=$(echo "$CHECKS_JSON" | jq '
+    ([.[] | select((.conclusion // "") | IN("FAILURE","TIMED_OUT","ERROR","CANCELLED","STARTUP_FAILURE"))]
+     + [.[] | select((.state // "") | IN("FAILURE","ERROR"))]) | length')
+  PENDING_COUNT=$(echo "$CHECKS_JSON" | jq '
+    ([.[] | select((.status // "") | IN("IN_PROGRESS","QUEUED","PENDING"))]
+     + [.[] | select((.state // "") | IN("PENDING","EXPECTED"))]) | length')
   TOTAL_COUNT=$(echo "$CHECKS_JSON" | jq 'length')
   LATEST_FAIL_COMPLETED=$(echo "$CHECKS_JSON" | jq -r '
-    [ .[] | select((.conclusion // "") | IN("FAILURE","TIMED_OUT","ERROR","CANCELLED","STARTUP_FAILURE")) | (.completedAt // .startedAt // "") ]
-    + [ .[] | select((.state // "") | IN("FAILURE","ERROR")) | (.createdAt // "") ]
+    ([.[] | select((.conclusion // "") | IN("FAILURE","TIMED_OUT","ERROR","CANCELLED","STARTUP_FAILURE")) | (.completedAt // .startedAt // "")]
+     + [.[] | select((.state // "") | IN("FAILURE","ERROR")) | (.createdAt // "")])
     | map(select(. != "")) | sort | reverse | .[0] // ""')
   LATEST_FAIL_EPOCH=$(iso_to_epoch "$LATEST_FAIL_COMPLETED")
   MINS_SINCE_FAIL=$(mins_since "$LATEST_FAIL_EPOCH")
@@ -204,15 +208,17 @@ done < <(echo "$PR_DATA" | jq -r '.[] | [
 mkdir -p "$SUMMARY_DIR"
 
 write_section() {
+  # Args: heading, then zero or more items. Bash 3-compatible (no nameref) so
+  # this script can be smoke-tested on macOS too.
   local heading="$1"; shift
-  local -n arr=$1
+  local count="$#"
   echo "" >> "$SUMMARY_FILE"
-  echo "## $heading (${#arr[@]})" >> "$SUMMARY_FILE"
-  if [ "${#arr[@]}" -eq 0 ]; then
+  echo "## $heading ($count)" >> "$SUMMARY_FILE"
+  if [ "$count" -eq 0 ]; then
     echo "_none_" >> "$SUMMARY_FILE"
     return
   fi
-  for item in "${arr[@]}"; do
+  for item in "$@"; do
     echo "- $item" >> "$SUMMARY_FILE"
   done
 }
@@ -223,14 +229,16 @@ write_section() {
   echo "Repo: \`$REPO\` · Open PRs: $PR_COUNT · Run: \`${GITHUB_RUN_ID:-local}\`"
 } > "$SUMMARY_FILE"
 
-write_section "Auto-merged this run" AUTO_MERGED
-write_section "CLEAN + green (awaiting human merge)" CLEAN_GREEN
-write_section "CI failing <1h (watching)" CI_FAILING_SHORT
-write_section "CI failing >1h (commented + rerun triggered)" CI_FAILING_LONG
-write_section "DIRTY — needs rebase (commented)" DIRTY_PRS
-write_section "Abandoned >4d w/ red CI (commented, no auto-close)" ABANDONED
-write_section "Drafts (skipped)" DRAFTS
-write_section "Other / unclassified" OTHER
+# NB: ${arr[@]+"${arr[@]}"} is the bash-3-safe way to pass a possibly-empty
+# array under `set -u`.
+write_section "Auto-merged this run"                              ${AUTO_MERGED[@]+"${AUTO_MERGED[@]}"}
+write_section "CLEAN + green (awaiting human merge)"              ${CLEAN_GREEN[@]+"${CLEAN_GREEN[@]}"}
+write_section "CI failing <1h (watching)"                         ${CI_FAILING_SHORT[@]+"${CI_FAILING_SHORT[@]}"}
+write_section "CI failing >1h (commented + rerun triggered)"      ${CI_FAILING_LONG[@]+"${CI_FAILING_LONG[@]}"}
+write_section "DIRTY — needs rebase (commented)"                  ${DIRTY_PRS[@]+"${DIRTY_PRS[@]}"}
+write_section "Abandoned >4d w/ red CI (commented, no auto-close)" ${ABANDONED[@]+"${ABANDONED[@]}"}
+write_section "Drafts (skipped)"                                  ${DRAFTS[@]+"${DRAFTS[@]}"}
+write_section "Other / unclassified"                              ${OTHER[@]+"${OTHER[@]}"}
 
 echo "" >> "$SUMMARY_FILE"
 echo "---" >> "$SUMMARY_FILE"
