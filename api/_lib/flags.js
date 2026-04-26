@@ -15,11 +15,16 @@ function kvGet(key) {
   return new Promise((resolve, reject) => {
     const url = kvUrl(), tok = kvToken();
     if (!url) return reject(new Error('KV env vars not set'));
-    const u = new URL(url + '/get/' + encodeURIComponent(key));
+    const u = new URL(url.replace(/\/+$/, '') + '/get/' + encodeURIComponent(key));
     const req = https.request({ hostname: u.hostname, path: u.pathname + u.search,
       method: 'GET', headers: { Authorization: 'Bearer ' + tok } }, r => {
       let d = ''; r.on('data', c => d += c);
-      r.on('end', () => { try { resolve(JSON.parse(d).result); } catch { resolve(null); } });
+      r.on('end', () => {
+        if (r.statusCode < 200 || r.statusCode >= 300) {
+          return reject(new Error('KV GET ' + key + ' failed: ' + r.statusCode + ' ' + d.slice(0, 200)));
+        }
+        try { resolve(JSON.parse(d).result); } catch { resolve(null); }
+      });
     });
     req.on('error', reject); req.end();
   });
@@ -29,13 +34,27 @@ function kvSet(key, value) {
   return new Promise((resolve, reject) => {
     const url = kvUrl(), tok = kvToken();
     if (!url) return reject(new Error('KV env vars not set'));
-    const body = JSON.stringify([['SET', key, typeof value === 'string' ? value : JSON.stringify(value)]]);
-    const u = new URL(url + '/pipeline');
-    const req = https.request({ hostname: u.hostname, path: u.pathname,
+    const stringVal = typeof value === 'string' ? value : JSON.stringify(value);
+    const u = new URL(url.replace(/\/+$/, '') + '/set/' + encodeURIComponent(key));
+    const body = stringVal;
+    const req = https.request({ hostname: u.hostname, path: u.pathname + u.search,
       method: 'POST', headers: { Authorization: 'Bearer ' + tok,
-        'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, r => {
+        'Content-Type': 'text/plain', 'Content-Length': Buffer.byteLength(body) } }, r => {
       let d = ''; r.on('data', c => d += c);
-      r.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve(null); } });
+      r.on('end', () => {
+        if (r.statusCode < 200 || r.statusCode >= 300) {
+          return reject(new Error('KV SET ' + key + ' failed: ' + r.statusCode + ' ' + d.slice(0, 200)));
+        }
+        let parsed = null;
+        try { parsed = JSON.parse(d); } catch {}
+        if (parsed && parsed.error) {
+          return reject(new Error('KV SET ' + key + ' error: ' + parsed.error));
+        }
+        if (parsed && parsed.result !== 'OK') {
+          return reject(new Error('KV SET ' + key + ' unexpected result: ' + JSON.stringify(parsed)));
+        }
+        resolve(parsed);
+      });
     });
     req.on('error', reject); req.write(body); req.end();
   });
