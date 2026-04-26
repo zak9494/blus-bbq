@@ -246,6 +246,26 @@ Unit test files live next to their source:
 
 ---
 
+## Branch Protection on `main`
+
+`main` is protected by GitHub branch-protection rules — see [`docs/branch-protection.md`](./docs/branch-protection.md) for the full ruleset, setup commands, and emergency-bypass procedure.
+
+In short:
+
+- **Required checks**: `Playwright smoke suite` + `Vercel` (both must be green).
+- **Required reviews**: 1 approving review (from Zach).
+- **No direct pushes** to `main`. Every change is a PR.
+- **No force-pushes**, **no deletion** of `main`.
+- **`scripts/branch-protection.test.js`** runs against the live GitHub API and asserts the ruleset stays in place. Skips when no token / no network — informational.
+
+### Process feedback wired in
+
+- **Memory rule**: orchestrator agents (Wave Shepherd, STATUS-refresh tasks, etc.) NEVER push directly to `main`. Every change is a PR. Pre-merge screenshot review IS the approval.
+- **Wave Shepherd**: any open PR without an approval > 2h is flagged as "needs Zach review" in the next hourly dashboard.
+- **Class of bugs prevented**: solo-merges that drag `chore(status):` commits into a feature PR (the parallel-branch contention class — see `docs/runbooks/parallel-branch-contention.md`); accidental direct-pushes that skip CI; force-pushes that rewrite history other PRs depend on.
+
+---
+
 ## Destructive Action Explanations
 
 Before requesting user approval for any action that could delete, destroy, overwrite, or irreversibly change state — including but not limited to: `rm`, `sudo`, `git push --force`, `git reset --hard`, `git branch -D`, `git clean -fd`, `git push --delete`, `drop table`, `truncate`, `delete from`, `uninstall`, `shutdown`, `reboot`, `crontab -r`, `docker volume rm`, `docker system prune`, `brew uninstall`, `pip uninstall`, `npm uninstall --global`, `npm publish`, `gh repo delete`, `gh release delete`, `find ... -delete`, `find ... -exec rm` — first output a plain-English explanation block in the chat covering:
