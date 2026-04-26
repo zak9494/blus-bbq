@@ -1,12 +1,14 @@
 # Blu's BBQ — Status
 
-_Updated: 2026-04-26T22:17Z (manual refresh — task batch complete; auto-update PR #110 still blocked by smoke wall)_
+_Updated: 2026-04-26T23:56Z (manual refresh — new tasks spawned; auto-update PR #110 still blocked by smoke wall)_
 
 ## Right now (max 5)
-_(idle — all spawned tasks completed; awaiting Upstash quota reset to unblock smoke suite)_
+[██░░░░░░░░] 20%  Editable notes on inquiry detail — task `local_0e82917f` running.
+[████░░░░░░] 40%  Smoke hardening (PR #113) — admin-merging + cascade re-trigger of dependent PRs.
 
 ## Need your call (max 3)
-- **🚧 Upstash KV quota exhausted (500K/500K)** — blocks 16 open PRs on the Playwright smoke suite. **Reset at 00:00 UTC (~1h 43min from now)** OR upgrade Upstash to PAYG ($10/mo) to unblock immediately. Symptom: any test calling `setFlag()` returns HTTP 500 (correct loud-failure post-#105) and downstream selectors time out.
+- **🚧 Upstash KV quota exhausted (500K/500K)** — blocks ~16 open PRs on the Playwright smoke suite. **Reset at 00:00 UTC (~4 min from now)** OR upgrade Upstash to PAYG ($10/mo) to unblock immediately. Symptom: any test calling `setFlag()` returns HTTP 500 (correct loud-failure post-#105) and downstream selectors time out.
+- **📖 Review PR #108 (Postgres migration plan)** when you have time — unblocks migration phase 1 (`api/_lib/db.js` scaffolding).
 
 ## Your todo (action when ready)
 
@@ -40,44 +42,43 @@ _(idle — all spawned tasks completed; awaiting Upstash quota reset to unblock 
 - First-run cron permission approvals (gh, git push) — approve once, future auto-approve
 
 ## Last 24 hours
-✅ Merged (no new merges since 19:43Z — Upstash quota wall holding everything)
-   #111 Manual STATUS.md refresh (this file's prior version)         ~2.5h ago
-   #105 Flag toggle persistence — kvSet now loud on KV failure       ~3h ago
-   #103 Wave Shepherd cron → GitHub Actions                          ~5.5h ago
-   #47  AI-triggered sends route through approval queue              ~7.5h ago
-   #91  Calendar chip filter accuracy                                ~7.5h ago
-   #48  Require SELF_MODIFY_SECRET on /api/self-modify               ~8.5h ago
-   #95  Incident-response runbooks (8 known failure modes)           ~9.5h ago
-   #102 QB pipeline click → revise + correct hydration               ~10.5h ago
-   #101 Competitor research synthesis (23 docs)                      ~11.5h ago
-   #96  Notifications bell flyout auto-close                         ~12.5h ago
-   #100 Smoke unblock — drop brittle hamburger count                 ~13.5h ago
-   #99  Calendar "TBD" instead of "12:00 AM"                         ~15.5h ago
-   #46  await flags.load() before nav — CI flake fix                 ~19.5h ago
-   #63  Payments adapter (stub/Stripe/Square)                        ~19.5h ago
-   #79  Maps empty-state notice (shop-origin unset)                  ~19.5h ago
-   #62  SMS scaffold (`sms_channel`, stub mode)                      ~19.5h ago
-   #88  Pipeline tiles + lost-reasons widget fix                     ~19.5h ago
-   #61  Wave 2 QB extensions (discount/fee/tax/dates)                ~19.5h ago
-   #86  post-merge smoke spec + cron prompt                          ~21.5h ago
-   #87  /notifications duplicate hamburger fix                       ~22.5h ago
-   #65  kanban audit batch A                                         ~22.5h ago
-   #82  /notifications page empty-state                              ~22.5h ago
+✅ Merged (no new functional merges since 19:43Z — Upstash quota wall holding everything; STATUS refresh PRs only)
+   #112 Manual STATUS.md refresh — task batch complete                ~1.5h ago
+   #111 Manual STATUS.md refresh (initial)                            ~4h ago
+   #105 Flag toggle persistence — kvSet now loud on KV failure        ~4.5h ago
+   #103 Wave Shepherd cron → GitHub Actions                           ~7h ago
+   #47  AI-triggered sends route through approval queue               ~9h ago
+   #91  Calendar chip filter accuracy                                 ~9h ago
+   #48  Require SELF_MODIFY_SECRET on /api/self-modify                ~10h ago
+   #95  Incident-response runbooks (8 known failure modes)            ~11h ago
+   #102 QB pipeline click → revise + correct hydration                ~12h ago
+   #101 Competitor research synthesis (23 docs)                       ~13h ago
+   #96  Notifications bell flyout auto-close                          ~14h ago
+   #100 Smoke unblock — drop brittle hamburger count                  ~15h ago
+   #99  Calendar "TBD" instead of "12:00 AM"                          ~17h ago
+   #46  await flags.load() before nav — CI flake fix                  ~21h ago
+   #63  Payments adapter (stub/Stripe/Square)                         ~21h ago
+   #79  Maps empty-state notice (shop-origin unset)                   ~21h ago
+   #62  SMS scaffold (`sms_channel`, stub mode)                       ~21h ago
+   #88  Pipeline tiles + lost-reasons widget fix                      ~21h ago
+   #61  Wave 2 QB extensions (discount/fee/tax/dates)                 ~21h ago
+   #86  post-merge smoke spec + cron prompt                           ~23h ago
 
 🛠 Recently spawned / completed (no PR or PR open + blocked)
-   Audit  Apr 23 punch list + new items — completed in-conversation, no PR
-   #108  Postgres migration plan — scoping doc, opened on `docs/postgres-migration-plan-v2` (non-standard branch name due to concurrent-agent collision)
+   Editable inquiry notes — task `local_0e82917f` running
+   #113  Smoke hardening — admin-merging + cascade re-trigger
+   #108  Postgres migration plan — scoping doc, opened on `docs/postgres-migration-plan-v2`
    #110  Auto-update STATUS.md GH Action — opened, blocked by smoke wall
    #94   Conv-commits — open, DIRTY (9 commits behind main), needs rebase post-quota-reset
    #107  customer_profile_v2 assertion fix — open, blocked by smoke wall
    #109  Post-restart recovery runbook — open, blocked by smoke wall
 
 ## Up next in queue (max 5)
-1. Tier 1 flag flips                           → after Upstash quota reset
-2. PR #94 rebase + re-push                     → after Upstash quota reset
-3. Postgres migration phases 2-3               → pending Zach's review of #108
-4. Smoke suite hardening                       → skip flag-flip-dependent tests when KV returns 500
-5. Editable pipeline notes                     → Wave 3
+1. Advance follow-up calendar UI                  → Wave 3
+2. Post Catering Emails subsection                → Wave 3
+3. Dessert email → approval queue routing         → Wave 3
+4. Migration phase 1 — `api/_lib/db.js` scaffolding → after PR #108 reviewed
+5. PR #94 rebase                                  → after Upstash quota reset
 
 ## Discussed, not queued (max 10)
 - AI phone ordering          (SaaS scope)
