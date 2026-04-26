@@ -76,9 +76,11 @@
     if (!dtStr) return null;
     var m = String(dtStr).match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
     if (!m) return null;
+    var hasTime = m[4] !== undefined;
     return { year: +m[1], month: +m[2] - 1, day: +m[3],
-             hour: m[4] !== undefined ? +m[4] : 0,
-             minute: m[5] !== undefined ? +m[5] : 0 };
+             hour: hasTime ? +m[4] : 0,
+             minute: m[5] !== undefined ? +m[5] : 0,
+             hasTime: hasTime };
   }
 
   function eventStart(ev) { return parseCalDT(ev.start && (ev.start.dateTime || ev.start.date)); }
@@ -87,6 +89,26 @@
   function formatTime12(h, min) {
     var ampm = h >= 12 ? 'PM' : 'AM';
     return (h % 12 || 12) + ':' + pad2(min) + '\u202f' + ampm;
+  }
+
+  /* Time chip for a calendar event chip/list item.
+     - real time present  \u2192 "6:00 PM"
+     - BBQ-managed event with no time (synthetic from inquiry, or BBQ-tagged
+       gcal event) \u2192 "TBD"
+     - non-BBQ Google all-day event \u2192 "" (caller falls through to no chip)
+     A real midnight booking has dateTime "\u2026T00:00:00\u2026" \u2192 hasTime=true \u2192 shown
+     as "12:00 AM". Synthetic all-day items use start.date and have hasTime=false. */
+  function formatStartTime(ev) {
+    var s = eventStart(ev);
+    if (s && s.hasTime) return formatTime12(s.hour, s.minute);
+    if (ev && (ev.bbqVirtual || bbqThreadId(ev))) return 'TBD';
+    return '';
+  }
+
+  function formatEndTime(ev) {
+    var e = eventEnd(ev);
+    if (e && e.hasTime) return formatTime12(e.hour, e.minute);
+    return '';
   }
 
   function bbqThreadId(ev) {
@@ -149,7 +171,7 @@
     if (!threadIds.length) return;
     await Promise.all(threadIds.map(async function (tid) {
       try {
-        var r = await fetch('/api/inquiries/get?threadId=' + encodeURIComponent(tid));
+        var r = await fetch('/api/inquiries/get?threadId=' + encodeURIComponent(tid) + '&secret=' + encodeURIComponent(getSecret()));
         if (!r.ok) return;
         var d = await r.json();
         if (d.inquiry && d.inquiry.status) calInqStatusMap[tid] = d.inquiry.status;
@@ -370,9 +392,8 @@
           var shown = Math.min(evs.length, 3);
           for (var ei = 0; ei < shown; ei++) {
             var ev  = evs[ei];
-            var s   = eventStart(ev);
             var tid = bbqThreadId(ev);
-            var t   = s ? formatTime12(s.hour, s.minute) : '';
+            var t   = formatStartTime(ev);
             html += '<div class="cal-event' + (ev.hidden ? ' cal-event-hidden' : '') + '" onclick="event.stopPropagation();calEventClick(' +
                     JSON.stringify(ev.id) + ',' + JSON.stringify(tid) + ')">' +
                     (t ? '<span class="cal-event-time">' + t + '</span> ' : '') +
@@ -460,10 +481,11 @@
         var topPx = (startMin - DAY_START * 60) / 60 * HOUR_HEIGHT;
         var htPx  = Math.max(24, (endMin - startMin) / 60 * HOUR_HEIGHT);
         var tid   = bbqThreadId(ev);
+        var tEv = formatStartTime(ev);
         html += '<div class="cal-timed-event' + (ev.hidden ? ' cal-event-hidden' : '') + '" style="top:' + topPx + 'px;height:' + htPx + 'px"' +
                 ' onclick="event.stopPropagation();calEventClick(' + JSON.stringify(ev.id) + ',' + JSON.stringify(tid) + ')">' +
                 '<div class="cal-timed-event-name">' + escHtml(eventName(ev)) + '</div>' +
-                '<div class="cal-timed-event-time">' + formatTime12(s.hour, s.minute) + '</div>' +
+                (tEv ? '<div class="cal-timed-event-time">' + tEv + '</div>' : '') +
                 '</div>';
       });
       html += '</div>';
@@ -506,9 +528,8 @@
         html += '<span class="cal-mobile-no-evs">—</span>';
       } else {
         evs.forEach(function (ev) {
-          var s   = eventStart(ev);
           var tid = bbqThreadId(ev);
-          var t   = s ? formatTime12(s.hour, s.minute) : '';
+          var t   = formatStartTime(ev);
           html += '<div class="cal-mobile-event' + (ev.hidden ? ' cal-event-hidden' : '') + '" onclick="event.stopPropagation();calEventClick(' +
                   JSON.stringify(ev.id) + ',' + JSON.stringify(tid) + ')">' +
                   (t ? '<span class="cal-mobile-event-time">' + t + '</span>' : '') +
@@ -561,12 +582,13 @@
       var topPx = (startMin - DAY_START * 60) / 60 * HOUR_HEIGHT;
       var htPx  = Math.max(36, (endMin - startMin) / 60 * HOUR_HEIGHT);
       var tid   = bbqThreadId(ev);
-      var eStr  = e ? formatTime12(e.hour, e.minute) : '';
+      var sStr  = formatStartTime(ev);
+      var eStr  = formatEndTime(ev);
+      var timeText = sStr ? sStr + (eStr && eStr !== sStr ? '\u2009–\u2009' + eStr : '') : '';
       html += '<div class="cal-day-event' + (ev.hidden ? ' cal-event-hidden' : '') + '" style="top:' + topPx + 'px;height:' + htPx + 'px"' +
               ' onclick="calEventClick(' + JSON.stringify(ev.id) + ',' + JSON.stringify(tid) + ')">' +
               '<div class="cal-day-event-name">' + escHtml(eventName(ev)) + '</div>' +
-              '<div class="cal-day-event-time">' + formatTime12(s.hour, s.minute) +
-              (eStr ? '\u2009–\u2009' + eStr : '') + '</div>' +
+              (timeText ? '<div class="cal-day-event-time">' + timeText + '</div>' : '') +
               (ev.location ? '<div class="cal-day-event-loc">' + escHtml(ev.location) + '</div>' : '') +
               '</div>';
     });
@@ -593,9 +615,10 @@
     });
     if (!ev) return;
 
-    var s = eventStart(ev), e = eventEnd(ev);
-    var t1 = s ? formatTime12(s.hour, s.minute) : '';
-    var t2 = e ? formatTime12(e.hour, e.minute) : '';
+    var t1 = formatStartTime(ev);
+    var t2 = formatEndTime(ev);
+    /* "TBD" indicates a BBQ-managed event with no time. "All day" is reserved for
+       native Google Calendar all-day events that we don't manage. */
     var timeRange = t1 ? t1 + (t2 && t2 !== t1 ? '\u2009–\u2009' + t2 : '') : 'All day';
     var tid  = bbqThreadId(ev);
     var desc = (ev.description || '').slice(0, 400);
@@ -607,8 +630,48 @@
     document.getElementById('cal-em-time').textContent    = timeRange;
 
     var locEl = document.getElementById('cal-em-loc');
-    locEl.textContent    = ev.location || '';
-    locEl.style.display  = ev.location ? '' : 'none';
+    locEl.style.display = ev.location ? '' : 'none';
+    if (ev.location) {
+      var mapsEnabled = window.flags && window.flags.isEnabled('maps_v1');
+      if (mapsEnabled) {
+        var staticGmUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(ev.location);
+        var gmUrl = window.mapboxDistance ? window.mapboxDistance.mapsViewUrl(ev.location) : staticGmUrl;
+        locEl.innerHTML = '<div class="cal-em-loc-row">'
+          + '<span class="cal-em-loc-text">' + escHtml(ev.location) + '</span>'
+          + '<a class="maps-view-btn" id="cal-em-view-map" href="' + escHtml(gmUrl || '#') + '" target="_blank" rel="noopener">View Map</a>'
+          + (window.mapboxDistance ? '<span class="maps-dist-chip maps-loading" id="cal-em-dist-chip">\u2026</span>' : '')
+          + '</div>';
+        if (window.mapboxDistance) {
+          var departAt = (ev.start && ev.start.dateTime) ? ev.start.dateTime : null;
+          window.mapboxDistance.fetch('default', ev.location, departAt)
+            .then(function (result) {
+              var chip = document.getElementById('cal-em-dist-chip');
+              if (!chip) return;
+              if (result && result.ok) {
+                chip.textContent = window.mapboxDistance.fmtChip(result);
+                chip.classList.remove('maps-loading');
+                chip.title = 'Free-flow: ' + result.freeFlowMin + ' min \u00b7 With traffic: ' + result.trafficMin + ' min';
+                var btn = document.getElementById('cal-em-view-map');
+                if (btn) btn.href = window.mapboxDistance.mapsViewUrl(ev.location);
+              } else if (result && result.error === 'no_origin_address') {
+                var btn2 = document.getElementById('cal-em-view-map');
+                if (btn2) btn2.remove();
+                var notice = document.createElement('span');
+                notice.className = 'maps-empty-notice';
+                notice.setAttribute('data-testid', 'maps-empty-notice');
+                notice.innerHTML = 'Set your shop address in '
+                  + '<a href="#" class="maps-empty-link" onclick="window._calCloseEventModal&amp;&amp;window._calCloseEventModal();window.openShopAddressSetting&amp;&amp;window.openShopAddressSetting();return false;">Settings &rarr; Shop Info</a>'
+                  + ' to enable maps &amp; drive times.';
+                chip.replaceWith(notice);
+              } else {
+                chip.style.display = 'none';
+              }
+            });
+        }
+      } else {
+        locEl.textContent = ev.location;
+      }
+    }
 
     var descEl = document.getElementById('cal-em-desc');
     descEl.textContent   = desc;
@@ -829,11 +892,10 @@
     setError('');
     setLoading(true);
     try {
-      var tasks = [ensureLoaded()];
-      if (window.flags && window.flags.isEnabled('calendar_v2')) {
-        tasks.push(loadInqStatuses());
+      await ensureLoaded();
+      if (window.flags && (window.flags.isEnabled('calendar_v2') || window.flags.isEnabled('calendar_filters_v2'))) {
+        await loadInqStatuses();
       }
-      await Promise.all(tasks);
     } catch (e) {
       setError('Could not load calendar: ' + e.message);
     }
@@ -874,10 +936,10 @@
       html += '<div class="cal-agenda-month-group">' +
               '<div class="cal-agenda-month-label">' + MONTH_NAMES[g.month] + '\u00a0' + g.year + '</div>';
       g.evs.forEach(function (ev) {
-        var s = eventStart(ev), e = eventEnd(ev);
+        var s = eventStart(ev);
         if (!s) return;
-        var t1  = formatTime12(s.hour, s.minute);
-        var t2  = e ? formatTime12(e.hour, e.minute) : '';
+        var t1  = formatStartTime(ev);
+        var t2  = formatEndTime(ev);
         var tid = bbqThreadId(ev);
         var clr = eventStatusColor(ev);
         html += '<div class="cal-agenda-event' + (ev.hidden ? ' cal-event-hidden' : '') + '" style="border-left-color:' + clr + '"' +
@@ -888,7 +950,7 @@
                 '</div>' +
                 '<div class="cal-agenda-event-info">' +
                 '<div class="cal-agenda-event-name">' + escHtml(eventName(ev)) + '</div>' +
-                '<div class="cal-agenda-event-time">' + t1 + (t2 && t2 !== t1 ? '\u2009–\u2009' + t2 : '') + '</div>' +
+                (t1 ? '<div class="cal-agenda-event-time">' + t1 + (t2 && t2 !== t1 ? '\u2009–\u2009' + t2 : '') + '</div>' : '') +
                 '</div></div>';
       });
       html += '</div>';
