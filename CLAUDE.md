@@ -246,6 +246,31 @@ Unit test files live next to their source:
 
 ---
 
+## Sentry Error Tracking
+
+Production error capture is wired up in this repo but **flag-gated and DSN-gated**:
+
+- Server-side: `api/_lib/sentry.js` (uses `@sentry/node`).
+- Client-side: `static/js/sentry-init.js` loaded early in `index.html` head; loads the Sentry browser bundle from CDN only when `/api/sentry-config` reports `enabled: true`.
+- Both paths are no-ops until: (a) the `sentry_enabled` flag is ON in `api/_lib/flags.js`, AND (b) the `SENTRY_DSN` env var is set in Vercel.
+
+### Setup steps for Zach
+See [`docs/sentry-setup.md`](./docs/sentry-setup.md). Short version: create the project, add the DSN to Vercel env, flip the flag.
+
+### Process feedback wired in
+- **STATUS.md** gets a new section `🔴 Sentry errors (last 24h)`. The hourly STATUS cron should curl Sentry's API for unresolved errors and prepend them.
+- **Wave Shepherd** treats any Sentry error count > 0 as a stalled item — auto-spawns a hotfix task.
+- **Adversarial verification rule:** when an agent claims a bug is fixed, the verification spawn MUST also check Sentry for the same error signature in the last 24h. Local test passing is necessary but not sufficient — Sentry confirms the fix landed in production traffic.
+- **`lib/logger.js` integration:** `log.error()` in the structured logger forwards to `Sentry.captureException` automatically (via the soft-require pattern in PR 4) when the flag is on. Same call site, no extra wiring.
+
+### Errors are tagged with
+- `release` = git SHA (Vercel injects `VERCEL_GIT_COMMIT_SHA`)
+- `environment` = `production` / `preview` / `development`
+- `request_id` (when wrapped in `withSentry` or `withRequestId`)
+- `route` and `method`
+
+---
+
 ## Destructive Action Explanations
 
 Before requesting user approval for any action that could delete, destroy, overwrite, or irreversibly change state — including but not limited to: `rm`, `sudo`, `git push --force`, `git reset --hard`, `git branch -D`, `git clean -fd`, `git push --delete`, `drop table`, `truncate`, `delete from`, `uninstall`, `shutdown`, `reboot`, `crontab -r`, `docker volume rm`, `docker system prune`, `brew uninstall`, `pip uninstall`, `npm uninstall --global`, `npm publish`, `gh repo delete`, `gh release delete`, `find ... -delete`, `find ... -exec rm` — first output a plain-English explanation block in the chat covering:

@@ -101,6 +101,8 @@ const SEED_FLAGS = [
   { name: 'lost_reasons_v1',        description: 'Wave 1.5: past-event visual flag, Mark Lost modal (7-reason enum picker), Lost Reasons dashboard widget' },
   // Payment link abstraction
   { name: 'payment_links_v1',       description: 'Payment processing via provider-agnostic adapter (PAYMENT_PROVIDER=stripe|square|stub); default OFF' },
+  // Engineering: Sentry error tracking (default OFF — flip ON after SENTRY_DSN env var is set in Vercel)
+  { name: 'sentry_enabled',         description: 'Sentry error tracking on client + server — requires SENTRY_DSN env var in Vercel before flipping ON' },
 ];
 
 async function getFlag(name, defaultValue) {
