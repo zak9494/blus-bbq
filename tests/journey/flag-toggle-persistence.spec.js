@@ -35,12 +35,14 @@ for (const vp of VIEWPORTS) {
     test.slow();
     await page.setViewportSize({ width: vp.width, height: vp.height });
 
-    /** @type {{status:number,url:string}[]} */
+    /** @type {{status:number,url:string,body:string}[]} */
     const saveResponses = [];
     page.on('response', async r => {
       const u = r.url();
       if (u.includes(`/api/flags/${TARGET_FLAG}`)) {
-        saveResponses.push({ status: r.status(), url: u });
+        let body = '';
+        try { body = await r.text(); } catch {}
+        saveResponses.push({ status: r.status(), url: u, body });
       }
     });
 
@@ -79,7 +81,7 @@ for (const vp of VIEWPORTS) {
     // the new state.
     expect(saveResponses.length).toBeGreaterThan(0);
     for (const r of saveResponses) {
-      expect(r.status, `flag save POST returned ${r.status}`).toBeLessThan(400);
+      expect(r.status, `flag save POST returned ${r.status} body=${r.body}`).toBeLessThan(400);
     }
 
     // Pre-refresh screenshot.
