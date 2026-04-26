@@ -46,3 +46,43 @@
   flex: 1 1 auto;
   min-width: 0;
 }
+
+/* Empty-state notice shown in place of the View Map button when shop address is unset */
+.maps-empty-notice {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--warn, #d97706);
+  background: var(--warn-bg, rgba(217,119,6,0.12));
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.maps-empty-link {
+  color: var(--accent, #1a73e8);
+  text-decoration: underline;
+  margin-left: 2px;
+  cursor: pointer;
+}
+
+.maps-empty-link:hover { text-decoration: none; }
+
+/* Settings → Shop Info warning chip when address empty + maps_v1 ON */
+.maps-shop-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--warn, #d97706);
+  background: var(--warn-bg, rgba(217,119,6,0.12));
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-top: 8px;
+}
+
+.maps-shop-warn-icon { font-size: 12px; }
