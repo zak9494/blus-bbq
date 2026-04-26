@@ -94,8 +94,9 @@ module.exports = async (req, res) => {
   // Filter by lost_at date range
   const inRange = records.filter(r => {
     if (!r) return false;
-    // Fall back to updatedAt if lost_at is missing
-    const lostTs = r.lost_at || r.updatedAt;
+    // KV index records use snake_case (updated_at). Accept camelCase too so older
+    // declined entries without lost_at still count toward the widget.
+    const lostTs = r.lost_at || r.updated_at || r.updatedAt;
     if (!lostTs) return false;
     const d = new Date(lostTs);
     return d >= from && d <= to;

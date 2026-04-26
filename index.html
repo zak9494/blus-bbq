@@ -2278,7 +2278,18 @@ function renderTable() {
 }
 
 function updateStats() {
-  var data = pipelineInqCache || [];
+  // Skip when cache hasn't loaded yet — otherwise renderAll() during init() (called
+  // before loadPipelineInquiries() resolves) writes "0" to all tiles and users see
+  // misleading zeros until the network fetch completes.
+  if (!pipelineInqCache) {
+    var loadingMark = '—';
+    var act = document.getElementById('stat-active');     if (act)  act.textContent  = loadingMark;
+    var qtd = document.getElementById('stat-quoted');     if (qtd)  qtd.textContent  = loadingMark;
+    var fup = document.getElementById('stat-followup');   if (fup)  fup.textContent  = loadingMark;
+    var bkd = document.getElementById('stat-booked');     if (bkd)  bkd.textContent  = loadingMark;
+    return;
+  }
+  var data = pipelineInqCache;
   document.getElementById('stat-active').textContent = data.filter(function(i){ return i.status !== 'declined'; }).length;
   document.getElementById('stat-quoted').textContent = data.filter(function(i){ return i.status === 'quote_sent' || i.status === 'quote_approved'; }).length;
   document.getElementById('stat-followup').textContent = data.filter(function(i){ return i.has_unreviewed_update; }).length;
