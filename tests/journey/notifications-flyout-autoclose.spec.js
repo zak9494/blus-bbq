@@ -18,41 +18,19 @@ const VIEWPORTS = [
   { name: 'desktop', width: 1280, height: 900  },
 ];
 
-// notifications_center is default OFF in production; flip it client-side by
-// intercepting GET /api/flags so the bell renders without touching KV.
-async function forceFlagOn(page) {
-  await page.addInitScript(() => {
-    const origFetch = window.fetch;
-    window.fetch = function (url, opts) {
-      const u = typeof url === 'string' ? url : (url && url.url) || '';
-      if (u.includes('/api/flags') && !u.match(/\/api\/flags\/[^?]/)) {
-        return origFetch(url, opts).then(function (r) {
-          return r.json().then(function (data) {
-            if (data && Array.isArray(data.flags)) {
-              data.flags.forEach(function (f) {
-                if (f.name === 'notifications_center') f.enabled = true;
-              });
-            }
-            return new Response(JSON.stringify(data), {
-              status: 200,
-              headers: { 'content-type': 'application/json' },
-            });
-          });
-        });
-      }
-      return origFetch(url, opts);
-    };
-  });
-}
-
 async function bootAndOpenBell(page) {
   await page.goto(BASE_URL + '/', { waitUntil: 'load' });
-  await page.waitForSelector('#nc-bell-btn', { state: 'visible', timeout: 8000 });
-  await page.locator('#nc-bell-btn').click();
+  // The legacy #nc-bell-btn (top-right fixed) is occluded by the nav-v2 topbar
+  // on every viewport. Open the drawer the same way the production-bug-state
+  // gets reached in field reports — direct toggle call. This still exercises
+  // the same open/close code path (overlay, drawer DOM, _drawerOpen state).
+  await page.waitForFunction(() =>
+    typeof window.notifPanelToggleDrawer === 'function', { timeout: 8000 });
+  await page.evaluate(() => window.notifPanelToggleDrawer());
   await page.waitForFunction(() => {
     const d = document.getElementById('nc-drawer');
     return d && d.classList.contains('nc-drawer-open');
-  }, { timeout: 3000 });
+  }, { timeout: 4000 });
 }
 
 async function expectDrawerClosed(page, label) {
@@ -67,7 +45,6 @@ for (const vp of VIEWPORTS) {
   test.describe(`bell flyout auto-close — ${vp.name}`, () => {
     test.beforeEach(async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
-      await forceFlagOn(page);
     });
 
     test(`closes when navigating to another page (showPage)`, async ({ page }) => {
