@@ -59,7 +59,7 @@
         var gmUrl = window.mapboxDistance
           ? window.mapboxDistance.mapsViewUrl(inq.delivery_address)
           : 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(inq.delivery_address);
-        distExtra = ' <a class="maps-view-btn" href="' + h(gmUrl) + '" target="_blank" rel="noopener">View Map</a>'
+        distExtra = ' <a class="maps-view-btn" href="' + h(gmUrl || '#') + '" target="_blank" rel="noopener">View Map</a>'
           + '<span class="maps-dist-chip maps-loading" id="ed-dist-' + h(inq.threadId) + '">\u2026</span>';
       }
       addressHtml = '<div class="ed-info-row">'
@@ -153,7 +153,7 @@
         .then(function (result) {
           var chip = document.getElementById('ed-dist-' + inq.threadId);
           if (!chip) return;
-          if (result) {
+          if (result && result.ok) {
             chip.textContent = window.mapboxDistance.fmtChip(result);
             chip.classList.remove('maps-loading');
             chip.title = 'Free-flow: ' + result.freeFlowMin + ' min \u00b7 With traffic: ' + result.trafficMin + ' min';
@@ -161,6 +161,16 @@
             if (viewBtn && viewBtn.classList.contains('maps-view-btn')) {
               viewBtn.href = window.mapboxDistance.mapsViewUrl(inq.delivery_address);
             }
+          } else if (result && result.error === 'no_origin_address') {
+            var btn = chip.previousElementSibling;
+            if (btn && btn.classList.contains('maps-view-btn')) btn.remove();
+            var notice = document.createElement('span');
+            notice.className = 'maps-empty-notice';
+            notice.setAttribute('data-testid', 'maps-empty-notice');
+            notice.innerHTML = 'Set your shop address in '
+              + '<a href="#" class="maps-empty-link" onclick="window.openShopAddressSetting&amp;&amp;window.openShopAddressSetting();return false;">Settings &rarr; Shop Info</a>'
+              + ' to enable maps &amp; drive times.';
+            chip.replaceWith(notice);
           } else {
             chip.style.display = 'none';
           }

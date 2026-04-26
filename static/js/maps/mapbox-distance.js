@@ -37,10 +37,11 @@
       var r = await fetch(url, opts);
       if (timer) clearTimeout(timer);
       var j = await r.json();
-      if (!j.ok) return null;
-      if (j.origin) _shopAddr = j.origin;
-      _cache[key] = j;
-      return j;
+      if (j && j.ok) {
+        if (j.origin) _shopAddr = j.origin;
+        _cache[key] = j;
+      }
+      return j || null;
     } catch (_) {
       if (timer) clearTimeout(timer);
       return null;

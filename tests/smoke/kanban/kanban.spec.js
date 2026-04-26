@@ -184,8 +184,11 @@ test.describe('flag-on tests', () => {
 
 test('bulk approve: checkbox reveals button, dismiss preserves selection', async ({ page }) => {
   await page.goto(BASE_URL);
-  await page.waitForLoadState('networkidle');
-  await page.locator('.nav-item', { hasText: 'Inquiries' }).click();
+  await page.evaluate(async () => {
+    if (window.flags) await window.flags.load();
+    if (typeof showPage === 'function') showPage('inquiries');
+  });
+  await expect(page.locator('#page-inquiries')).toBeVisible({ timeout: 5000 });
   await expect(page.locator('#page-inquiries')).toBeVisible({ timeout: 6000 });
   await page.waitForTimeout(1500);
   const cb = page.locator('.inq-bulk-cb').first();

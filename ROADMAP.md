@@ -7,17 +7,17 @@ _For a daily glance, see [STATUS.md](./STATUS.md)._
 - [x] "Missed" highlight for past event dates — shipped in PR #80 (Wave 1.5 Lost system; past-event red border + "Past Event" pill on kanban + list)
 - [x] ~~quote_total on kanban cards~~ — DROPPED 2026-04-25 by Zach: "Not doing it." Code removed from PR #65.
 
-## Wave 2 — Quote Builder + infrastructure  (4/10 complete)
+## Wave 2 — Quote Builder + infrastructure  (10/10 complete) ✓
 - [x] $ alongside service charge % — shipped in PR #16
 - [x] Default address setting — shipped in PR #74
 - [x] Google Maps directions link — shipped in PR #72
 - [x] Quarter chicken 3+ meat logic — shipped in PR #75
-- [ ] Discount field — in PR #61
-- [ ] Setup fee conditional input — in PR #61
-- [ ] Due date + deposit % + 2nd due date — in PR #61
-- [ ] Tax rate override (currently hardcoded 8.25% in `quote-engine.js`) — in PR #61
-- [ ] SMS scaffold (`api/sms/`) — in PR #62
-- [ ] Payment link abstraction (`api/payments/`) — in PR #63
+- [x] Discount field — shipped in PR #61
+- [x] Setup fee conditional input — shipped in PR #61
+- [x] Due date + deposit % + 2nd due date — shipped in PR #61
+- [x] Tax rate override (currently hardcoded 8.25% in `quote-engine.js`) — shipped in PR #61
+- [x] SMS scaffold (`api/sms/`) — shipped in PR #62
+- [x] Payment link abstraction (`api/payments/`) — shipped in PR #63
 
 ## Wave 3 — AI + Notifications UX  (4/8 complete)
 - [x] Notification Settings page — shipped in PR #70
@@ -46,6 +46,12 @@ _For a daily glance, see [STATUS.md](./STATUS.md)._
 ## Recently shipped (last 14 days, rolling)
 _Most recent first. Auto-archived from STATUS.md "Last 24h" section._
 
+- 2026-04-26 · #46 — Await `flags.load()` before nav interactions (CI flake fix)
+- 2026-04-26 · #63 — Provider-agnostic payments adapter (stub/Stripe/Square scaffold)
+- 2026-04-26 · #79 — Maps empty-state notice when shop origin unset
+- 2026-04-26 · #62 — SMS scaffold (`sms_channel`, send + status webhook, stub mode when Twilio absent)
+- 2026-04-26 · #88 — Pipeline tiles + lost-reasons widget no longer stuck on "0"
+- 2026-04-26 · #61 — Wave 2 QB extensions (discount, setup fee, tax override, due dates, Maps link)
 - 2026-04-25 · #86 — Post-merge prod smoke spec + cron prompt
 - 2026-04-25 · #87 — `/notifications` duplicate hamburger fix
 - 2026-04-25 · #65 — Kanban audit batch A (`.kb-board` await fix; phone, $totals, service chips, sort, lost-hide, edit mode)
