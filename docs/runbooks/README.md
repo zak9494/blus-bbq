@@ -26,6 +26,7 @@ Every runbook follows the same shape:
 | A PR has been red / stalled for > 2h                      | [pr-stuck-in-bucket.md](./pr-stuck-in-bucket.md)          |
 | Calendar shows the wrong events                           | [calendar-shows-wrong-events.md](./calendar-shows-wrong-events.md) |
 | `/notifications` page broken                              | [notifications-page-broken.md](./notifications-page-broken.md) |
+| Wave Shepherd GH Action red / no-op                       | [wave-shepherd-gh-action.md](./wave-shepherd-gh-action.md) |
 
 ## When to write a new runbook
 

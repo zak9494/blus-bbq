@@ -1,4 +1,49 @@
-# Wave Shepherd — GitHub Actions runbook
+# Runbook: Wave Shepherd GitHub Action
+
+## Symptoms
+
+- The `wave-shepherd.yml` workflow run is red, or the daily `wave-shepherd alert` GitHub issue stops appearing despite stalled PRs.
+- Open PRs that should auto-merge (CLEAN + green + `auto-merge-ok` label) sit unmerged for >30 min.
+- Manual `gh workflow run wave-shepherd.yml` returns non-zero.
+
+## Immediate action
+
+If the workflow is failing in a way that risks accidental merges, disable it: `gh workflow disable wave-shepherd.yml`. Otherwise leave it running while you diagnose — a stalled shepherd is a no-op, not destructive.
+
+## Diagnose
+
+1. `gh run list --workflow=wave-shepherd.yml --limit 5` — find the most recent runs.
+2. `gh run view <run-id> --log-failed` — read the failure.
+3. Check whether the failure is in classification (`gh pr list`/`gh pr view` calls) or in action (`gh pr merge`, `gh pr comment`).
+4. Manual repro: `gh workflow run wave-shepherd.yml -f dry_run=1` and watch the resulting summary artifact.
+
+## Root cause checklist
+
+- GitHub token expired or scope reduced (look for 401/403 in the log).
+- `jq`/`bash` syntax regression in `scripts/wave-shepherd.sh` (the script targets bash 3 for macOS dev parity).
+- A labelled-but-DIRTY PR triggering a merge attempt and crashing on conflict.
+- Workflow concurrency limit hit (rare; check the run queue).
+
+## Fix
+
+- Token issues: rotate `GITHUB_TOKEN` permissions or fall back to a fine-grained PAT in repo secrets.
+- Script regressions: revert the offending commit on `scripts/wave-shepherd.sh` and patch forward in a new commit.
+- Conflict crashes: guard `gh pr merge` with the `mergeStateStatus=CLEAN` check before invoking.
+
+## Verify
+
+- Trigger a dry run: `gh workflow run wave-shepherd.yml -f dry_run=1`.
+- Confirm a non-empty summary artifact uploads and the step log echoes the same content.
+- Re-enable the workflow if previously disabled: `gh workflow enable wave-shepherd.yml`.
+
+## Post-incident
+
+- File a follow-up issue if the root cause was a script regression — add a regression test in `scripts/` so future bash/jq drift fails CI before it reaches the cron.
+- If a token had to be rotated, update the rotation date in `docs/runbooks/secret-rotation.md`.
+
+---
+
+## Reference: how it works
 
 The Wave Shepherd is a PR-triage cron that used to run on Zach's laptop via
 local Claude scheduled tasks. It now runs on GitHub Actions:
