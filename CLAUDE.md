@@ -246,6 +246,56 @@ Unit test files live next to their source:
 
 ---
 
+## Conventional Commits
+
+Every commit message must follow [Conventional Commits](https://www.conventionalcommits.org/) — `<type>(<scope>): <subject>`. The `commit-msg` husky hook (PR 5) runs `commitlint` and rejects anything that doesn't match.
+
+### Allowed types
+
+| Type       | Use for                                                                 |
+|------------|-------------------------------------------------------------------------|
+| `feat`     | New user-visible feature                                                |
+| `fix`      | Bug fix                                                                 |
+| `hotfix`   | Urgent / production fix — Wave Shepherd treats this as P0               |
+| `chore`    | Tooling, config, dependency bumps, no user impact                       |
+| `docs`     | README, CLAUDE.md, runbooks, comments-only edits                        |
+| `test`     | Add/modify tests; no production code change                             |
+| `qa`       | QA artefacts (Playwright fixtures, smoke specs)                         |
+| `refactor` | Code change that is neither a feature nor a bug fix                     |
+| `perf`     | Performance improvement                                                 |
+| `build`    | Build system / package manager / CI config                              |
+| `ci`       | CI-only changes                                                         |
+| `revert`   | Reverts a prior commit                                                  |
+| `style`    | Whitespace, formatting (NOT functional CSS — that's `feat`/`fix`)       |
+
+### Examples
+
+```
+feat(kanban): lost-reasons widget on the pipeline tile
+fix(notifications): clear stale push subscription on 410
+hotfix(dispatch): skip send when sender mismatch
+chore(status): refresh dashboard for 10 merges
+docs(runbooks): post-merge-smoke-failed playbook
+```
+
+### Generating CHANGELOG.md
+
+```bash
+npm run release            # bumps version + regenerates CHANGELOG.md from commits
+npm run release:first      # for the very first release; no version bump
+git push --follow-tags origin main
+```
+
+`standard-version` reads commit messages since the previous tag, groups by type, and updates `CHANGELOG.md`. Because the commit-msg hook gates the format, every commit on main is changelog-eligible by construction.
+
+### Process feedback wired in
+
+- **STATUS.md "Last 24 hours"** should pull from `CHANGELOG.md` instead of parsing raw `git log` — the type prefix is structured.
+- **Wave Shepherd cron** uses `fix(` and `hotfix(` prefixes to auto-detect P0 priority, and `feat(` for normal-flow features.
+- **Memory rule:** when bypassing the commit-msg hook with `--no-verify` (rare), document why in the commit body — otherwise the changelog grouping breaks for that release.
+
+---
+
 ## Destructive Action Explanations
 
 Before requesting user approval for any action that could delete, destroy, overwrite, or irreversibly change state — including but not limited to: `rm`, `sudo`, `git push --force`, `git reset --hard`, `git branch -D`, `git clean -fd`, `git push --delete`, `drop table`, `truncate`, `delete from`, `uninstall`, `shutdown`, `reboot`, `crontab -r`, `docker volume rm`, `docker system prune`, `brew uninstall`, `pip uninstall`, `npm uninstall --global`, `npm publish`, `gh repo delete`, `gh release delete`, `find ... -delete`, `find ... -exec rm` — first output a plain-English explanation block in the chat covering:
