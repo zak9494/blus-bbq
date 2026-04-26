@@ -3,17 +3,18 @@
 // Flag-off tests always run. Flag-on tests require SMOKE_SECRET env var and
 // temporarily enable notifications_center, then restore it to off in teardown.
 const { test, expect } = require('@playwright/test');
+const { setFlagOrSkip } = require('../../helpers/flags');
 
 const BASE_URL = process.env.SMOKE_BASE_URL || 'https://blus-bbq.vercel.app';
 const SECRET   = process.env.SMOKE_SECRET   || '';
-const FLAGS_URL = BASE_URL + '/api/flags/notifications_center';
 const FLAG_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
 
 // Ensure flag is off before flag-off assertions (guards against stale dev KV state)
 test.beforeAll(async ({ request }) => {
-  await request.post(FLAGS_URL, {
-    data: { secret: FLAG_SECRET, enabled: false },
-  }).catch(() => {});
+  await setFlagOrSkip(request, 'notifications_center', false, {
+    secret: FLAG_SECRET,
+    baseUrl: BASE_URL,
+  });
 });
 
 // ── flag-off (always run, no auth needed) ─────────────────────────────────────
@@ -47,15 +48,17 @@ test.describe('flag-on tests', () => {
 
   test.afterAll(async ({ request }) => {
     // Always restore flag to off
-    await request.post(FLAGS_URL, {
-      data: { secret: SECRET, enabled: false },
+    await setFlagOrSkip(request, 'notifications_center', false, {
+      secret: SECRET,
+      baseUrl: BASE_URL,
     });
   });
 
   test('enable flag and GET /api/notifications returns 200 with expected shape', async ({ request }) => {
-    // Enable flag
-    const flagRes = await request.post(FLAGS_URL, {
-      data: { secret: SECRET, enabled: true },
+    // Enable flag (soft-skips if KV is at quota)
+    const flagRes = await setFlagOrSkip(request, 'notifications_center', true, {
+      secret: SECRET,
+      baseUrl: BASE_URL,
     });
     expect(flagRes.status()).toBe(200);
 

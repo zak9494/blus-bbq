@@ -5,6 +5,7 @@
  * Requires: BASE_URL and INQ_SECRET env vars (or defaults to prod + hardcoded secret).
  */
 const { test, expect } = require('@playwright/test');
+const { setFlagOrSkip } = require('../helpers/flags');
 
 const BASE_URL  = process.env.SMOKE_BASE_URL || process.env.BASE_URL  || 'https://blus-bbq.vercel.app';
 const SECRET    = process.env.INQ_SECRET || 'c857eb539774b63cf0b0a09303adc78d';
@@ -12,9 +13,7 @@ const SECRET    = process.env.INQ_SECRET || 'c857eb539774b63cf0b0a09303adc78d';
 // ── Flag helpers ──────────────────────────────────────────────────────────────
 
 async function setFlag(request, name, enabled) {
-  await request.post(BASE_URL + '/api/flags/' + name, {
-    data: { secret: SECRET, enabled, description: '' },
-  });
+  return setFlagOrSkip(request, name, enabled, { secret: SECRET, baseUrl: BASE_URL });
 }
 
 // ── Shared navigation ─────────────────────────────────────────────────────────

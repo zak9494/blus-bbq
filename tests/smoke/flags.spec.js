@@ -1,6 +1,7 @@
 // @ts-check
 // Feature flags smoke tests — shape verification only (no KV writes in CI).
 const { test, expect } = require('@playwright/test');
+const { setFlagOrSkip } = require('../helpers/flags');
 
 const BASE_URL = process.env.SMOKE_BASE_URL || 'https://blus-bbq.vercel.app';
 
@@ -66,22 +67,15 @@ const FLAG_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
 
 test('POST /api/flags/:name returns 200 (routing fix regression guard)', async ({ request }) => {
   // Write kanban_restructure=false (no-op: it was already false). Verifies the route exists.
-  const res = await request.post(BASE_URL + '/api/flags/kanban_restructure', {
-    data: { secret: FLAG_SECRET, enabled: false, description: 'Restructured kanban board layout' },
+  // setFlagOrSkip soft-skips on Upstash quota 500 and throws on other errors —
+  // the routing/handler check is preserved without the file owning the skip logic.
+  const res = await setFlagOrSkip(request, 'kanban_restructure', false, {
+    secret: FLAG_SECRET,
+    baseUrl: BASE_URL,
+    description: 'Restructured kanban board layout',
   });
-
-  // Tolerate Upstash KV quota exhaustion: the route still exists and reaches
-  // the handler (which is what this regression guard checks); it just can't
-  // commit the write until the quota resets or the plan is upgraded. Without
-  // this branch every flag-related test would red-flag CI whenever KV runs
-  // out of credits, even though the routing/handler is fine.
-  const text = await res.text();
-  if (res.status() === 500 && /max requests limit exceeded/i.test(text)) {
-    test.skip(true, `Upstash KV at quota — POST handler reached but cannot write. body=${text.slice(0, 200)}`);
-  }
-
-  expect(res.status(), `POST returned ${res.status()} body=${text.slice(0, 200)}`).toBe(200);
-  const body = JSON.parse(text);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
   expect(body).toHaveProperty('ok', true);
   expect(body.name).toBe('kanban_restructure');
   expect(body.enabled).toBe(false);
