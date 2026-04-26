@@ -57,8 +57,10 @@ describe('delete.js — past-event guard', () => {
 
   test('blocks deletion of a past event (403)', async () => {
     clearKv();
+    // Use 2 days ago (not 1) to avoid the UTC-midnight/Chicago-timezone edge case where
+    // "yesterday UTC" === "today Chicago" and the past-event guard incorrectly misses.
     const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setDate(yesterday.getDate() - 2);
     const pastDate = yesterday.toISOString().slice(0, 10) + 'T12:00:00-05:00';
 
     _gcalImpl = async (method) => {
@@ -75,7 +77,7 @@ describe('delete.js — past-event guard', () => {
   test('soft-deletes a past event (200, hidden:true, written to KV)', async () => {
     clearKv();
     const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setDate(yesterday.getDate() - 2);
     const pastDate = yesterday.toISOString().slice(0, 10) + 'T12:00:00-05:00';
 
     _gcalImpl = async (method) => {
@@ -104,7 +106,7 @@ describe('delete.js — past-event guard', () => {
     _kvStore['calendar:hidden'] = JSON.stringify(['ev-already-hidden']);
 
     const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setDate(yesterday.getDate() - 2);
     const pastDate = yesterday.toISOString().slice(0, 10) + 'T12:00:00-05:00';
     _gcalImpl = async (method) => {
       if (method === 'GET') return { status: 200, body: { start: { dateTime: pastDate } } };

@@ -173,12 +173,16 @@ async function handlePipelineSave(req, res, body) {
     if (!Array.isArray(index)) index = [];
     index = index.filter(e => e.threadId !== threadId);
     const ef = record.extracted_fields || {};
+    const isDeclinedNew = record.status === 'declined' && existing?.status !== 'declined';
+    const lostAt = isDeclinedNew ? now : (existing?.lost_at ?? null);
     index.push({
       threadId,
       from:            record.from || '',
       subject:         record.subject || '',
       customer_name:   ef.customer_name || body.customer_name || null,
+      customer_email:  ef.customer_email || null,
       customer_phone:  ef.customer_phone || body.phone || null,
+      service_type:    ef.service_type || null,
       event_date:      ef.event_date    || null,
       guest_count:     ef.guest_count   || null,
       budget:          ef.budget        != null ? ef.budget : (body.budget != null ? body.budget : null),
@@ -188,6 +192,7 @@ async function handlePipelineSave(req, res, body) {
       has_unreviewed_update: record.has_unreviewed_update || false,
       email_date:      record.date || null,
       quote_total:     record.quote_total || null,
+      lost_at:         lostAt,
       updated_at:      now,
     });
     index.sort((a, b) => {

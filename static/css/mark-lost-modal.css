@@ -1,0 +1,174 @@
+/* ===== mark-lost-modal — Wave 1.5 ===== */
+
+.mlm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.mlm-overlay.mlm-visible { opacity: 1; }
+
+.mlm-sheet {
+  background: var(--bg-card, #fff);
+  border-radius: 16px 16px 0 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 20px 20px 28px;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.18);
+  transform: translateY(100%);
+  transition: transform 0.25s ease;
+}
+.mlm-overlay.mlm-visible .mlm-sheet { transform: translateY(0); }
+
+.mlm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.mlm-title {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text-primary, #111);
+}
+.mlm-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-muted, #888);
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.mlm-subtitle {
+  font-size: 13px;
+  color: var(--text-muted, #666);
+  margin: 0 0 14px;
+}
+
+.mlm-reasons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.mlm-reason-btn {
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #e0e0e0);
+  background: var(--bg, #fafafa);
+  color: var(--text-primary, #111);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.mlm-reason-btn:hover { border-color: var(--accent, #e65c00); }
+.mlm-reason-btn.mlm-selected {
+  border-color: var(--red, #c0392b);
+  background: var(--red-border, rgba(192,57,43,0.08));
+  color: var(--red, #c0392b);
+  font-weight: 600;
+}
+
+.mlm-notes-wrap { margin-bottom: 14px; }
+.mlm-notes {
+  width: 100%;
+  border: 1.5px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--bg-input, #fff);
+  color: var(--text-primary, #111);
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.mlm-notes:focus { outline: none; border-color: var(--accent, #e65c00); }
+.mlm-notes-counter {
+  font-size: 11px;
+  color: var(--text-muted, #999);
+  text-align: right;
+  margin-top: 3px;
+}
+
+.mlm-actions {
+  display: flex;
+  gap: 10px;
+}
+.mlm-btn {
+  flex: 1;
+  padding: 12px 0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s;
+}
+.mlm-btn:disabled { opacity: 0.45; cursor: default; }
+.mlm-btn-cancel {
+  background: var(--bg-secondary, #f0f0f0);
+  color: var(--text-muted, #555);
+}
+.mlm-btn-confirm {
+  background: var(--red, #c0392b);
+  color: #fff;
+}
+
+.mlm-error {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--red, #c0392b);
+  text-align: center;
+}
+
+/* Past-event flag on kanban cards */
+.kb-card.kb-past-event {
+  border-left: 3px solid var(--red, #c0392b);
+}
+.kb-card.kb-past-event .kb-card-meta {
+  color: var(--red, #c0392b);
+}
+.kb-tag-past-event {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--red-border, rgba(192,57,43,0.12));
+  color: var(--red, #c0392b);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.kb-tag-past-event:hover { background: rgba(192,57,43,0.22); }
+
+/* Past-event flag on list-view rows */
+.lv-past-event-date {
+  color: var(--red, #c0392b);
+  font-weight: 600;
+}
+.lv-chip-past-event {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--red-border, rgba(192,57,43,0.12));
+  color: var(--red, #c0392b);
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+@media (min-width: 480px) {
+  .mlm-overlay { align-items: center; }
+  .mlm-sheet { border-radius: 16px; }
+}

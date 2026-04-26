@@ -1,8 +1,3 @@
-/* ===== NOTIFICATION TYPES
-   GET  /api/notifications/types — list all types with current text (public, flag-gated)
-   POST /api/notifications/types — update type text (requires SELF_MODIFY_SECRET)
-     body: { secret, id, defaultText?, defaultSound?, defaultIcon? }
-   ===== */
 'use strict';
 const { getFlag }                  = require('../_lib/flags.js');
 const { listTypes, upsertType, SEED_TYPES } = require('../_lib/notification-types.js');
@@ -15,10 +10,11 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const enabled = await getFlag('notifications_center', false);
-  if (!enabled) return res.status(404).json({ error: 'Not found' });
 
-  // ── GET ───────────────────────────────────────────────────────────────────
   if (req.method === 'GET') {
+    if (!enabled) {
+      return res.status(200).json({ ok: true, types: SEED_TYPES });
+    }
     try {
       const types = await listTypes();
       return res.status(200).json({ ok: true, types });
@@ -27,8 +23,8 @@ module.exports = async (req, res) => {
     }
   }
 
-  // ── POST ─────────────────────────────────────────────────────────────────
   if (req.method === 'POST') {
+    if (!enabled) return res.status(404).json({ error: 'Not found' });
     const expected = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN;
     const body     = req.body || {};
     if (!expected || body.secret !== expected) {

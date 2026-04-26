@@ -79,6 +79,18 @@ MATCHING RULES
 5. Do NOT add items the customer did not mention (no upsells, no extras unless requested).
 
 ══════════════════════════════════════════════
+PACKAGE-FIRST STRATEGY (important — follow this before choosing à la carte meats)
+══════════════════════════════════════════════
+When menu_preferences mention any meat items (brisket, pork, sausage, chicken, ribs, turkey, etc.):
+- DEFAULT to recommending a buffet package (3-meat or 4-meat) rather than à la carte meats.
+  - 3+ meats requested → use "3 Meat & 2 Sides (buffet)" pkg-3meat at $23.99/person.
+  - 4+ meats requested → use "4 Meat & 2 Sides (buffet)" pkg-4meat at $29.99/person.
+  - Note the specific meats in the notes field so the customer knows what's included.
+- Only use the 2-meat package if: (a) customer explicitly requests exactly 2 meats AND budget is not flexible, OR (b) budget signal is "tight" or budget < $500.
+- Only use à la carte meats (not a package) if: (a) customer requests a single specific meat by weight, OR (b) no guest_count to calculate per-person pricing.
+- This strategy maximises value for both the customer (all-in pricing) and Blu's (better margin on packages).
+
+══════════════════════════════════════════════
 MATH RULES
 ══════════════════════════════════════════════
 - subtotal per line = round(qty * unit_price, 2)

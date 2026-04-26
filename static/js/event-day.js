@@ -53,10 +53,22 @@
     var addressHtml = '';
     if (inq.delivery_address) {
       var mUrl = mapsUrl(inq.delivery_address);
+      var mapsEnabled = window.flags && window.flags.isEnabled('maps_v1');
+      var distExtra = '';
+      if (mapsEnabled) {
+        var gmUrl = window.mapboxDistance
+          ? window.mapboxDistance.mapsViewUrl(inq.delivery_address)
+          : 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(inq.delivery_address);
+        distExtra = ' <a class="maps-view-btn" href="' + h(gmUrl || '#') + '" target="_blank" rel="noopener">View Map</a>'
+          + '<span class="maps-dist-chip maps-loading" id="ed-dist-' + h(inq.threadId) + '">\u2026</span>';
+      }
       addressHtml = '<div class="ed-info-row">'
         + '<span class="ed-info-label">Address</span>'
+        + '<span class="ed-address-content">'
         + '<a class="ed-address-link" href="' + h(mUrl) + '" target="_blank" rel="noopener">'
-        + h(inq.delivery_address) + '</a></div>';
+        + h(inq.delivery_address) + '</a>'
+        + distExtra
+        + '</span></div>';
     }
 
     var guestHtml = inq.guest_count
@@ -130,6 +142,42 @@
     }
   };
 
+  function _fetchDistances() {
+    if (!window.mapboxDistance || !window.flags || !window.flags.isEnabled('maps_v1')) return;
+    _events.forEach(function (inq) {
+      if (!inq.delivery_address) return;
+      var departAt = (inq.event_date && inq.event_time)
+        ? inq.event_date + 'T' + inq.event_time + ':00-05:00'
+        : null;
+      window.mapboxDistance.fetch('default', inq.delivery_address, departAt)
+        .then(function (result) {
+          var chip = document.getElementById('ed-dist-' + inq.threadId);
+          if (!chip) return;
+          if (result && result.ok) {
+            chip.textContent = window.mapboxDistance.fmtChip(result);
+            chip.classList.remove('maps-loading');
+            chip.title = 'Free-flow: ' + result.freeFlowMin + ' min \u00b7 With traffic: ' + result.trafficMin + ' min';
+            var viewBtn = chip.previousElementSibling;
+            if (viewBtn && viewBtn.classList.contains('maps-view-btn')) {
+              viewBtn.href = window.mapboxDistance.mapsViewUrl(inq.delivery_address);
+            }
+          } else if (result && result.error === 'no_origin_address') {
+            var btn = chip.previousElementSibling;
+            if (btn && btn.classList.contains('maps-view-btn')) btn.remove();
+            var notice = document.createElement('span');
+            notice.className = 'maps-empty-notice';
+            notice.setAttribute('data-testid', 'maps-empty-notice');
+            notice.innerHTML = 'Set your shop address in '
+              + '<a href="#" class="maps-empty-link" onclick="window.openShopAddressSetting&amp;&amp;window.openShopAddressSetting();return false;">Settings &rarr; Shop Info</a>'
+              + ' to enable maps &amp; drive times.';
+            chip.replaceWith(notice);
+          } else {
+            chip.style.display = 'none';
+          }
+        });
+    });
+  }
+
   function _renderCards() {
     var el = document.getElementById('ed-cards');
     if (!el) return;
@@ -138,6 +186,7 @@
       return;
     }
     el.innerHTML = _events.map(renderCard).join('');
+    _fetchDistances();
   }
 
   async function load() {
