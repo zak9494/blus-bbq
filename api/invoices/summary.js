@@ -69,7 +69,9 @@ module.exports = async (req, res) => {
 
   const avgTicket = invoiceCount > 0 ? charged / invoiceCount : 0;
 
-  // lostDollars: sum of quote totals on declined/archived inquiries in range
+  // lostDollars: sum of quote totals on declined/archived inquiries in range.
+  // KV index records use snake_case (event_date, quote_total, updated_at). Accept
+  // camelCase too in case older code paths wrote either shape.
   let lostDollars = 0;
   try {
     const inqRaw = await kvGet('inquiries:index');
@@ -77,10 +79,11 @@ module.exports = async (req, res) => {
       const inqIndex = typeof inqRaw === 'string' ? JSON.parse(inqRaw) : inqRaw;
       for (const inq of (inqIndex || [])) {
         if (!['declined', 'archived'].includes(inq.status)) continue;
-        const d = inq.eventDate || inq.created_at;
+        const d = inq.event_date || inq.eventDate || inq.updated_at || inq.created_at;
         if (from && d && d.slice(0, 10) < from) continue;
         if (to   && d && d.slice(0, 10) > to)   continue;
-        if (inq.quoteTotal) lostDollars += Number(inq.quoteTotal) || 0;
+        const qt = inq.quote_total || inq.quoteTotal;
+        if (qt) lostDollars += Number(qt) || 0;
       }
     }
   } catch (_) {}
