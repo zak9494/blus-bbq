@@ -1,0 +1,8 @@
+node_modules/
+test-results/
+tests/audit/post-merge-smoke-output/
+package-lock.json
+CHANGELOG.md
+index.html
+static/js/*.min.js
+.husky/
