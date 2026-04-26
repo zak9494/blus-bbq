@@ -260,18 +260,37 @@
     return result;
   }
 
+  /* Map every possible event status onto one of the 5 chip keys so the chip
+     set is exhaustive. Without this:
+       - quote_approved / new inquiries can never be shown (no chip exists)
+       - events without an inquiry status (raw Google Calendar entries) bypass
+         the filter entirely (`if (!status) return true`) and always render.
+     `quote_approved` collapses into "Quote Sent" (same workflow stage), `new`
+     collapses into "Needs More Info" (initial inquiry stage), and unlinked
+     calendar entries are treated as bookings (Google Calendar events without
+     an inquiry are presumed to be confirmed bookings someone added manually). */
+  var STATUS_TO_CHIP = {
+    new:            'needs_info',
+    needs_info:     'needs_info',
+    quote_drafted:  'quote_drafted',
+    quote_sent:     'quote_sent',
+    quote_approved: 'quote_sent',
+    booked:         'booked',
+    completed:      'completed',
+  };
+
   /* ── Render dispatcher ───────────────────────── */
   function eventPassesStatusFilter(ev) {
     if (!(window.flags && typeof window.flags.isEnabled === 'function' && window.flags.isEnabled('calendar_filters_v2'))) return true;
     var tid = bbqThreadId(ev);
-    var status = (tid && calInqStatusMap[tid]) || '';
-    if (!status) return true;
-    return calStatusFilters.has(status);
+    var rawStatus = (tid && calInqStatusMap[tid]) || '';
+    var chipKey = STATUS_TO_CHIP[rawStatus] || 'booked';
+    return calStatusFilters.has(chipKey);
   }
 
   function toggleStatusFilter(key) {
     if (calStatusFilters.has(key)) {
-      if (calStatusFilters.size > 1) calStatusFilters.delete(key);
+      calStatusFilters.delete(key);
     } else {
       calStatusFilters.add(key);
     }
