@@ -1,9 +1,9 @@
 # Blu's BBQ — Status
 
-_Updated: 2026-04-26T02:00Z_
+_Updated: 2026-04-26T02:30Z_
 
 ## Right now (max 5)
-[███░░░░░░░] 30%  PR #63 Payments adapter — Stripe/Square scaffold on `feat/payments-abstraction`, awaits creds
+[██░░░░░░░░] 15%  Competitor research synthesis — Salesforce, Toast, QuickBooks, Gong, AI sales tools (Lavender, AISDR, Regie.ai), ClickUp marketing, voice AI ordering. Output: `docs/competitor-research/` per-competitor + prioritized "features to steal" backlog. Task `local_e5552f04` running.
 
 ## Need your call (max 3)
 _(no urgent blockers right now)_
@@ -39,21 +39,22 @@ _(no urgent blockers right now)_
 
 ## Last 24 hours
 ✅ Merged
-   #79  Maps empty-state notice (shop-origin unset)   ~4min ago
-   #62  SMS scaffold (`sms_channel`, stub mode)       ~22min ago
-   #88  Pipeline tiles + lost-reasons widget fix      ~23min ago
-   #61  Wave 2 QB extensions (discount/fee/tax/dates) ~24min ago
-   #86  post-merge smoke spec + cron prompt           ~1h ago
+   #46  await flags.load() before nav — CI flake fix  ~recent
+   #63  Payments adapter (stub/Stripe/Square)         ~recent
+   #79  Maps empty-state notice (shop-origin unset)   ~30min ago
+   #62  SMS scaffold (`sms_channel`, stub mode)       ~50min ago
+   #88  Pipeline tiles + lost-reasons widget fix      ~50min ago
+   #61  Wave 2 QB extensions (discount/fee/tax/dates) ~50min ago
+   #86  post-merge smoke spec + cron prompt           ~2h ago
    #87  /notifications duplicate hamburger fix        ~3h ago
    #65  kanban audit batch A                          ~3h ago
    #82  /notifications page empty-state               ~3h ago
-   #84  pipeline alerts INQ_SECRET regression test    ~3h ago
-   #85  notif settings SAVE 401 regression test       ~3h ago
-   #83  calendar v2 — KV inquiry events fix           ~3h ago
+   #84  pipeline alerts INQ_SECRET regression test    ~4h ago
+   #85  notif settings SAVE 401 regression test       ~4h ago
+   #83  calendar v2 — KV inquiry events fix           ~4h ago
    #81  customer profile direct-nav loading hang      ~4h ago
    #75  Quarter chicken 3+ meat                       ~4h ago
-   #80  Wave 1.5 Lost system (replaces #68)           ~4h ago
-   #76  STATUS.md + ROADMAP.md tracking               ~5h ago
+   #80  Wave 1.5 Lost system (replaces #68)           ~5h ago
 
 ❌ Failed to merge
    _(none — all backlogged PRs cleared this round)_
@@ -74,7 +75,7 @@ _(no urgent blockers right now)_
 
 ## Wave progress
 Wave 1 · Core UX + iOS feel               [██████████] 100%  2/2 ✓
-Wave 2 · Quote Builder + infra            [█████████░]  90%  9/10
+Wave 2 · Quote Builder + infra            [██████████] 100% 10/10 ✓
 Wave 3 · AI + notifications UX            [█████░░░░░]  50%  4/8
 Wave 4 · External integrations + creds    [█████░░░░░]  50%  2/4
 Wave 5 · Calendar polish                  [████████░░]  75%  3/4
