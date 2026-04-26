@@ -2456,7 +2456,7 @@ function sendFollowupEmail() {
   const id = window._followupLeadId;
   const l = leads.find(x => x.id === id);
   if (l) {
-    sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({id, to: l.email, name: l.name, subject, body})}`);
+    sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({id, to: l.email, name: l.name, subject, body, source: 'human'})}`);
     closeModal('followup-modal');
     const idx = leads.findIndex(x => x.id === id);
     if (idx >= 0) leads[idx].followup = false;
@@ -2822,7 +2822,7 @@ function sendToastLink() {
   const amount = document.getElementById('tm-amount').value;
   const message = document.getElementById('tm-message').value;
   if (!link || !email) { alert('Please enter email and payment link'); return; }
-  sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({to: email, name: email, subject: "Blu's BBQ — Payment Link for Your Catering Order", body: `${message}\n\nPayment link: ${link}\nAmount due: ${amount}\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`})}`);
+  sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({to: email, name: email, subject: "Blu's BBQ — Payment Link for Your Catering Order", body: `${message}\n\nPayment link: ${link}\nAmount due: ${amount}\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`, source: 'human'})}`);
   closeModal('toast-modal');
   // reset schedule UI
   const sr = document.getElementById('tm-schedule-row');
@@ -3324,7 +3324,7 @@ function emailQuote() {
 
   const total    = document.getElementById('preview-total').textContent;
   const body = `Hi ${name.split(' ')[0] || 'there'},\n\nPlease see the attached quote for your review!\n\nOrder summary:\n${itemLines.join('\n')}\n\nTotal: ${total}\n\nPlease let me know if you have any questions or would like any changes. You're also welcome to stop by anytime after 1PM, Wednesday through Sunday to try some samples — just ask for the manager, Raul!\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`;
-  sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({to: email, name, subject: "Re: Blu's BBQ - Catering Quote", body})}`);
+  sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({to: email, name, subject: "Re: Blu's BBQ - Catering Quote", body, source: 'human'})}`);
   showToast('Quote emailed to customer!');
 }
 
