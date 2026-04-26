@@ -5,6 +5,7 @@ const KV_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
 const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPO = process.env.GITHUB_REPO;
+const AUTH_SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || null;
 const TARGET_FILE   = 'index.html';
 const TARGET_BRANCH = 'main';
 
@@ -237,6 +238,9 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!AUTH_SECRET) return res.status(500).json({ error: 'No secret configured (set SELF_MODIFY_SECRET env var)' });
+  const provided = (req.query && req.query.secret) || req.headers['x-secret'];
+  if (provided !== AUTH_SECRET) return res.status(401).json({ error: 'Invalid or missing secret' });
   if (!GITHUB_TOKEN) return res.status(500).json({ error: 'GITHUB_TOKEN is not set' });
   if (!GITHUB_REPO) return res.status(500).json({ error: 'GITHUB_REPO is not set' });
 
