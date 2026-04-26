@@ -344,6 +344,36 @@
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
+  // ── Auto-close wiring ─────────────────────────────────────────────────────
+  // Drawer must close on SPA nav, Escape, and outside-click. Overlay already
+  // handles outside-click (onclick → notifPanelCloseDrawer). The other two
+  // are wired here. Wiring runs unconditionally (not behind the flag gate)
+  // so the handlers exist whenever the drawer can be opened.
+  var _autoCloseWired = false;
+  function wireAutoClose() {
+    if (_autoCloseWired) return;
+    _autoCloseWired = true;
+    try {
+      var origShowPage = window.showPage;
+      window.showPage = function () {
+        if (_drawerOpen) closeDrawer();
+        if (typeof origShowPage === 'function') {
+          return origShowPage.apply(this, arguments);
+        }
+      };
+    } catch (_) {}
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && _drawerOpen) closeDrawer();
+    });
+  }
+
+  // Wire on DOM ready so window.showPage exists by the time we wrap it.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireAutoClose);
+  } else {
+    wireAutoClose();
+  }
+
   window.notifPanelInit = async function () {
     if (_inited) return;
     _inited = true;

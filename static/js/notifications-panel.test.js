@@ -42,8 +42,10 @@ function el(id) {
 const _ls = {};
 global.window   = global;
 global.document = {
+  readyState: 'complete',
   getElementById(id) { return el(id); },
   querySelectorAll() { return []; },
+  addEventListener() {},
   createElement(tag) {
     return {
       tag, _classes: new Set(), _style: {},
