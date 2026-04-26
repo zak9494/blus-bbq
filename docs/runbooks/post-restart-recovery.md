@@ -59,7 +59,21 @@ The script is read-only — it does not push, commit, or modify anything. Safe t
 
 ---
 
-## Action map per inventory finding
+## Root cause checklist
+
+Common reasons a restart event left in-flight task state behind. Ranked by likelihood:
+
+1. **Auto-checkpoint protocol was not followed.** A non-trivial edit lived only on local disk for >5 minutes when the session died. Mitigation lives upstream of recovery — see CLAUDE.md's auto-checkpoint protocol.
+2. **Scheduled task was paused on shutdown** and not auto-resumed. macOS sleep, OS update reboot, or `launchd` reload all silently leave `enabled: false`.
+3. **Worktree clean-up didn't run** before the session ended. Worktrees under `/tmp/` survive reboots on some macOS configurations but the parent session metadata is gone.
+4. **PR feedback loop stalled** — a Wave Shepherd repair entry was in flight when the session died, leaving the PR in an indeterminate state with no follow-up.
+5. **Local-only commits** were never pushed (the originating session expected to push later but never got the chance).
+
+If none of the above match, the restart was unusual — surface details to the user before proceeding to Fix.
+
+---
+
+## Fix
 
 Match each line in the inventory output to one of the following actions. Work top-to-bottom — the script's "Recommended actions" section is already ranked by urgency.
 

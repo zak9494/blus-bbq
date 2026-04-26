@@ -27,6 +27,7 @@ Every runbook follows the same shape:
 | Calendar shows the wrong events                           | [calendar-shows-wrong-events.md](./calendar-shows-wrong-events.md) |
 | `/notifications` page broken                              | [notifications-page-broken.md](./notifications-page-broken.md) |
 | Wave Shepherd GH Action red / no-op                       | [wave-shepherd-gh-action.md](./wave-shepherd-gh-action.md) |
+| Computer restarted, in-flight task state needs recovery   | [post-restart-recovery.md](./post-restart-recovery.md)    |
 
 ## When to write a new runbook
 
