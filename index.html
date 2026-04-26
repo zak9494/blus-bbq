@@ -1405,7 +1405,6 @@ if (typeof marked !== 'undefined') {
 
     <div id="page-notifications" class="page">
       <div class="topbar">
-        <button class="hamburger-btn" onclick="openMobileSidebar()">&#9776;</button>
         <div class="topbar-title">Notifications</div>
         <button class="btn btn-sm" onclick="notifPanelOpenSettings()" style="margin-left:auto">&#9881; Settings</button>
       </div>
@@ -4322,6 +4321,16 @@ const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_
 
 async function loadPipelineInquiries() {
   try {
+    // init() calls this synchronously from the inline script before defer'd flags.js
+    // has even defined window.flags. Wait for the flags client to appear and hydrate,
+    // so the kanban_restructure gate sees a populated cache on first paint.
+    const _flagsWaitStart = Date.now();
+    while (!window.flags && (Date.now() - _flagsWaitStart) < 3000) {
+      await new Promise(function (r) { setTimeout(r, 50); });
+    }
+    if (window.flags && typeof window.flags.load === 'function') {
+      await window.flags.load();
+    }
     const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
     const d = await r.json();
     // Stage 2: only approved, non-archived; exclude test records unless showTestData is on
