@@ -15,30 +15,88 @@ function kvGet(key) {
   return new Promise((resolve, reject) => {
     const url = kvUrl(), tok = kvToken();
     if (!url) return reject(new Error('KV env vars not set'));
-    const u = new URL(url + '/get/' + encodeURIComponent(key));
+    const u = new URL(url.replace(/\/+$/, '') + '/get/' + encodeURIComponent(key));
     const req = https.request({ hostname: u.hostname, path: u.pathname + u.search,
       method: 'GET', headers: { Authorization: 'Bearer ' + tok } }, r => {
       let d = ''; r.on('data', c => d += c);
-      r.on('end', () => { try { resolve(JSON.parse(d).result); } catch { resolve(null); } });
+      r.on('end', () => {
+        if (r.statusCode < 200 || r.statusCode >= 300) {
+          return reject(new Error('KV GET ' + key + ' failed: ' + r.statusCode + ' ' + d.slice(0, 200)));
+        }
+        try { resolve(JSON.parse(d).result); } catch { resolve(null); }
+      });
     });
     req.on('error', reject); req.end();
   });
 }
 
-function kvSet(key, value) {
+// Low-level Upstash POST. Used by both the /set/<key> and /pipeline strategies.
+function kvPost(pathSuffix, body, contentType) {
   return new Promise((resolve, reject) => {
     const url = kvUrl(), tok = kvToken();
     if (!url) return reject(new Error('KV env vars not set'));
-    const body = JSON.stringify([['SET', key, typeof value === 'string' ? value : JSON.stringify(value)]]);
-    const u = new URL(url + '/pipeline');
-    const req = https.request({ hostname: u.hostname, path: u.pathname,
+    const u = new URL(url.replace(/\/+$/, '') + pathSuffix);
+    const req = https.request({ hostname: u.hostname, path: u.pathname + u.search,
       method: 'POST', headers: { Authorization: 'Bearer ' + tok,
-        'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, r => {
+        'Content-Type': contentType, 'Content-Length': Buffer.byteLength(body) } }, r => {
       let d = ''; r.on('data', c => d += c);
-      r.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve(null); } });
+      r.on('end', () => resolve({ status: r.statusCode, body: d }));
     });
     req.on('error', reject); req.write(body); req.end();
   });
+}
+
+// Write a key/value to KV. Tries /set/<key> first; falls back to /pipeline if
+// the simpler endpoint is unavailable on this Upstash plan/version. Throws if
+// neither path produces a 2xx response with an OK result, or if a follow-up
+// readback shows the value did not actually land. The readback closes the
+// silent-failure hole that masked this bug originally.
+async function kvSet(key, value) {
+  const stringVal = typeof value === 'string' ? value : JSON.stringify(value);
+  let lastErr = null;
+
+  // Strategy 1 — POST /set/<encoded-key> with the raw value as body.
+  try {
+    const r = await kvPost('/set/' + encodeURIComponent(key), stringVal, 'text/plain');
+    if (r.status >= 200 && r.status < 300) {
+      let parsed = null;
+      try { parsed = JSON.parse(r.body); } catch {}
+      if (parsed && parsed.result === 'OK') return parsed;
+      lastErr = new Error('KV /set ' + key + ' unexpected result: ' + (r.body || '').slice(0, 200));
+    } else {
+      lastErr = new Error('KV /set ' + key + ' failed: ' + r.status + ' ' + (r.body || '').slice(0, 200));
+    }
+  } catch (e) {
+    lastErr = e;
+  }
+
+  // Strategy 2 — POST /pipeline with [["SET", key, value]].
+  try {
+    const body = JSON.stringify([['SET', key, stringVal]]);
+    const r = await kvPost('/pipeline', body, 'application/json');
+    if (r.status >= 200 && r.status < 300) {
+      let parsed = null;
+      try { parsed = JSON.parse(r.body); } catch {}
+      const ok = Array.isArray(parsed)
+        ? parsed.length > 0 && parsed[0] && parsed[0].result === 'OK' && !parsed[0].error
+        : parsed && parsed.result === 'OK';
+      if (ok) {
+        // Readback verification — guard against any silent-success regression.
+        const readback = await kvGet(key);
+        if (readback === stringVal) return parsed;
+        lastErr = new Error('KV SET ' + key + ' readback mismatch (stored ' +
+          (readback === null ? 'null' : 'differs') + ')');
+      } else {
+        lastErr = new Error('KV /pipeline ' + key + ' unexpected result: ' + (r.body || '').slice(0, 200));
+      }
+    } else {
+      lastErr = new Error('KV /pipeline ' + key + ' failed: ' + r.status + ' ' + (r.body || '').slice(0, 200));
+    }
+  } catch (e) {
+    lastErr = e;
+  }
+
+  throw lastErr || new Error('KV SET ' + key + ' failed: no successful path');
 }
 
 // Seed flags — these appear in listFlags() even if never written to KV.

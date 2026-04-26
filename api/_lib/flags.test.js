@@ -41,12 +41,19 @@ function mockRequest(opts, cb) {
         } else {
           responseBody = JSON.stringify({ result: null });
         }
+      } else if (path.startsWith('/set/')) {
+        // POST /set/:encoded-key — body is the raw value string.
+        const m = path.match(/\/set\/([^?]+)/);
+        if (m) {
+          const key = decodeURIComponent(m[1]);
+          _store[key] = bodyChunks.join('');
+        }
+        responseBody = JSON.stringify({ result: 'OK' });
       } else {
-        // POST /pipeline — body is [[cmd, key, val], ...]
+        // POST /pipeline — body is [[cmd, key, val], ...].
         const raw = bodyChunks.join('');
         let cmds = [];
         try { cmds = JSON.parse(raw); } catch { cmds = []; }
-        // Pipeline format: array of command arrays
         if (Array.isArray(cmds) && Array.isArray(cmds[0])) {
           cmds.forEach(function(cmd) {
             if (cmd[0] === 'SET') _store[cmd[1]] = cmd[2];
