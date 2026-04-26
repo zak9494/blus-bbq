@@ -802,10 +802,11 @@ if (typeof marked !== 'undefined') {
             <div class="form-row-2">
               <div class="form-group">
                 <label class="form-label">Service Type</label>
-                <select class="form-select" id="q-service" onchange="updateChargeSuggestion(); updatePreview()">
+                <select class="form-select" id="q-service" onchange="updateChargeSuggestion(); updatePreview(); qbUpdateExtFields()">
                   <option value="pickup">Pickup</option>
                   <option value="delivery">Delivery</option>
                   <option value="delivery_setup">Delivery &amp; Setup</option>
+                  <option value="delivery_full">Delivery + Setup + Serving</option>
                 </select>
               </div>
               <div class="form-group">
@@ -830,12 +831,63 @@ if (typeof marked !== 'undefined') {
             </div>
             <div class="form-group">
               <label class="form-label">Delivery Address (if applicable)</label>
-              <input class="form-input" id="q-address" placeholder="Full delivery address">
+              <input class="form-input" id="q-address" placeholder="Full delivery address" oninput="updatePreview()">
             </div>
+
+            <!-- Wave 2 extension fields (qb_ext_wave2 flag) -->
+            <div id="qb-ext-fields" style="display:none">
+              <div class="divider" style="margin:12px 0 10px"></div>
+
+              <!-- Discount -->
+              <div class="form-group">
+                <label class="form-label">Discount</label>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <input class="form-input" type="number" id="q-discount-val" min="0" step="0.01" placeholder="0" style="flex:1" oninput="updatePreview()">
+                  <button type="button" id="qb-discount-type-btn" class="btn btn-sm" onclick="qbToggleDiscountType()" style="min-width:36px; flex-shrink:0">$</button>
+                </div>
+                <div style="font-size:11px; color:var(--text3); margin-top:3px;">Applied to food subtotal before tax &amp; service charge</div>
+              </div>
+
+              <!-- Setup fee (shows only for delivery_setup / delivery_full) -->
+              <div class="form-group" id="qb-setup-fee-row" style="display:none">
+                <label class="form-label">Setup Fee ($)</label>
+                <input class="form-input" type="number" id="q-setup-fee" min="0" step="1" placeholder="0" oninput="updatePreview()">
+              </div>
+
+              <!-- Tax rate override -->
+              <div class="form-group">
+                <label class="form-label">Tax Rate (%)</label>
+                <input class="form-input" type="number" id="q-tax-rate" value="8.25" min="0" max="20" step="0.01" placeholder="8.25" oninput="updatePreview()">
+              </div>
+
+              <!-- Due date + deposit % -->
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="form-label">Deposit %</label>
+                  <input class="form-input" type="number" id="q-deposit-pct" min="0" max="100" step="1" placeholder="50" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Deposit Due Date</label>
+                  <input class="form-input" type="date" id="q-due-date" oninput="updatePreview()">
+                </div>
+              </div>
+
+              <!-- Optional 2nd due date -->
+              <div class="form-group">
+                <label class="form-label">2nd Due Date <span style="color:var(--text3);font-weight:400">(optional — balance due)</span></label>
+                <input class="form-input" type="date" id="q-due-date-2">
+              </div>
+            </div>
+            <!-- /qb-ext-fields -->
 
             <div class="divider"></div>
 
             <!-- Menu Picker -->
+            <!-- Quarter-chicken auto-suggest banner (qb_ext_wave2 flag) -->
+            <div id="qb-quarter-chicken-suggest" style="display:none; margin-bottom:10px; padding:8px 12px; border-radius:6px; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); font-size:12px; color:var(--amber);">
+              🍗 <strong>3+ meats selected</strong> — Quarter Chicken is a great margin add-on.
+              <button type="button" class="btn btn-sm" onclick="qbAddQuarterChicken()" style="margin-left:8px; font-size:11px; padding:2px 8px;">Add $5.50</button>
+            </div>
             <div class="menu-section">
               <div class="menu-section-title">Meats (select items)</div>
               <div class="menu-items-grid" id="menu-meats"></div>
@@ -907,6 +959,15 @@ if (typeof marked !== 'undefined') {
                 <input type="number" inputmode="decimal" class="charge-pct-input" id="delivery-fee-input" value="50" min="0" step="1" style="width:56px" oninput="updatePreview()">
               </div>
             </div>
+            <!-- Wave 2: discount + setup fee rows (hidden until qb_ext_wave2 flag) -->
+            <div class="charge-row" id="qb-discount-row" style="display:none;">
+              <span style="font-size:12px; color:var(--text2);">Discount</span>
+              <span style="font-size:12px; color:var(--green);" id="preview-discount-amt"></span>
+            </div>
+            <div class="charge-row" id="qb-setup-fee-preview-row" style="display:none;">
+              <span style="font-size:12px; color:var(--text2);">Setup fee</span>
+              <span style="font-size:12px; color:var(--text);" id="preview-setup-fee"></span>
+            </div>
             <div class="charge-row" id="qb-tax-row">
               <span style="font-size:12px; color:var(--text2);" id="qb-tax-label">TX Sales Tax (8.25%)</span>
               <span style="font-size:12px; color:var(--text);" id="preview-tax">$0.00</span>
@@ -934,6 +995,10 @@ if (typeof marked !== 'undefined') {
             </div>
 
             <div style="font-size:11px; color:var(--text3); margin-top:8px;" id="preview-service-type">Pickup</div>
+
+            <!-- Wave 2: deposit schedule + Maps link -->
+            <div id="qb-deposit-summary" style="display:none; margin-top:8px; padding:8px 10px; border-radius:6px; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2); font-size:11px; color:var(--text2);"></div>
+            <a id="qb-maps-link" href="#" target="_blank" rel="noopener" style="display:none; font-size:11px; color:var(--blue); text-decoration:none; margin-top:6px; display:none;">📍 Get directions to event</a>
 
             <button class="toast-send-btn" onclick="sendToast()">
               Send Toast Payment Link
@@ -1472,7 +1537,7 @@ if (typeof marked !== 'undefined') {
         </div>
       </div>
       <div class="content">
-        <div id="cp-loading" style="padding:32px;text-align:center;color:var(--text3)">Loading…</div>
+        <div id="cp-loading" style="padding:32px;text-align:center;color:var(--text3)">Select a customer from the Pipeline to view their profile.</div>
         <div id="cp-body" style="display:none">
           <div class="cp-header">
             <div class="cp-avatar" id="cp-avatar">?</div>
@@ -1872,7 +1937,7 @@ let leads = [
 let nextLeadId = 8;
 let editingLeadId = null;
 let currentQuoteNumber = 1043;
-let selectedItems = {};
+var selectedItems = {};
 let qbTaxExempt = false;  // standalone quote builder tax-exempt state
 let chatHistory = [];
 
@@ -2455,6 +2520,7 @@ function updateQtyFromInput(itemId) {
 function toggleItem(id, price, name, unit) {
   if (selectedItems[id]) { delete selectedItems[id]; }
   else { selectedItems[id] = { price, name, unit, qty: 1 }; setItemQty(id, 1); }
+  qbCheckQuarterChickenSuggest();
   updatePreview();
 }
 
@@ -2468,7 +2534,7 @@ function updatePreview() {
     const qty = getItemQty(id);
     return { ...item, id, qty, linePrice: item.price * qty };
   });
-  
+
   if (!items.length) {
     lines.innerHTML = '<div style="color:var(--text3); font-size:12px; text-align:center; padding:20px 0;">Select items to build quote</div>';
     document.getElementById('preview-total').textContent = '$0.00';
@@ -2481,54 +2547,126 @@ function updatePreview() {
     return `<div class="quote-line"><span class="q-item-name">${item.name} <span style="color:var(--text3);">(${item.qty}x ${item.unit})</span></span><span class="q-item-price">$${item.linePrice.toFixed(2)}</span></div>`;
   }).join('');
 
-  const pct = parseFloat(document.getElementById('charge-pct').value) || 0;
+  const pct     = parseFloat(document.getElementById('charge-pct').value) || 0;
   const service = document.getElementById('q-service').value;
   const dfInput = document.getElementById('delivery-fee-input');
-  const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? (dfInput ? (parseFloat(dfInput.value) || 0) : window.QB_DELIVERY_FEE) : 0;
-  const { serviceCharge: charge, baseTax, displayTax: tax, total } = window.calcQuoteTotals(subtotal, pct, deliveryFee, qbTaxExempt);
+  const hasDelivery = (service === 'delivery' || service === 'delivery_setup' || service === 'delivery_full');
+  const deliveryFee = hasDelivery ? (dfInput ? (parseFloat(dfInput.value) || 0) : window.QB_DELIVERY_FEE) : 0;
+
+  // Wave 2 opts (only active when qb_ext_wave2 fields are visible)
+  const extActive = document.getElementById('qb-ext-fields') && document.getElementById('qb-ext-fields').style.display !== 'none';
+  const taxRateInput  = document.getElementById('q-tax-rate');
+  const discountValEl = document.getElementById('q-discount-val');
+  const setupFeeEl    = document.getElementById('q-setup-fee');
+  const taxRate       = extActive && taxRateInput ? (parseFloat(taxRateInput.value) / 100) || window.SALES_TAX_RATE : window.SALES_TAX_RATE;
+  const setupFee      = extActive && setupFeeEl   ? (parseFloat(setupFeeEl.value) || 0) : 0;
+
+  let discountAmt = 0;
+  if (extActive && discountValEl) {
+    const rawVal = parseFloat(discountValEl.value) || 0;
+    const discountType = (document.getElementById('qb-discount-type-btn') || {}).textContent || '$';
+    discountAmt = discountType === '%' ? Math.round(subtotal * (rawVal / 100) * 100) / 100 : rawVal;
+  }
+
+  const { serviceCharge: charge, baseTax, displayTax: tax, total, discountAmt: appliedDiscount } =
+    window.calcQuoteTotals(subtotal, pct, deliveryFee, qbTaxExempt, { discountAmt, setupFee, taxRate });
 
   const amtEl = document.getElementById('charge-pct-amt');
   if (amtEl) amtEl.textContent = pct && subtotal ? '($' + charge.toFixed(2) + ')' : '';
 
   document.getElementById('preview-total').textContent = '$' + total.toFixed(2);
+
+  // Tax label / value
   if (qbTaxExempt) {
     const certNum = (document.getElementById('qb-tax-exempt-cert').value || '').trim();
     document.getElementById('preview-tax').textContent = 'Exempt';
-    document.getElementById('qb-tax-label').textContent = certNum
-      ? 'TX Sales Tax (Cert #' + certNum + ')'
-      : 'TX Sales Tax';
+    document.getElementById('qb-tax-label').textContent = certNum ? 'TX Sales Tax (Cert #' + certNum + ')' : 'TX Sales Tax';
     document.getElementById('preview-tax').style.color = 'var(--text3)';
   } else {
     document.getElementById('preview-tax').textContent = '$' + baseTax.toFixed(2);
-    document.getElementById('qb-tax-label').textContent = 'TX Sales Tax (8.25%)';
+    const taxPctDisplay = ((taxRate || window.SALES_TAX_RATE) * 100).toFixed(2).replace(/\.?0+$/, '');
+    document.getElementById('qb-tax-label').textContent = 'TX Sales Tax (' + taxPctDisplay + '%)';
     document.getElementById('preview-tax').style.color = 'var(--text)';
   }
+
   document.getElementById('delivery-row').style.display = deliveryFee ? 'flex' : 'none';
 
-  const serviceLabels = { pickup:'Pickup order', delivery:'Delivery order (+$50)', delivery_setup:'Delivery & setup (+$50)' };
+  // Wave 2: discount + setup fee preview rows
+  const discRow    = document.getElementById('qb-discount-row');
+  const setupRow   = document.getElementById('qb-setup-fee-preview-row');
+  const discAmt    = document.getElementById('preview-discount-amt');
+  const setupAmt   = document.getElementById('preview-setup-fee');
+  if (discRow && discAmt) {
+    if (appliedDiscount > 0) { discRow.style.display = 'flex'; discAmt.textContent = '−$' + appliedDiscount.toFixed(2); }
+    else { discRow.style.display = 'none'; }
+  }
+  if (setupRow && setupAmt) {
+    if (setupFee > 0) { setupRow.style.display = 'flex'; setupAmt.textContent = '$' + setupFee.toFixed(2); }
+    else { setupRow.style.display = 'none'; }
+  }
+
+  // Wave 2: deposit summary
+  const depositSummary = document.getElementById('qb-deposit-summary');
+  if (depositSummary && extActive) {
+    const depositPct  = parseFloat((document.getElementById('q-deposit-pct') || {}).value) || 0;
+    const dueDateVal  = (document.getElementById('q-due-date') || {}).value;
+    const dueDateVal2 = (document.getElementById('q-due-date-2') || {}).value;
+    if (depositPct && dueDateVal) {
+      const depositAmt = Math.round(total * (depositPct / 100) * 100) / 100;
+      const dueDateStr = new Date(dueDateVal + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+      let summary = depositPct + '% deposit ($' + depositAmt.toFixed(2) + ') due ' + dueDateStr;
+      if (dueDateVal2) {
+        const due2Str   = new Date(dueDateVal2 + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+        const balanceAmt = Math.round((total - depositAmt) * 100) / 100;
+        summary += ' · Balance ($' + balanceAmt.toFixed(2) + ') due ' + due2Str;
+      }
+      depositSummary.style.display = 'block';
+      depositSummary.textContent   = summary;
+    } else {
+      depositSummary.style.display = 'none';
+    }
+  }
+
+  // Wave 2: Maps directions link
+  const mapsLink = document.getElementById('qb-maps-link');
+  if (mapsLink && extActive) {
+    const eventAddr = (document.getElementById('q-address').value || '').trim();
+    if (eventAddr && hasDelivery) {
+      const kitchen = 'Blu\'s Barbeque, 17630 Preston Rd, Dallas TX 75252';
+      mapsLink.href = 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(kitchen) + '&destination=' + encodeURIComponent(eventAddr);
+      mapsLink.style.display = 'block';
+    } else {
+      mapsLink.style.display = 'none';
+    }
+  }
+
+  const serviceLabels = { pickup:'Pickup order', delivery:'Delivery order (+$50)', delivery_setup:'Delivery & setup (+$50)', delivery_full:'Delivery + Setup + Serving (+$50)' };
   document.getElementById('preview-service-type').textContent = serviceLabels[service] || '';
 }
 
 function updateChargeSuggestion() {
   const service = document.getElementById('q-service').value;
-  const budget = document.getElementById('q-budget').value;
-  const guests = parseInt(document.getElementById('q-guests').value) || 0;
+  const budget  = document.getElementById('q-budget').value;
+  const guests  = parseInt(document.getElementById('q-guests').value) || 0;
 
   let suggested = 0;
-  let reason = '';
+  let reason    = '';
 
   if (service === 'pickup') {
-    if (budget === 'tight') { suggested = 0; reason = 'Waiving charge — customer is budget-conscious and doing pickup.'; }
+    if (budget === 'tight')         { suggested = 0;  reason = 'Waiving charge — customer is budget-conscious and doing pickup.'; }
     else if (budget === 'flexible') { suggested = 10; reason = 'Pickup order with flexible budget — light service charge applied.'; }
-    else { suggested = 0; reason = 'Pickup order — no service charge recommended.'; }
+    else                            { suggested = 0;  reason = 'Pickup order — no service charge recommended.'; }
   } else if (service === 'delivery') {
-    if (budget === 'tight') { suggested = 8; reason = 'Delivery adds cost — applying reduced charge given tight budget.'; }
+    if (budget === 'tight')         { suggested = 8;  reason = 'Delivery adds cost — applying reduced charge given tight budget.'; }
     else if (budget === 'flexible') { suggested = 18; reason = 'Delivery with flexible budget — full 18% recommended.'; }
-    else if (guests > 75) { suggested = 15; reason = 'Large delivery order — 15% service charge recommended.'; }
-    else { suggested = 12; reason = 'Standard delivery — 12% service charge suggested.'; }
+    else if (guests > 75)           { suggested = 15; reason = 'Large delivery order — 15% service charge recommended.'; }
+    else                            { suggested = 12; reason = 'Standard delivery — 12% service charge suggested.'; }
   } else if (service === 'delivery_setup') {
-    if (budget === 'tight') { suggested = 12; reason = 'Full service with tight budget — 12% minimum recommended.'; }
-    else { suggested = 18; reason = 'Full delivery & setup — 18% service charge recommended.'; }
+    if (budget === 'tight')         { suggested = 12; reason = 'Full service with tight budget — 12% minimum recommended.'; }
+    else                            { suggested = 18; reason = 'Full delivery & setup — 18% service charge recommended.'; }
+  } else if (service === 'delivery_full') {
+    if (budget === 'tight')         { suggested = 15; reason = 'Full-service (delivery + setup + serving) with tight budget — 15% minimum.'; }
+    else                            { suggested = 22; reason = 'Full-service catering — 22% service charge recommended.'; }
   }
 
   const box = document.getElementById('ai-suggestion-box');
@@ -2537,6 +2675,58 @@ function updateChargeSuggestion() {
   document.getElementById('charge-pct').value = suggested;
   updatePreview();
 }
+
+/* ── Wave 2 QB helper functions ───────────────────────────────────────────── */
+
+function qbUpdateExtFields() {
+  const service     = document.getElementById('q-service').value;
+  const setupFeeRow = document.getElementById('qb-setup-fee-row');
+  if (setupFeeRow) {
+    const showSetup = (service === 'delivery_setup' || service === 'delivery_full');
+    setupFeeRow.style.display = showSetup ? '' : 'none';
+    if (!showSetup) { const sfEl = document.getElementById('q-setup-fee'); if (sfEl) sfEl.value = ''; }
+  }
+}
+
+function qbToggleDiscountType() {
+  const btn = document.getElementById('qb-discount-type-btn');
+  if (!btn) return;
+  btn.textContent = btn.textContent === '$' ? '%' : '$';
+  updatePreview();
+}
+
+const QB_MEAT_IDS = new Set([
+  'brisket-sliced','brisket-chopped','pulled-pork','sausage-pb','sausage-bj',
+  'chicken-quarter','chicken-half','chicken-whole','burnt-ends-brisket','burnt-ends-pork',
+  'rib-tips','beef-rib','turkey','jalapeno-poppers',
+]);
+
+function qbCheckQuarterChickenSuggest() {
+  const banner = document.getElementById('qb-quarter-chicken-suggest');
+  if (!banner) return;
+  if (!(window.flags && window.flags.isEnabled('qb_ext_wave2'))) return;
+  const meatCount = Object.keys(selectedItems).filter(id => QB_MEAT_IDS.has(id)).length;
+  banner.style.display = meatCount >= 3 ? 'block' : 'none';
+}
+
+function qbAddQuarterChicken() {
+  const id   = 'chicken-quarter';
+  const item = (window.MENU && window.MENU.meats || []).find(m => m.id === id);
+  const price = item ? item.price : 5.5;
+  const name  = item ? item.name  : 'Chicken - Quarter';
+  const unit  = item ? item.unit  : 'ea';
+  if (!selectedItems[id]) {
+    selectedItems[id] = { price, name, unit, qty: 1 };
+    setItemQty(id, 1);
+    const cb = document.querySelector(`input[data-id="${id}"]`);
+    if (cb) cb.checked = true;
+    updateQtyControls();
+  }
+  const banner = document.getElementById('qb-quarter-chicken-suggest');
+  if (banner) banner.style.display = 'none';
+  updatePreview();
+}
+/* ── end Wave 2 QB helpers ────────────────────────────────────────────────── */
 
 async function qbCheckRepeatCustomer(email) {
   const banner = document.getElementById('qb-repeat-banner');
@@ -2584,6 +2774,14 @@ function newQuote() {
   document.getElementById('qb-tax-exempt-chk').checked = false;
   document.getElementById('qb-tax-exempt-cert').value = '';
   document.getElementById('qb-tax-exempt-cert-row').style.display = 'none';
+  // Reset Wave 2 ext fields
+  const extIds = ['q-discount-val','q-setup-fee','q-due-date','q-due-date-2'];
+  extIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const taxRateEl = document.getElementById('q-tax-rate'); if (taxRateEl) taxRateEl.value = '8.25';
+  const depositEl = document.getElementById('q-deposit-pct'); if (depositEl) depositEl.value = String(window.DEFAULT_DEPOSIT_PCT || 50);
+  const discBtn = document.getElementById('qb-discount-type-btn'); if (discBtn) discBtn.textContent = '$';
+  const setupRow = document.getElementById('qb-setup-fee-row'); if (setupRow) setupRow.style.display = 'none';
+  const qcBanner = document.getElementById('qb-quarter-chicken-suggest'); if (qcBanner) qcBanner.style.display = 'none';
   updateQtyControls();
   updatePreview();
 }
@@ -2689,13 +2887,29 @@ async function generatePDF() {
     return;
   }
 
-  const subtotal      = items.reduce((s, i) => s + i.linePrice, 0);
-  const serviceCharge = subtotal * (pct / 100);
-  const deliveryFee   = (service === 'delivery' || service === 'delivery_setup') ? 50 : 0;
-  const baseTax       = Math.round(subtotal * 0.0825 * 100) / 100;
-  const tax           = qbTaxExempt ? 0 : baseTax;
-  const total         = subtotal + serviceCharge + tax + deliveryFee;
+  const foodSubtotal  = items.reduce((s, i) => s + i.linePrice, 0);
+  const hasDeliveryPDF = (service === 'delivery' || service === 'delivery_setup' || service === 'delivery_full');
+  const dfInputPDF    = document.getElementById('delivery-fee-input');
+  const deliveryFee   = hasDeliveryPDF ? (dfInputPDF ? (parseFloat(dfInputPDF.value) || 0) : 50) : 0;
   const taxExemptCert = qbTaxExempt ? (document.getElementById('qb-tax-exempt-cert').value || '').trim() : '';
+
+  // Wave 2 opts
+  const extActive2    = document.getElementById('qb-ext-fields') && document.getElementById('qb-ext-fields').style.display !== 'none';
+  const taxRateEl2    = document.getElementById('q-tax-rate');
+  const discValEl2    = document.getElementById('q-discount-val');
+  const setupFeeEl2   = document.getElementById('q-setup-fee');
+  const taxRate2      = extActive2 && taxRateEl2 ? (parseFloat(taxRateEl2.value) / 100) || 0.0825 : 0.0825;
+  const setupFee2     = extActive2 && setupFeeEl2 ? (parseFloat(setupFeeEl2.value) || 0) : 0;
+  let discountAmt2    = 0;
+  if (extActive2 && discValEl2) {
+    const rawV = parseFloat(discValEl2.value) || 0;
+    const dType = (document.getElementById('qb-discount-type-btn') || {}).textContent || '$';
+    discountAmt2 = dType === '%' ? Math.round(foodSubtotal * (rawV / 100) * 100) / 100 : rawV;
+  }
+  const { serviceCharge, baseTax, displayTax: tax, total,
+          discountAmt: appliedDiscount2, discountedSubtotal: discSub2 } =
+    window.calcQuoteTotals(foodSubtotal, pct, deliveryFee, qbTaxExempt, { discountAmt: discountAmt2, setupFee: setupFee2, taxRate: taxRate2 });
+  const subtotal = foodSubtotal; // alias for PDF line items table (unchanged)
 
   // ── Load jsPDF from CDN (once) ─────────────────────────────────────────────
   if (!window.jspdf) {
@@ -2859,6 +3073,17 @@ async function generatePDF() {
   doc.text('$' + subtotal.toFixed(2), TV, y, { align: 'right' });
   y += 16;
 
+  if (appliedDiscount2 > 0) {
+    doc.setTextColor(34, 197, 94);
+    doc.text('Discount', TL, y);
+    doc.text('-$' + appliedDiscount2.toFixed(2), TV, y, { align: 'right' });
+    doc.setTextColor(80, 80, 80);
+    y += 16;
+    doc.text('Discounted Subtotal', TL, y);
+    doc.text('$' + discSub2.toFixed(2), TV, y, { align: 'right' });
+    y += 16;
+  }
+
   if (serviceCharge > 0) {
     doc.text(`Service Charge (${pct}%)`, TL, y);
     doc.text('$' + serviceCharge.toFixed(2), TV, y, { align: 'right' });
@@ -2869,6 +3094,11 @@ async function generatePDF() {
     doc.text('$' + deliveryFee.toFixed(2), TV, y, { align: 'right' });
     y += 16;
   }
+  if (setupFee2 > 0) {
+    doc.text('Setup Fee', TL, y);
+    doc.text('$' + setupFee2.toFixed(2), TV, y, { align: 'right' });
+    y += 16;
+  }
   if (qbTaxExempt) {
     doc.setTextColor(120, 120, 120);
     const certLabel = taxExemptCert ? 'TX Sales Tax (Cert #' + taxExemptCert + ')' : 'TX Sales Tax';
@@ -2876,7 +3106,8 @@ async function generatePDF() {
     doc.text('Exempt', TV, y, { align: 'right' });
     doc.setTextColor(80, 80, 80);
   } else {
-    doc.text('TX Sales Tax (8.25%)', TL, y);
+    const taxPctPDF = ((taxRate2 || 0.0825) * 100).toFixed(2).replace(/\.?0+$/, '');
+    doc.text('TX Sales Tax (' + taxPctPDF + '%)', TL, y);
     doc.text('$' + baseTax.toFixed(2), TV, y, { align: 'right' });
   }
   y += 16;
@@ -3061,14 +3292,23 @@ async function saveQuoteAsInquiry() {
 
 function emailQuote() {
   const email = document.getElementById('q-email').value;
-  const name = document.getElementById('q-name').value;
+  const name  = document.getElementById('q-name').value;
   if (!email) { alert('Please enter a customer email first'); return; }
-  const items = Object.entries(selectedItems).map(([id, item]) => {
+
+  const itemLines = Object.entries(selectedItems).map(([id, item]) => {
     const qty = getItemQty(id);
     return `• ${item.name} (${qty}x): $${(item.price * qty).toFixed(2)}`;
-  }).join('\n');
-  const total = document.getElementById('preview-total').textContent;
-  const body = `Hi ${name.split(' ')[0] || 'there'},\n\nPlease see the attached quote for your review!\n\nOrder summary:\n${items}\n\nTotal: ${total}\n\nPlease let me know if you have any questions or would like any changes. You're also welcome to stop by anytime after 1PM, Wednesday through Sunday to try some samples — just ask for the manager, Raul!\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`;
+  });
+
+  // Wave 2: discount + setup fee lines in email
+  const extActive3  = document.getElementById('qb-ext-fields') && document.getElementById('qb-ext-fields').style.display !== 'none';
+  const discAmtEl3  = document.getElementById('preview-discount-amt');
+  const setupAmtEl3 = document.getElementById('preview-setup-fee');
+  if (extActive3 && discAmtEl3 && discAmtEl3.textContent)  itemLines.push(`• Discount: ${discAmtEl3.textContent}`);
+  if (extActive3 && setupAmtEl3 && setupAmtEl3.textContent) itemLines.push(`• Setup Fee: ${setupAmtEl3.textContent}`);
+
+  const total    = document.getElementById('preview-total').textContent;
+  const body = `Hi ${name.split(' ')[0] || 'there'},\n\nPlease see the attached quote for your review!\n\nOrder summary:\n${itemLines.join('\n')}\n\nTotal: ${total}\n\nPlease let me know if you have any questions or would like any changes. You're also welcome to stop by anytime after 1PM, Wednesday through Sunday to try some samples — just ask for the manager, Raul!\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`;
   sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({to: email, name, subject: "Re: Blu's BBQ - Catering Quote", body})}`);
   showToast('Quote emailed to customer!');
 }
@@ -5535,6 +5775,13 @@ window.addEventListener('load', function() {
       var spPanel = document.getElementById('pipeline-sales-panel');
       if (spPanel) spPanel.style.display = '';
       if (window.invoiceMgr) window.invoiceMgr.init();
+    }
+    if (window.flags.isEnabled('qb_ext_wave2')) {
+      var extFields = document.getElementById('qb-ext-fields');
+      if (extFields) extFields.style.display = '';
+      // Set deposit % default from engine constant
+      var depEl = document.getElementById('q-deposit-pct');
+      if (depEl && !depEl.value) depEl.value = String(window.DEFAULT_DEPOSIT_PCT || 50);
     }
     if (window.flags.isEnabled('notification_settings_v1')) {
       var navNS = document.getElementById('nav-notif-settings');
