@@ -9,14 +9,13 @@
  * Run:  SMOKE_BASE_URL=<preview> SMOKE_SECRET=<secret> npx playwright test tests/smoke/kanban/
  */
 const { test, expect } = require('@playwright/test');
+const { setFlagOrSkip } = require('../../helpers/flags');
 
 const BASE_URL = process.env.SMOKE_BASE_URL || 'https://blus-bbq.vercel.app';
 const SECRET   = process.env.SMOKE_SECRET   || '';
 
-const FLAG_URL = BASE_URL + '/api/flags/kanban_restructure';
-
 async function setFlag(request, enabled) {
-  return request.post(FLAG_URL, { data: { secret: SECRET, enabled } });
+  return setFlagOrSkip(request, 'kanban_restructure', enabled, { secret: SECRET, baseUrl: BASE_URL });
 }
 
 async function goToPipeline(page) {

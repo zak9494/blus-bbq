@@ -6,6 +6,7 @@
  *   SMOKE_BASE_URL=https://<preview>.vercel.app npx playwright test tests/smoke/ai-endpoints.spec.js
  */
 const { test, expect } = require('@playwright/test');
+const { setFlagOrSkip } = require('../helpers/flags');
 
 const BASE_URL = process.env.SMOKE_BASE_URL || 'https://blus-bbq.vercel.app';
 const GMAIL_SECRET = process.env.SMOKE_GMAIL_SECRET || '';
@@ -14,9 +15,10 @@ const FLAG_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
 
 // Ensure ai_quote_updates flag is off before flag-off assertions (guards against stale dev KV state)
 test.beforeAll(async ({ request }) => {
-  await request.post(`${BASE_URL}/api/flags/ai_quote_updates`, {
-    data: { secret: FLAG_SECRET, enabled: false },
-  }).catch(() => {});
+  await setFlagOrSkip(request, 'ai_quote_updates', false, {
+    secret: FLAG_SECRET,
+    baseUrl: BASE_URL,
+  });
 });
 
 // ── /api/ai/quote-updates (flag-gated) ─────────────────────────────────────
@@ -34,9 +36,11 @@ test('GET /api/ai/quote-updates with flag on → 200 + correct shape', async ({ 
   // In CI it is skipped; for manual verification, set the env and toggle the flag
   test.skip(!SELF_MODIFY_SECRET, 'Requires SMOKE_SELF_MODIFY_SECRET to toggle flag');
 
-  // Enable flag
-  const flagRes = await request.post(`${BASE_URL}/api/flags/ai_quote_updates`, {
-    data: { secret: SELF_MODIFY_SECRET, enabled: true, description: 'smoke test' },
+  // Enable flag (soft-skips if KV is at quota)
+  const flagRes = await setFlagOrSkip(request, 'ai_quote_updates', true, {
+    secret: SELF_MODIFY_SECRET,
+    baseUrl: BASE_URL,
+    description: 'smoke test',
   });
   expect(flagRes.status()).toBe(200);
 
@@ -51,8 +55,10 @@ test('GET /api/ai/quote-updates with flag on → 200 + correct shape', async ({ 
   expect(body.stats).toHaveProperty('pending');
 
   // Disable flag again to leave clean
-  await request.post(`${BASE_URL}/api/flags/ai_quote_updates`, {
-    data: { secret: SELF_MODIFY_SECRET, enabled: false, description: 'smoke test' },
+  await setFlagOrSkip(request, 'ai_quote_updates', false, {
+    secret: SELF_MODIFY_SECRET,
+    baseUrl: BASE_URL,
+    description: 'smoke test',
   });
 });
 
