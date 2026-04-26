@@ -3,19 +3,19 @@
 _Source of truth for the full backlog. Updated by Claude after every state change._
 _For a daily glance, see [STATUS.md](./STATUS.md)._
 
-## Wave 1 — Core UX + iOS feel  (1/2 complete)
-- [ ] "Missed" highlight for past event dates — in PR #68 (open, CI green, blocked behind #64-67)
+## Wave 1 — Core UX + iOS feel  (2/2 complete) ✓
+- [x] "Missed" highlight for past event dates — shipped in PR #80 (Wave 1.5 Lost system; past-event red border + "Past Event" pill on kanban + list)
 - [x] ~~quote_total on kanban cards~~ — DROPPED 2026-04-25 by Zach: "Not doing it." Code removed from PR #65.
 
-## Wave 2 — Quote Builder + infrastructure  (3/10 complete)
+## Wave 2 — Quote Builder + infrastructure  (4/10 complete)
 - [x] $ alongside service charge % — shipped in PR #16
 - [x] Default address setting — shipped in PR #74
 - [x] Google Maps directions link — shipped in PR #72
+- [x] Quarter chicken 3+ meat logic — shipped in PR #75
 - [ ] Discount field — in PR #61
 - [ ] Setup fee conditional input — in PR #61
 - [ ] Due date + deposit % + 2nd due date — in PR #61
 - [ ] Tax rate override (currently hardcoded 8.25% in `quote-engine.js`) — in PR #61
-- [ ] Quarter chicken 3+ meat logic — in PR #75 (open, CI green, DIRTY conflict)
 - [ ] SMS scaffold (`api/sms/`) — in PR #62
 - [ ] Payment link abstraction (`api/payments/`) — in PR #63
 
@@ -46,6 +46,16 @@ _For a daily glance, see [STATUS.md](./STATUS.md)._
 ## Recently shipped (last 14 days, rolling)
 _Most recent first. Auto-archived from STATUS.md "Last 24h" section._
 
+- 2026-04-25 · #86 — Post-merge prod smoke spec + cron prompt
+- 2026-04-25 · #87 — `/notifications` duplicate hamburger fix
+- 2026-04-25 · #65 — Kanban audit batch A (`.kb-board` await fix; phone, $totals, service chips, sort, lost-hide, edit mode)
+- 2026-04-25 · #82 — `/notifications` page renders empty state instead of "Failed to load"
+- 2026-04-25 · #84 — Pipeline alerts `INQ_SECRET` dual-accept regression test
+- 2026-04-25 · #85 — Notif Settings SAVE 401 regression spec
+- 2026-04-25 · #83 — Calendar v2: merge KV inquiry events into `/api/calendar/list` output
+- 2026-04-25 · #81 — Customer profile "Loading…" hang on direct-nav fix
+- 2026-04-25 · #75 — Quote builder: quarter chicken requires 3+ meats
+- 2026-04-25 · #80 — Wave 1.5 Lost system (`lost_reasons_v1`, replaces PR #68)
 - 2026-04-25 · #76 — STATUS.md + ROADMAP.md as single source of truth
 - 2026-04-25 · #78 — Notifications sub-page entry under Settings
 - 2026-04-25 · #64 — Calendar v2 filters fix (events not rendering)
