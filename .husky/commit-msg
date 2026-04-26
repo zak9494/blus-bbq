@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+# Validate commit message format with commitlint.
+# Format: <type>(<scope>): <subject>
+# Types: feat, fix, chore, docs, test, refactor, perf, build, ci, revert, style
+# See commitlint.config.js for the full ruleset.
+#
+# Bypass with `--no-verify` only in true emergencies. The format is
+# load-bearing: STATUS.md "Last 24 hours" + auto-CHANGELOG.md derive
+# entirely from these prefixes; Wave Shepherd treats `fix(` and `hotfix(`
+# as P0 priority signals.
+
+npx --no-install commitlint --edit "$1"
