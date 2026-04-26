@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+# Blu's BBQ pre-commit hook
+# - lint-staged: ESLint + Prettier on changed files
+# - index.html JS syntax check: only when index.html is staged
+# - Fast unit tests: node --test (Playwright runs in CI, not here)
+#
+# Bypass with `--no-verify` only in true emergencies. Pre-commit failures
+# almost always represent a real issue worth fixing before pushing.
+
+set -e
+
+npx lint-staged
+
+if git diff --cached --name-only | grep -q '^index\.html$'; then
+  node scripts/lint.js
+fi
+
+npm test --silent
