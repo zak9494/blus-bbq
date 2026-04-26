@@ -740,3 +740,35 @@
   .cal-period-chip { font-size: 11px; padding: 3px 8px; }
   .cal-v2-legend { padding: 5px 12px; }
 }
+
+/* ── Calendar status filter chips (calendar_filters_v2) ── */
+.cal-status-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  background: var(--bg);
+}
+.cal-status-chip {
+  height: 30px;
+  padding: 0 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.cal-status-chip:hover {
+  border-color: var(--text3);
+  color: var(--text);
+}
+.cal-status-chip-active {
+  background: transparent;
+  font-weight: 700;
+  color: var(--text);
+}

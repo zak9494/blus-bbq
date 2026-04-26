@@ -11,7 +11,7 @@ module.exports = async (req, res) => {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const enabled = await getFlag('notifications_center');
-  if (!enabled) return res.status(404).json({ error: 'Not found' });
+  if (!enabled) return res.status(200).json({ ok: true, unread_count: 0, by_type: {} });
 
   try {
     const { notifications, unread_count } = await listNotifications({ limit: 200, offset: 0 });

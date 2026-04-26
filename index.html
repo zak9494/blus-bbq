@@ -29,6 +29,15 @@
 <link rel="stylesheet" href="/static/css/ui/bottom-sheet.css">
 <link rel="stylesheet" href="/static/css/widgets/todays-actions.css">
 <link rel="stylesheet" href="/static/css/customers/tag-picker.css">
+<link rel="stylesheet" href="/static/css/invoice-manager.css">
+<link rel="stylesheet" href="/static/css/components/date-picker.css">
+<link rel="stylesheet" href="/static/css/notification-settings.css">
+<!-- Wave 4: Maps -->
+<link rel="stylesheet" href="/static/css/maps.css">
+<link rel="stylesheet" href="/static/css/thread-view.css">
+<!-- Wave 1.5: Lost system -->
+<link rel="stylesheet" href="/static/css/mark-lost-modal.css">
+<link rel="stylesheet" href="/static/css/lost-reasons-widget.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -131,6 +140,17 @@ h1,h2,h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
 .inq-bulk-approve { background:var(--green); color:#000; }
 .inq-bulk-archive { background:var(--amber); color:var(--on-color-text); }
 .inq-bulk-clear   { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.inq-paging { display:flex; align-items:center; gap:10px; padding:10px 16px; flex-wrap:wrap; }
+.inq-pg-btn { font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); cursor:pointer; }
+.inq-pg-btn:disabled { opacity:0.4; cursor:default; }
+.inq-pg-btn:not(:disabled):hover { border-color:var(--amber); color:var(--amber); }
+.inq-page-info { font-size:12px; color:var(--text3); }
+.inq-per-page-sel { font-size:12px; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); }
+.lv-paging { display:flex; align-items:center; gap:10px; padding:10px 0; flex-wrap:wrap; }
+.lv-page-btn { font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); cursor:pointer; }
+.lv-page-btn:disabled { opacity:0.4; cursor:default; }
+.lv-page-btn:not(:disabled):hover { border-color:var(--amber); color:var(--amber); }
+.lv-page-info { font-size:12px; color:var(--text3); }
 .inq-section { margin-bottom:24px; }
 .inq-section-title { font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text3); margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:6px; }
 .inq-fields-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -577,8 +597,12 @@ if (typeof marked !== 'undefined') {
     <div class="nav-item" onclick="showPage('calendar');calInit()"><span class="nav-dot dot-green"></span>Calendar</div>
     <div class="nav-item" id="nav-today" style="display:none" onclick="showPage('today')"><span class="nav-dot dot-orange"></span>Today's Gigs</div>
     <div class="nav-item" id="nav-customers" onclick="showPage('customer')" style="display:none"><span class="nav-dot dot-amber"></span>Customers</div>
+    <div class="nav-item" id="nav-invoices" onclick="showPage('invoices')" style="display:none"><span class="nav-dot dot-green"></span>Invoices</div>
     <button class="sidebar-close-btn" onclick="closeMobileSidebar()">✕</button>
-    <div class="nav-item disabled"><span class="nav-dot dot-green"></span>Invoices</div>
+    <!-- Accounting nav section (invoice_manager_v1 flag gates label + active item) -->
+    <div id="nav-accounting-label" class="nav-section-label" style="display:none">Accounting</div>
+    <div id="nav-invoices-active" class="nav-item" style="display:none" onclick="showPage('invoices')"><span class="nav-dot dot-green"></span>Invoices</div>
+    <div id="nav-invoices-stub" class="nav-item disabled"><span class="nav-dot dot-green"></span>Invoices</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Outbound Leads</div>
 
     <div class="nav-section-label">Restaurant</div>
@@ -602,6 +626,7 @@ if (typeof marked !== 'undefined') {
     <div class="nav-section-label">Settings</div>
     <div class="nav-item" id="theme-toggle-btn" onclick="themeToggle()" title="Toggle light/dark mode"><span class="theme-icon">☾</span><span class="theme-label">Dark Mode</span></div>
     <div class="nav-item" onclick="showPage('flags')"><span class="nav-dot dot-amber"></span>Feature Flags</div>
+    <div class="nav-item" id="nav-notif-settings" onclick="showPage('notif-settings')" style="display:none"><span class="nav-dot dot-blue"></span>Notification Settings</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Integrations</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Account</div>
 
@@ -645,8 +670,8 @@ if (typeof marked !== 'undefined') {
         </div>
       </div>
       <div class="content">
-        <!-- Stats -->
-        <div class="stats-row">
+        <!-- Stats — legacy count tiles (hidden when sales_panel_v1 is ON) -->
+        <div id="pipeline-stats-legacy" class="stats-row">
           <div class="stat-card">
             <div class="stat-label">Active Leads</div>
             <div class="stat-val red" id="stat-active">7</div>
@@ -668,6 +693,8 @@ if (typeof marked !== 'undefined') {
             <div class="stat-sub">this month</div>
           </div>
         </div>
+        <!-- Sales panel (shown when sales_panel_v1 flag is ON; rendered by invoice-manager/index.js) -->
+        <div id="pipeline-sales-panel" style="display:none;margin-bottom:12px"></div>
 
         <!-- Today's Actions widget (Wave 1, flag: todays_actions_widget) -->
         <div id="todays-actions-container" style="display:none;margin-bottom:12px"></div>
@@ -675,15 +702,21 @@ if (typeof marked !== 'undefined') {
         <!-- Overdue widget (Group 9, flag-gated) -->
         <div id="overdue-widget-container" style="display:none;margin-bottom:12px"></div>
 
+        <!-- Lost Reasons widget (Wave 1.5, flag: lost_reasons_v1) -->
+        <div id="lost-reasons-widget-container" style="display:none;margin-bottom:12px"></div>
+
         <!-- Alerts: hidden (stale hardcoded data replaced by dynamic recent-replies-section) -->
         <div class="alerts-section" id="alerts-section" style="display:none"></div>
         <div id="recent-replies-section" style="display:none;margin-top:4px"></div>
 
         <!-- Tabs -->
         <div class="tabs">
-          <div class="tab active" onclick="switchTab('kanban',this)">Kanban</div>
-          <div class="tab" onclick="switchTab('list',this)">List View</div>
+          <div class="tab active" data-view="kanban" onclick="switchTab('kanban',this)">Kanban</div>
+          <div class="tab" data-view="list" onclick="switchTab('list',this)">List View</div>
         </div>
+
+        <!-- Date picker row (date_picker_v2 flag; sits above both kanban and list views) -->
+        <div id="kb-date-picker-row" style="display:none"></div>
 
         <!-- Kanban -->
         <div id="view-kanban">
@@ -715,6 +748,7 @@ if (typeof marked !== 'undefined') {
     <div id="page-quotes" class="page">
       <div class="topbar">
         <div class="topbar-left">
+          <button id="qb-back-btn" class="btn" style="display:none;margin-right:10px" onclick="qbGoBack()">&#8592; Back</button>
           <div>
             <div class="topbar-title">Quote Builder</div>
             <div class="topbar-sub">Build, price &amp; send catering quotes</div>
@@ -768,10 +802,11 @@ if (typeof marked !== 'undefined') {
             <div class="form-row-2">
               <div class="form-group">
                 <label class="form-label">Service Type</label>
-                <select class="form-select" id="q-service" onchange="updateChargeSuggestion(); updatePreview()">
+                <select class="form-select" id="q-service" onchange="updateChargeSuggestion(); updatePreview(); qbUpdateExtFields()">
                   <option value="pickup">Pickup</option>
                   <option value="delivery">Delivery</option>
                   <option value="delivery_setup">Delivery &amp; Setup</option>
+                  <option value="delivery_full">Delivery + Setup + Serving</option>
                 </select>
               </div>
               <div class="form-group">
@@ -796,12 +831,63 @@ if (typeof marked !== 'undefined') {
             </div>
             <div class="form-group">
               <label class="form-label">Delivery Address (if applicable)</label>
-              <input class="form-input" id="q-address" placeholder="Full delivery address">
+              <input class="form-input" id="q-address" placeholder="Full delivery address" oninput="updatePreview()">
             </div>
+
+            <!-- Wave 2 extension fields (qb_ext_wave2 flag) -->
+            <div id="qb-ext-fields" style="display:none">
+              <div class="divider" style="margin:12px 0 10px"></div>
+
+              <!-- Discount -->
+              <div class="form-group">
+                <label class="form-label">Discount</label>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <input class="form-input" type="number" id="q-discount-val" min="0" step="0.01" placeholder="0" style="flex:1" oninput="updatePreview()">
+                  <button type="button" id="qb-discount-type-btn" class="btn btn-sm" onclick="qbToggleDiscountType()" style="min-width:36px; flex-shrink:0">$</button>
+                </div>
+                <div style="font-size:11px; color:var(--text3); margin-top:3px;">Applied to food subtotal before tax &amp; service charge</div>
+              </div>
+
+              <!-- Setup fee (shows only for delivery_setup / delivery_full) -->
+              <div class="form-group" id="qb-setup-fee-row" style="display:none">
+                <label class="form-label">Setup Fee ($)</label>
+                <input class="form-input" type="number" id="q-setup-fee" min="0" step="1" placeholder="0" oninput="updatePreview()">
+              </div>
+
+              <!-- Tax rate override -->
+              <div class="form-group">
+                <label class="form-label">Tax Rate (%)</label>
+                <input class="form-input" type="number" id="q-tax-rate" value="8.25" min="0" max="20" step="0.01" placeholder="8.25" oninput="updatePreview()">
+              </div>
+
+              <!-- Due date + deposit % -->
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="form-label">Deposit %</label>
+                  <input class="form-input" type="number" id="q-deposit-pct" min="0" max="100" step="1" placeholder="50" oninput="updatePreview()">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Deposit Due Date</label>
+                  <input class="form-input" type="date" id="q-due-date" oninput="updatePreview()">
+                </div>
+              </div>
+
+              <!-- Optional 2nd due date -->
+              <div class="form-group">
+                <label class="form-label">2nd Due Date <span style="color:var(--text3);font-weight:400">(optional — balance due)</span></label>
+                <input class="form-input" type="date" id="q-due-date-2">
+              </div>
+            </div>
+            <!-- /qb-ext-fields -->
 
             <div class="divider"></div>
 
             <!-- Menu Picker -->
+            <!-- Quarter-chicken auto-suggest banner (qb_ext_wave2 flag) -->
+            <div id="qb-quarter-chicken-suggest" style="display:none; margin-bottom:10px; padding:8px 12px; border-radius:6px; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); font-size:12px; color:var(--amber);">
+              🍗 <strong>3+ meats selected</strong> — Quarter Chicken is a great margin add-on.
+              <button type="button" class="btn btn-sm" onclick="qbAddQuarterChicken()" style="margin-left:8px; font-size:11px; padding:2px 8px;">Add $5.50</button>
+            </div>
             <div class="menu-section">
               <div class="menu-section-title">Meats (select items)</div>
               <div class="menu-items-grid" id="menu-meats"></div>
@@ -837,7 +923,7 @@ if (typeof marked !== 'undefined') {
           <div class="quote-preview">
             <div style="text-align:center; padding-bottom:14px; border-bottom:1px solid var(--border); margin-bottom:14px;">
               <div style="font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:0.05em; color:var(--text);">Blu's Barbeque</div>
-              <div style="font-size:11px; color:var(--text3); line-height:1.8;">17630 Preston Rd · Dallas, TX 75252<br>214-514-8684 · blusbarbeque.com</div>
+              <div style="font-size:11px; color:var(--text3); line-height:1.8;" id="quote-preview-shop-addr-wrap"><span id="quote-preview-shop-addr"></span><br>214-514-8684 · blusbarbeque.com</div>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
               <div>
@@ -873,6 +959,15 @@ if (typeof marked !== 'undefined') {
                 <input type="number" inputmode="decimal" class="charge-pct-input" id="delivery-fee-input" value="50" min="0" step="1" style="width:56px" oninput="updatePreview()">
               </div>
             </div>
+            <!-- Wave 2: discount + setup fee rows (hidden until qb_ext_wave2 flag) -->
+            <div class="charge-row" id="qb-discount-row" style="display:none;">
+              <span style="font-size:12px; color:var(--text2);">Discount</span>
+              <span style="font-size:12px; color:var(--green);" id="preview-discount-amt"></span>
+            </div>
+            <div class="charge-row" id="qb-setup-fee-preview-row" style="display:none;">
+              <span style="font-size:12px; color:var(--text2);">Setup fee</span>
+              <span style="font-size:12px; color:var(--text);" id="preview-setup-fee"></span>
+            </div>
             <div class="charge-row" id="qb-tax-row">
               <span style="font-size:12px; color:var(--text2);" id="qb-tax-label">TX Sales Tax (8.25%)</span>
               <span style="font-size:12px; color:var(--text);" id="preview-tax">$0.00</span>
@@ -900,6 +995,10 @@ if (typeof marked !== 'undefined') {
             </div>
 
             <div style="font-size:11px; color:var(--text3); margin-top:8px;" id="preview-service-type">Pickup</div>
+
+            <!-- Wave 2: deposit schedule + Maps link -->
+            <div id="qb-deposit-summary" style="display:none; margin-top:8px; padding:8px 10px; border-radius:6px; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2); font-size:11px; color:var(--text2);"></div>
+            <a id="qb-maps-link" href="#" target="_blank" rel="noopener" style="display:none; font-size:11px; color:var(--blue); text-decoration:none; margin-top:6px; display:none;">📍 Get directions to event</a>
 
             <button class="toast-send-btn" onclick="sendToast()">
               Send Toast Payment Link
@@ -1086,6 +1185,8 @@ if (typeof marked !== 'undefined') {
       <!-- LIST VIEW -->
       <div id="inq-list-view">
         <div id="inq-chips" class="inq-chips"></div>
+        <!-- Date picker (date_picker_v2 flag; replaces legacy date chips when ON) -->
+        <div id="inq-date-picker-row" style="display:none;padding:6px 16px 2px"></div>
         <div id="inq-date-chips" class="inq-chips" style="padding-top:0;border-top:none"></div>
         <!-- Search bar — sits between chips and cards, respects active chip filter -->
         <div style="padding:6px 16px 10px;position:relative">
@@ -1126,6 +1227,11 @@ if (typeof marked !== 'undefined') {
           </div>
         </div>
         <div class="content inq-detail-scroll">
+
+          <!-- Thread view (Wave 4: email_thread_v2 flag) -->
+          <div class="inq-section" id="inq-thread-section" style="display:none;padding:0">
+            <div id="inq-thread-container"></div>
+          </div>
 
           <!-- Customer info (editable) -->
           <div class="inq-section">
@@ -1319,8 +1425,23 @@ if (typeof marked !== 'undefined') {
 
     <!-- COMING SOON PAGES -->
     <div id="page-invoices" class="page">
-      <div class="topbar"><div class="topbar-title">Invoices</div></div>
-      <div class="content"><div class="coming-soon"><div class="coming-soon-badge">Coming Soon</div><div class="coming-soon-title">Invoice Manager</div><div class="coming-soon-sub">Track paid, unpaid, and overdue invoices with one-click Toast payment link integration.</div></div></div>
+      <div class="inv-topbar topbar">
+        <div class="topbar-left"><div class="inv-topbar-title topbar-title">Invoices</div></div>
+        <div class="topbar-actions">
+          <button class="inv-create-btn" onclick="if(window.invoiceMgr)window.invoiceMgr.openCreate()">+ Create</button>
+        </div>
+      </div>
+      <div class="content" style="padding:0">
+        <div id="inv-summary-section"></div>
+        <div id="inv-filters-row"></div>
+        <div id="inv-bulk-bar" hidden></div>
+        <div id="inv-table-wrap"></div>
+        <div id="inv-pagination"></div>
+      </div>
+      <!-- Invoice modal overlay -->
+      <div id="inv-modal-overlay" hidden onclick="if(event.target===this)window.invoiceMgr&&window.invoiceMgr.closeModal()">
+        <div id="inv-modal-content"></div>
+      </div>
     </div>
     <div id="page-outbound" class="page">
       <div class="topbar"><div class="topbar-title">Outbound Leads</div></div>
@@ -1349,7 +1470,6 @@ if (typeof marked !== 'undefined') {
 
     <div id="page-notifications" class="page">
       <div class="topbar">
-        <button class="hamburger-btn" onclick="openMobileSidebar()">&#9776;</button>
         <div class="topbar-title">Notifications</div>
         <button class="btn btn-sm" onclick="notifPanelOpenSettings()" style="margin-left:auto">&#9881; Settings</button>
       </div>
@@ -1366,6 +1486,18 @@ if (typeof marked !== 'undefined') {
           <button class="nc-btn-ghost" onclick="notifPanelOpenSettings()">&#10005;</button>
         </div>
         <div id="nc-settings-list" class="nc-settings-list"></div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION SETTINGS PAGE (notification_settings_v1 flag) -->
+    <div id="page-notif-settings" class="page">
+      <div class="topbar">
+        <button class="ns-back-btn btn" onclick="showPage('settings')" aria-label="Back to Settings">&#8592; Settings</button>
+        <div class="topbar-title">Notification Settings</div>
+      </div>
+      <div class="ns-page-content">
+        <div id="ns-save-status" class="ns-save-status"></div>
+        <div id="ns-page-body"></div>
       </div>
     </div>
 
@@ -1405,7 +1537,7 @@ if (typeof marked !== 'undefined') {
         </div>
       </div>
       <div class="content">
-        <div id="cp-loading" style="padding:32px;text-align:center;color:var(--text3)">Loading…</div>
+        <div id="cp-loading" style="padding:32px;text-align:center;color:var(--text3)">Select a customer from the Pipeline to view their profile.</div>
         <div id="cp-body" style="display:none">
           <div class="cp-header">
             <div class="cp-avatar" id="cp-avatar">?</div>
@@ -1456,6 +1588,25 @@ if (typeof marked !== 'undefined') {
         </div>
 
         <div class="settings-section">
+          <div class="settings-section-title">Shop Info</div>
+          <div class="settings-row">
+            <div style="flex:1">
+              <div class="settings-row-label">Shop Address</div>
+              <div class="settings-row-sub" style="margin-bottom:8px">Used for distance calculations and quote PDFs. Leave empty to disable map features.</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input class="form-input" id="settings-shop-address" placeholder="123 Main St, City TX 12345" style="flex:1">
+                <button class="btn btn-primary" onclick="saveShopAddress()">Save</button>
+              </div>
+              <div id="settings-shop-address-status" style="font-size:12px;color:var(--text3);margin-top:6px"></div>
+              <div id="settings-shop-address-warning" class="maps-shop-warn" data-testid="maps-shop-warn" style="display:none">
+                <span class="maps-shop-warn-icon" aria-hidden="true">&#9888;&#65039;</span>
+                Maps &amp; drive time features are disabled until this is set.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
           <div class="settings-section-title">Connections</div>
           <div class="settings-row settings-row-tap" onclick="showPage('ai')">
             <div><div class="settings-row-label">Gmail</div><div class="settings-row-sub" id="settings-gmail-sub">Not connected</div></div>
@@ -1467,6 +1618,14 @@ if (typeof marked !== 'undefined') {
           </div>
           <div class="settings-row settings-row-tap" onclick="showPage('ai')">
             <div><div class="settings-row-label">Push Notifications</div><div class="settings-row-sub">Enable browser push alerts</div></div>
+            <div class="settings-row-right"><span class="settings-row-arrow">›</span></div>
+          </div>
+        </div>
+
+        <div class="settings-section" id="settings-preferences-section" style="display:none">
+          <div class="settings-section-title">Preferences</div>
+          <div class="settings-row settings-row-tap" id="settings-row-notifications" onclick="showPage('notif-settings')">
+            <div><div class="settings-row-label">Notifications</div><div class="settings-row-sub">Choose which events alert you and how</div></div>
             <div class="settings-row-right"><span class="settings-row-arrow">›</span></div>
           </div>
         </div>
@@ -1759,6 +1918,12 @@ if (typeof marked !== 'undefined') {
 <script src="/static/js/kanban/card-status-dropdown.js"></script>
 <script src="/static/js/widgets/todays-actions.js"></script>
 <script src="/static/js/customers/tag-picker.js"></script>
+<script src="/static/js/notification-settings.js"></script>
+<!-- Wave 4: Maps -->
+<script src="/static/js/maps/mapbox-distance.js"></script>
+<!-- Wave 1.5: Lost system -->
+<script src="/static/js/pipeline/mark-lost-modal.js"></script>
+<script src="/static/js/pipeline/lost-reasons-widget.js"></script>
 <script>
 /* ===== MODULE: CONSTANTS & STATIC DATA ===== */
 // D22: MENU is now loaded from /static/js/menu.js (window.MENU).
@@ -1776,12 +1941,35 @@ let leads = [
 let nextLeadId = 8;
 let editingLeadId = null;
 let currentQuoteNumber = 1043;
-let selectedItems = {};
+var selectedItems = {};
 let qbTaxExempt = false;  // standalone quote builder tax-exempt state
 let chatHistory = [];
 
 /* ===== MODULE: NAVIGATION ===== */
+
+// QB back-button routing state
+var _activePipelineTab  = 'kanban'; // updated by switchTab()
+var _quoteReturnTo      = null;     // page to return to when pressing QB ← Back
+var _quoteReturnScrollY = 0;        // .main scrollTop saved before entering QB
+
 function showPage(page) {
+  // Capture currently-active page before switching so QB back button knows where to return
+  if (page === 'quotes') {
+    var _curActive = null;
+    document.querySelectorAll('.page.active').forEach(function(p) {
+      _curActive = p.id.replace('page-', '');
+    });
+    _quoteReturnTo = _curActive || null;
+    var _mainEl = document.querySelector('.main');
+    _quoteReturnScrollY = _mainEl ? _mainEl.scrollTop : (window.scrollY || 0);
+    var _qbBack = document.getElementById('qb-back-btn');
+    if (_qbBack) _qbBack.style.display = (_quoteReturnTo === 'pipeline') ? '' : 'none';
+  } else {
+    _quoteReturnTo = null;
+    var _qbBack2 = document.getElementById('qb-back-btn');
+    if (_qbBack2) _qbBack2.style.display = 'none';
+  }
+
   if (window.innerWidth <= 768) closeMobileSidebar();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1791,13 +1979,16 @@ function showPage(page) {
   if (page === 'scheduled') renderScheduled();
   if (page === 'inquiries') loadInquiries();
   else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
-  if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); if (window.overdueWidget) window.overdueWidget.init(); }
+  if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); if (window.overdueWidget) window.overdueWidget.init(); if (window.lostReasonsWidget) window.lostReasonsWidget.init(); }
+  if (page === 'calendar') { if (typeof calInit === 'function') calInit(); }
   if (page === 'customer') { if (window.customerProfile) window.customerProfile.init(); }
   if (page === 'ai') { loadChatHistory(); if (typeof chatApprovalInit === 'function') chatApprovalInit(); } // C21 + D24
   if (page === 'flags') loadFlagsPage();
   if (page === 'notifications' && typeof notifPanelRenderPage === 'function') notifPanelRenderPage();
+  if (page === 'notif-settings' && window.notifSettings) window.notifSettings.init();
   if (page === 'today') { if (typeof loadEventDayView === 'function') loadEventDayView(); }
-  if (page === 'settings') initLostReasonsSettings();
+  if (page === 'settings') { initLostReasonsSettings(); loadShopOriginAddress(); }
+  if (page === 'invoices' && window.invoiceMgr) window.invoiceMgr.initPage();
   // customer profile is rendered on-demand by openCustomerProfile(); no init needed here
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
@@ -2030,6 +2221,7 @@ async function toggleFlag(name, enabled, description) {
 }
 
 function switchTab(tab, el) {
+  _activePipelineTab = tab; // track for QB back-button routing
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   const kbEl = document.getElementById('view-kanban');
@@ -2041,6 +2233,43 @@ function switchTab(tab, el) {
   if (useNewKanban && pipelineInqCache) {
     if (tab === 'kanban' && kbEl && window.kanbanView) window.kanbanView.render(kbEl);
     if (tab === 'list'   && lvEl && window.listView)  window.listView.render(lvEl);
+  }
+  // Date picker row: show above kanban when date_picker_v2 ON, destroy on list switch
+  const dpRow = document.getElementById('kb-date-picker-row');
+  if (dpRow && window.flags && window.flags.isEnabled('date_picker_v2')) {
+    if (tab === 'kanban') {
+      dpRow.style.display = '';
+      if (window.kanbanView && typeof window.kanbanView.initDatePicker === 'function') {
+        window.kanbanView.initDatePicker(dpRow);
+      }
+    } else {
+      dpRow.style.display = 'none';
+      if (window.kanbanView && typeof window.kanbanView.destroyDatePicker === 'function') {
+        window.kanbanView.destroyDatePicker();
+      }
+    }
+  }
+}
+
+function qbGoBack() {
+  var dest       = _quoteReturnTo || 'pipeline';
+  var savedScroll = _quoteReturnScrollY;
+  showPage(dest);
+  if (dest === 'pipeline') {
+    // Restore the pipeline tab (kanban or list) that was active when user left
+    if (_activePipelineTab === 'list') {
+      var kbEl     = document.getElementById('view-kanban');
+      var lvEl     = document.getElementById('view-list');
+      var tabEl    = document.querySelector('.tab[onclick*="list"]');
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      if (tabEl) tabEl.classList.add('active');
+      if (kbEl)  kbEl.style.display = 'none';
+      if (lvEl)  lvEl.style.display = 'block';
+      var useNewKanban = window.flags && window.flags.isEnabled('kanban_restructure');
+      if (useNewKanban && window.listView && lvEl) window.listView.render(lvEl);
+    }
+    var mainEl = document.querySelector('.main');
+    if (mainEl) mainEl.scrollTop = savedScroll;
   }
 }
 
@@ -2118,7 +2347,18 @@ function renderTable() {
 }
 
 function updateStats() {
-  var data = pipelineInqCache || [];
+  // Skip when cache hasn't loaded yet — otherwise renderAll() during init() (called
+  // before loadPipelineInquiries() resolves) writes "0" to all tiles and users see
+  // misleading zeros until the network fetch completes.
+  if (!pipelineInqCache) {
+    var loadingMark = '—';
+    var act = document.getElementById('stat-active');     if (act)  act.textContent  = loadingMark;
+    var qtd = document.getElementById('stat-quoted');     if (qtd)  qtd.textContent  = loadingMark;
+    var fup = document.getElementById('stat-followup');   if (fup)  fup.textContent  = loadingMark;
+    var bkd = document.getElementById('stat-booked');     if (bkd)  bkd.textContent  = loadingMark;
+    return;
+  }
+  var data = pipelineInqCache;
   document.getElementById('stat-active').textContent = data.filter(function(i){ return i.status !== 'declined'; }).length;
   document.getElementById('stat-quoted').textContent = data.filter(function(i){ return i.status === 'quote_sent' || i.status === 'quote_approved'; }).length;
   document.getElementById('stat-followup').textContent = data.filter(function(i){ return i.has_unreviewed_update; }).length;
@@ -2295,6 +2535,7 @@ function updateQtyFromInput(itemId) {
 function toggleItem(id, price, name, unit) {
   if (selectedItems[id]) { delete selectedItems[id]; }
   else { selectedItems[id] = { price, name, unit, qty: 1 }; setItemQty(id, 1); }
+  qbCheckQuarterChickenSuggest();
   updatePreview();
 }
 
@@ -2308,7 +2549,7 @@ function updatePreview() {
     const qty = getItemQty(id);
     return { ...item, id, qty, linePrice: item.price * qty };
   });
-  
+
   if (!items.length) {
     lines.innerHTML = '<div style="color:var(--text3); font-size:12px; text-align:center; padding:20px 0;">Select items to build quote</div>';
     document.getElementById('preview-total').textContent = '$0.00';
@@ -2321,54 +2562,126 @@ function updatePreview() {
     return `<div class="quote-line"><span class="q-item-name">${item.name} <span style="color:var(--text3);">(${item.qty}x ${item.unit})</span></span><span class="q-item-price">$${item.linePrice.toFixed(2)}</span></div>`;
   }).join('');
 
-  const pct = parseFloat(document.getElementById('charge-pct').value) || 0;
+  const pct     = parseFloat(document.getElementById('charge-pct').value) || 0;
   const service = document.getElementById('q-service').value;
   const dfInput = document.getElementById('delivery-fee-input');
-  const deliveryFee = (service === 'delivery' || service === 'delivery_setup') ? (dfInput ? (parseFloat(dfInput.value) || 0) : window.QB_DELIVERY_FEE) : 0;
-  const { serviceCharge: charge, baseTax, displayTax: tax, total } = window.calcQuoteTotals(subtotal, pct, deliveryFee, qbTaxExempt);
+  const hasDelivery = (service === 'delivery' || service === 'delivery_setup' || service === 'delivery_full');
+  const deliveryFee = hasDelivery ? (dfInput ? (parseFloat(dfInput.value) || 0) : window.QB_DELIVERY_FEE) : 0;
+
+  // Wave 2 opts (only active when qb_ext_wave2 fields are visible)
+  const extActive = document.getElementById('qb-ext-fields') && document.getElementById('qb-ext-fields').style.display !== 'none';
+  const taxRateInput  = document.getElementById('q-tax-rate');
+  const discountValEl = document.getElementById('q-discount-val');
+  const setupFeeEl    = document.getElementById('q-setup-fee');
+  const taxRate       = extActive && taxRateInput ? (parseFloat(taxRateInput.value) / 100) || window.SALES_TAX_RATE : window.SALES_TAX_RATE;
+  const setupFee      = extActive && setupFeeEl   ? (parseFloat(setupFeeEl.value) || 0) : 0;
+
+  let discountAmt = 0;
+  if (extActive && discountValEl) {
+    const rawVal = parseFloat(discountValEl.value) || 0;
+    const discountType = (document.getElementById('qb-discount-type-btn') || {}).textContent || '$';
+    discountAmt = discountType === '%' ? Math.round(subtotal * (rawVal / 100) * 100) / 100 : rawVal;
+  }
+
+  const { serviceCharge: charge, baseTax, displayTax: tax, total, discountAmt: appliedDiscount } =
+    window.calcQuoteTotals(subtotal, pct, deliveryFee, qbTaxExempt, { discountAmt, setupFee, taxRate });
 
   const amtEl = document.getElementById('charge-pct-amt');
   if (amtEl) amtEl.textContent = pct && subtotal ? '($' + charge.toFixed(2) + ')' : '';
 
   document.getElementById('preview-total').textContent = '$' + total.toFixed(2);
+
+  // Tax label / value
   if (qbTaxExempt) {
     const certNum = (document.getElementById('qb-tax-exempt-cert').value || '').trim();
     document.getElementById('preview-tax').textContent = 'Exempt';
-    document.getElementById('qb-tax-label').textContent = certNum
-      ? 'TX Sales Tax (Cert #' + certNum + ')'
-      : 'TX Sales Tax';
+    document.getElementById('qb-tax-label').textContent = certNum ? 'TX Sales Tax (Cert #' + certNum + ')' : 'TX Sales Tax';
     document.getElementById('preview-tax').style.color = 'var(--text3)';
   } else {
     document.getElementById('preview-tax').textContent = '$' + baseTax.toFixed(2);
-    document.getElementById('qb-tax-label').textContent = 'TX Sales Tax (8.25%)';
+    const taxPctDisplay = ((taxRate || window.SALES_TAX_RATE) * 100).toFixed(2).replace(/\.?0+$/, '');
+    document.getElementById('qb-tax-label').textContent = 'TX Sales Tax (' + taxPctDisplay + '%)';
     document.getElementById('preview-tax').style.color = 'var(--text)';
   }
+
   document.getElementById('delivery-row').style.display = deliveryFee ? 'flex' : 'none';
 
-  const serviceLabels = { pickup:'Pickup order', delivery:'Delivery order (+$50)', delivery_setup:'Delivery & setup (+$50)' };
+  // Wave 2: discount + setup fee preview rows
+  const discRow    = document.getElementById('qb-discount-row');
+  const setupRow   = document.getElementById('qb-setup-fee-preview-row');
+  const discAmt    = document.getElementById('preview-discount-amt');
+  const setupAmt   = document.getElementById('preview-setup-fee');
+  if (discRow && discAmt) {
+    if (appliedDiscount > 0) { discRow.style.display = 'flex'; discAmt.textContent = '−$' + appliedDiscount.toFixed(2); }
+    else { discRow.style.display = 'none'; }
+  }
+  if (setupRow && setupAmt) {
+    if (setupFee > 0) { setupRow.style.display = 'flex'; setupAmt.textContent = '$' + setupFee.toFixed(2); }
+    else { setupRow.style.display = 'none'; }
+  }
+
+  // Wave 2: deposit summary
+  const depositSummary = document.getElementById('qb-deposit-summary');
+  if (depositSummary && extActive) {
+    const depositPct  = parseFloat((document.getElementById('q-deposit-pct') || {}).value) || 0;
+    const dueDateVal  = (document.getElementById('q-due-date') || {}).value;
+    const dueDateVal2 = (document.getElementById('q-due-date-2') || {}).value;
+    if (depositPct && dueDateVal) {
+      const depositAmt = Math.round(total * (depositPct / 100) * 100) / 100;
+      const dueDateStr = new Date(dueDateVal + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+      let summary = depositPct + '% deposit ($' + depositAmt.toFixed(2) + ') due ' + dueDateStr;
+      if (dueDateVal2) {
+        const due2Str   = new Date(dueDateVal2 + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+        const balanceAmt = Math.round((total - depositAmt) * 100) / 100;
+        summary += ' · Balance ($' + balanceAmt.toFixed(2) + ') due ' + due2Str;
+      }
+      depositSummary.style.display = 'block';
+      depositSummary.textContent   = summary;
+    } else {
+      depositSummary.style.display = 'none';
+    }
+  }
+
+  // Wave 2: Maps directions link
+  const mapsLink = document.getElementById('qb-maps-link');
+  if (mapsLink && extActive) {
+    const eventAddr = (document.getElementById('q-address').value || '').trim();
+    if (eventAddr && hasDelivery) {
+      const kitchen = 'Blu\'s Barbeque, 17630 Preston Rd, Dallas TX 75252';
+      mapsLink.href = 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(kitchen) + '&destination=' + encodeURIComponent(eventAddr);
+      mapsLink.style.display = 'block';
+    } else {
+      mapsLink.style.display = 'none';
+    }
+  }
+
+  const serviceLabels = { pickup:'Pickup order', delivery:'Delivery order (+$50)', delivery_setup:'Delivery & setup (+$50)', delivery_full:'Delivery + Setup + Serving (+$50)' };
   document.getElementById('preview-service-type').textContent = serviceLabels[service] || '';
 }
 
 function updateChargeSuggestion() {
   const service = document.getElementById('q-service').value;
-  const budget = document.getElementById('q-budget').value;
-  const guests = parseInt(document.getElementById('q-guests').value) || 0;
+  const budget  = document.getElementById('q-budget').value;
+  const guests  = parseInt(document.getElementById('q-guests').value) || 0;
 
   let suggested = 0;
-  let reason = '';
+  let reason    = '';
 
   if (service === 'pickup') {
-    if (budget === 'tight') { suggested = 0; reason = 'Waiving charge — customer is budget-conscious and doing pickup.'; }
+    if (budget === 'tight')         { suggested = 0;  reason = 'Waiving charge — customer is budget-conscious and doing pickup.'; }
     else if (budget === 'flexible') { suggested = 10; reason = 'Pickup order with flexible budget — light service charge applied.'; }
-    else { suggested = 0; reason = 'Pickup order — no service charge recommended.'; }
+    else                            { suggested = 0;  reason = 'Pickup order — no service charge recommended.'; }
   } else if (service === 'delivery') {
-    if (budget === 'tight') { suggested = 8; reason = 'Delivery adds cost — applying reduced charge given tight budget.'; }
+    if (budget === 'tight')         { suggested = 8;  reason = 'Delivery adds cost — applying reduced charge given tight budget.'; }
     else if (budget === 'flexible') { suggested = 18; reason = 'Delivery with flexible budget — full 18% recommended.'; }
-    else if (guests > 75) { suggested = 15; reason = 'Large delivery order — 15% service charge recommended.'; }
-    else { suggested = 12; reason = 'Standard delivery — 12% service charge suggested.'; }
+    else if (guests > 75)           { suggested = 15; reason = 'Large delivery order — 15% service charge recommended.'; }
+    else                            { suggested = 12; reason = 'Standard delivery — 12% service charge suggested.'; }
   } else if (service === 'delivery_setup') {
-    if (budget === 'tight') { suggested = 12; reason = 'Full service with tight budget — 12% minimum recommended.'; }
-    else { suggested = 18; reason = 'Full delivery & setup — 18% service charge recommended.'; }
+    if (budget === 'tight')         { suggested = 12; reason = 'Full service with tight budget — 12% minimum recommended.'; }
+    else                            { suggested = 18; reason = 'Full delivery & setup — 18% service charge recommended.'; }
+  } else if (service === 'delivery_full') {
+    if (budget === 'tight')         { suggested = 15; reason = 'Full-service (delivery + setup + serving) with tight budget — 15% minimum.'; }
+    else                            { suggested = 22; reason = 'Full-service catering — 22% service charge recommended.'; }
   }
 
   const box = document.getElementById('ai-suggestion-box');
@@ -2377,6 +2690,58 @@ function updateChargeSuggestion() {
   document.getElementById('charge-pct').value = suggested;
   updatePreview();
 }
+
+/* ── Wave 2 QB helper functions ───────────────────────────────────────────── */
+
+function qbUpdateExtFields() {
+  const service     = document.getElementById('q-service').value;
+  const setupFeeRow = document.getElementById('qb-setup-fee-row');
+  if (setupFeeRow) {
+    const showSetup = (service === 'delivery_setup' || service === 'delivery_full');
+    setupFeeRow.style.display = showSetup ? '' : 'none';
+    if (!showSetup) { const sfEl = document.getElementById('q-setup-fee'); if (sfEl) sfEl.value = ''; }
+  }
+}
+
+function qbToggleDiscountType() {
+  const btn = document.getElementById('qb-discount-type-btn');
+  if (!btn) return;
+  btn.textContent = btn.textContent === '$' ? '%' : '$';
+  updatePreview();
+}
+
+const QB_MEAT_IDS = new Set([
+  'brisket-sliced','brisket-chopped','pulled-pork','sausage-pb','sausage-bj',
+  'chicken-quarter','chicken-half','chicken-whole','burnt-ends-brisket','burnt-ends-pork',
+  'rib-tips','beef-rib','turkey','jalapeno-poppers',
+]);
+
+function qbCheckQuarterChickenSuggest() {
+  const banner = document.getElementById('qb-quarter-chicken-suggest');
+  if (!banner) return;
+  if (!(window.flags && window.flags.isEnabled('qb_ext_wave2'))) return;
+  const meatCount = Object.keys(selectedItems).filter(id => QB_MEAT_IDS.has(id)).length;
+  banner.style.display = meatCount >= 3 ? 'block' : 'none';
+}
+
+function qbAddQuarterChicken() {
+  const id   = 'chicken-quarter';
+  const item = (window.MENU && window.MENU.meats || []).find(m => m.id === id);
+  const price = item ? item.price : 5.5;
+  const name  = item ? item.name  : 'Chicken - Quarter';
+  const unit  = item ? item.unit  : 'ea';
+  if (!selectedItems[id]) {
+    selectedItems[id] = { price, name, unit, qty: 1 };
+    setItemQty(id, 1);
+    const cb = document.querySelector(`input[data-id="${id}"]`);
+    if (cb) cb.checked = true;
+    updateQtyControls();
+  }
+  const banner = document.getElementById('qb-quarter-chicken-suggest');
+  if (banner) banner.style.display = 'none';
+  updatePreview();
+}
+/* ── end Wave 2 QB helpers ────────────────────────────────────────────────── */
 
 async function qbCheckRepeatCustomer(email) {
   const banner = document.getElementById('qb-repeat-banner');
@@ -2424,6 +2789,14 @@ function newQuote() {
   document.getElementById('qb-tax-exempt-chk').checked = false;
   document.getElementById('qb-tax-exempt-cert').value = '';
   document.getElementById('qb-tax-exempt-cert-row').style.display = 'none';
+  // Reset Wave 2 ext fields
+  const extIds = ['q-discount-val','q-setup-fee','q-due-date','q-due-date-2'];
+  extIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const taxRateEl = document.getElementById('q-tax-rate'); if (taxRateEl) taxRateEl.value = '8.25';
+  const depositEl = document.getElementById('q-deposit-pct'); if (depositEl) depositEl.value = String(window.DEFAULT_DEPOSIT_PCT || 50);
+  const discBtn = document.getElementById('qb-discount-type-btn'); if (discBtn) discBtn.textContent = '$';
+  const setupRow = document.getElementById('qb-setup-fee-row'); if (setupRow) setupRow.style.display = 'none';
+  const qcBanner = document.getElementById('qb-quarter-chicken-suggest'); if (qcBanner) qcBanner.style.display = 'none';
   updateQtyControls();
   updatePreview();
 }
@@ -2529,13 +2902,29 @@ async function generatePDF() {
     return;
   }
 
-  const subtotal      = items.reduce((s, i) => s + i.linePrice, 0);
-  const serviceCharge = subtotal * (pct / 100);
-  const deliveryFee   = (service === 'delivery' || service === 'delivery_setup') ? 50 : 0;
-  const baseTax       = Math.round(subtotal * 0.0825 * 100) / 100;
-  const tax           = qbTaxExempt ? 0 : baseTax;
-  const total         = subtotal + serviceCharge + tax + deliveryFee;
+  const foodSubtotal  = items.reduce((s, i) => s + i.linePrice, 0);
+  const hasDeliveryPDF = (service === 'delivery' || service === 'delivery_setup' || service === 'delivery_full');
+  const dfInputPDF    = document.getElementById('delivery-fee-input');
+  const deliveryFee   = hasDeliveryPDF ? (dfInputPDF ? (parseFloat(dfInputPDF.value) || 0) : 50) : 0;
   const taxExemptCert = qbTaxExempt ? (document.getElementById('qb-tax-exempt-cert').value || '').trim() : '';
+
+  // Wave 2 opts
+  const extActive2    = document.getElementById('qb-ext-fields') && document.getElementById('qb-ext-fields').style.display !== 'none';
+  const taxRateEl2    = document.getElementById('q-tax-rate');
+  const discValEl2    = document.getElementById('q-discount-val');
+  const setupFeeEl2   = document.getElementById('q-setup-fee');
+  const taxRate2      = extActive2 && taxRateEl2 ? (parseFloat(taxRateEl2.value) / 100) || 0.0825 : 0.0825;
+  const setupFee2     = extActive2 && setupFeeEl2 ? (parseFloat(setupFeeEl2.value) || 0) : 0;
+  let discountAmt2    = 0;
+  if (extActive2 && discValEl2) {
+    const rawV = parseFloat(discValEl2.value) || 0;
+    const dType = (document.getElementById('qb-discount-type-btn') || {}).textContent || '$';
+    discountAmt2 = dType === '%' ? Math.round(foodSubtotal * (rawV / 100) * 100) / 100 : rawV;
+  }
+  const { serviceCharge, baseTax, displayTax: tax, total,
+          discountAmt: appliedDiscount2, discountedSubtotal: discSub2 } =
+    window.calcQuoteTotals(foodSubtotal, pct, deliveryFee, qbTaxExempt, { discountAmt: discountAmt2, setupFee: setupFee2, taxRate: taxRate2 });
+  const subtotal = foodSubtotal; // alias for PDF line items table (unchanged)
 
   // ── Load jsPDF from CDN (once) ─────────────────────────────────────────────
   if (!window.jspdf) {
@@ -2570,8 +2959,9 @@ async function generatePDF() {
   doc.rect(0, 62, W, 22, 'F');
   doc.setFontSize(8.5);
   doc.setTextColor(150, 150, 150);
+  const _pdfAddr = (window.shopOriginAddress || '').trim();
   doc.text(
-    '17630 Preston Rd, Dallas TX 75252   \u2022   blusbarbeque.com   \u2022   214-514-8684',
+    (_pdfAddr ? _pdfAddr + '   \u2022   ' : '') + 'blusbarbeque.com   \u2022   214-514-8684',
     W / 2, 77, { align: 'center' }
   );
 
@@ -2698,6 +3088,17 @@ async function generatePDF() {
   doc.text('$' + subtotal.toFixed(2), TV, y, { align: 'right' });
   y += 16;
 
+  if (appliedDiscount2 > 0) {
+    doc.setTextColor(34, 197, 94);
+    doc.text('Discount', TL, y);
+    doc.text('-$' + appliedDiscount2.toFixed(2), TV, y, { align: 'right' });
+    doc.setTextColor(80, 80, 80);
+    y += 16;
+    doc.text('Discounted Subtotal', TL, y);
+    doc.text('$' + discSub2.toFixed(2), TV, y, { align: 'right' });
+    y += 16;
+  }
+
   if (serviceCharge > 0) {
     doc.text(`Service Charge (${pct}%)`, TL, y);
     doc.text('$' + serviceCharge.toFixed(2), TV, y, { align: 'right' });
@@ -2708,6 +3109,11 @@ async function generatePDF() {
     doc.text('$' + deliveryFee.toFixed(2), TV, y, { align: 'right' });
     y += 16;
   }
+  if (setupFee2 > 0) {
+    doc.text('Setup Fee', TL, y);
+    doc.text('$' + setupFee2.toFixed(2), TV, y, { align: 'right' });
+    y += 16;
+  }
   if (qbTaxExempt) {
     doc.setTextColor(120, 120, 120);
     const certLabel = taxExemptCert ? 'TX Sales Tax (Cert #' + taxExemptCert + ')' : 'TX Sales Tax';
@@ -2715,7 +3121,8 @@ async function generatePDF() {
     doc.text('Exempt', TV, y, { align: 'right' });
     doc.setTextColor(80, 80, 80);
   } else {
-    doc.text('TX Sales Tax (8.25%)', TL, y);
+    const taxPctPDF = ((taxRate2 || 0.0825) * 100).toFixed(2).replace(/\.?0+$/, '');
+    doc.text('TX Sales Tax (' + taxPctPDF + '%)', TL, y);
     doc.text('$' + baseTax.toFixed(2), TV, y, { align: 'right' });
   }
   y += 16;
@@ -2900,14 +3307,23 @@ async function saveQuoteAsInquiry() {
 
 function emailQuote() {
   const email = document.getElementById('q-email').value;
-  const name = document.getElementById('q-name').value;
+  const name  = document.getElementById('q-name').value;
   if (!email) { alert('Please enter a customer email first'); return; }
-  const items = Object.entries(selectedItems).map(([id, item]) => {
+
+  const itemLines = Object.entries(selectedItems).map(([id, item]) => {
     const qty = getItemQty(id);
     return `• ${item.name} (${qty}x): $${(item.price * qty).toFixed(2)}`;
-  }).join('\n');
-  const total = document.getElementById('preview-total').textContent;
-  const body = `Hi ${name.split(' ')[0] || 'there'},\n\nPlease see the attached quote for your review!\n\nOrder summary:\n${items}\n\nTotal: ${total}\n\nPlease let me know if you have any questions or would like any changes. You're also welcome to stop by anytime after 1PM, Wednesday through Sunday to try some samples — just ask for the manager, Raul!\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`;
+  });
+
+  // Wave 2: discount + setup fee lines in email
+  const extActive3  = document.getElementById('qb-ext-fields') && document.getElementById('qb-ext-fields').style.display !== 'none';
+  const discAmtEl3  = document.getElementById('preview-discount-amt');
+  const setupAmtEl3 = document.getElementById('preview-setup-fee');
+  if (extActive3 && discAmtEl3 && discAmtEl3.textContent)  itemLines.push(`• Discount: ${discAmtEl3.textContent}`);
+  if (extActive3 && setupAmtEl3 && setupAmtEl3.textContent) itemLines.push(`• Setup Fee: ${setupAmtEl3.textContent}`);
+
+  const total    = document.getElementById('preview-total').textContent;
+  const body = `Hi ${name.split(' ')[0] || 'there'},\n\nPlease see the attached quote for your review!\n\nOrder summary:\n${itemLines.join('\n')}\n\nTotal: ${total}\n\nPlease let me know if you have any questions or would like any changes. You're also welcome to stop by anytime after 1PM, Wednesday through Sunday to try some samples — just ask for the manager, Raul!\n\nThanks,\nZach\nBlu's Barbeque\n214-514-8684`;
   sendPrompt(`SEND_EMAIL_NOW::${JSON.stringify({to: email, name, subject: "Re: Blu's BBQ - Catering Quote", body})}`);
   showToast('Quote emailed to customer!');
 }
@@ -2964,7 +3380,9 @@ async function clearChatHistory() {
 /* end C21 ============================= */
 
 /* ===== MODULE: AI CHAT ===== */
-const CHAT_SYSTEM = `You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque (17630 Preston Rd, Dallas TX 75252, 214-514-8684, blusbarbeque.com).
+function getChatSystem() {
+  const addr = (window.shopOriginAddress || '').trim();
+  return `You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque${addr ? ' (' + addr + ', 214-514-8684, blusbarbeque.com)' : ' (214-514-8684, blusbarbeque.com)'}.
 
 Current pipeline: ${JSON.stringify(leads)}
 
@@ -2980,6 +3398,7 @@ IMPORTANT — Clarifying choices: When the user asks you to do something that re
   <option value='Another reply text'>Another label</option>
 </options>
 Only include <options> when a clarifying choice would genuinely help the user move forward. Skip them for pure Q&A or explanations where you already have enough info to answer.`;
+}
 
 async function sendChat(textOverride) {
   const input = document.getElementById('chat-input');
@@ -3008,7 +3427,7 @@ async function sendChat(textOverride) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1500,
-        system: CHAT_SYSTEM,
+        system: getChatSystem(),
         messages: chatHistory
       })
     });
@@ -3149,7 +3568,7 @@ async function sendImageToChat(base64, mediaType, filename) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
         max_tokens: 1500,
-        system: CHAT_SYSTEM,
+        system: getChatSystem(),
         messages: [...chatHistory, {
           role: 'user',
           content: [
@@ -3530,6 +3949,63 @@ let proposalToken;
 
 /* ===== MODULE: INQUIRIES TRIAGE ===== */
 const INQ_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
+window.shopOriginAddress = '';
+
+async function loadShopOriginAddress() {
+  try {
+    const r = await fetch('/api/settings/shop-origin', { cache: 'no-store' });
+    const d = await r.json();
+    window.shopOriginAddress = d.address || '';
+    const addrEl = document.getElementById('quote-preview-shop-addr');
+    if (addrEl) addrEl.textContent = window.shopOriginAddress;
+    const inputEl = document.getElementById('settings-shop-address');
+    if (inputEl) inputEl.value = window.shopOriginAddress;
+    updateShopAddressWarning();
+  } catch (_) {}
+}
+
+async function saveShopAddress() {
+  const input  = document.getElementById('settings-shop-address');
+  const status = document.getElementById('settings-shop-address-status');
+  if (!input) return;
+  const address = input.value.trim();
+  if (status) status.textContent = 'Saving\u2026';
+  try {
+    const r = await fetch('/api/settings/shop-origin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: INQ_SECRET, address }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Failed');
+    window.shopOriginAddress = address;
+    const addrEl = document.getElementById('quote-preview-shop-addr');
+    if (addrEl) addrEl.textContent = window.shopOriginAddress;
+    updateShopAddressWarning();
+    if (status) { status.textContent = 'Saved \u2713'; setTimeout(() => { if (status) status.textContent = ''; }, 2500); }
+  } catch (e) {
+    if (status) status.textContent = 'Error: ' + e.message;
+  }
+}
+
+function updateShopAddressWarning() {
+  const warn = document.getElementById('settings-shop-address-warning');
+  if (!warn) return;
+  const empty   = !(window.shopOriginAddress && String(window.shopOriginAddress).trim());
+  const mapsOn  = !!(window.flags && window.flags.isEnabled && window.flags.isEnabled('maps_v1'));
+  warn.style.display = (empty && mapsOn) ? '' : 'none';
+}
+
+window.openShopAddressSetting = function () {
+  if (typeof showPage === 'function') showPage('settings');
+  setTimeout(function () {
+    const input = document.getElementById('settings-shop-address');
+    if (input) {
+      try { input.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+      try { input.focus(); } catch (_) {}
+    }
+  }, 150);
+};
 let currentInquiry = null;
 
 const INQ_STATUS_LABELS = {
@@ -3550,9 +4026,13 @@ let inqCustomEnd   = null;
 let inqSearchTerm = '';
 let inqSearchTimer = null;
 let inquiriesCache   = null; // cached full list for re-filtering without refetch
+let _inqPerPage = parseInt(localStorage.getItem('inq_perPage') || '50', 10);
+let _inqPage    = 0;
+let _inqDpPicker = null;
 
 function setInqFilter(status) {
   currentInqFilter = status;
+  _inqPage = 0;
   renderInqCards();
   // Update chip active states
   document.querySelectorAll('.inq-chip').forEach(c => {
@@ -3629,6 +4109,7 @@ function schedInqSearch(val) {
     inqSearchTerm = val.trim().toLowerCase();
     const clearBtn = document.getElementById('inq-search-clear');
     if (clearBtn) clearBtn.style.display = inqSearchTerm ? 'block' : 'none';
+    _inqPage = 0;
     renderInqCards();
   }, 200);
 }
@@ -3668,7 +4149,47 @@ function renderInqCards() {
     return;
   }
   emptyEl.style.display = 'none';
-  cardsEl.innerHTML = filtered.map(renderInqCardHTML).join('');
+  const totalPages = Math.max(1, Math.ceil(filtered.length / _inqPerPage));
+  if (_inqPage >= totalPages) _inqPage = totalPages - 1;
+  const pageItems = filtered.slice(_inqPage * _inqPerPage, (_inqPage + 1) * _inqPerPage);
+  cardsEl.innerHTML = pageItems.map(renderInqCardHTML).join('');
+  _renderInqPaging(filtered.length, totalPages);
+}
+
+function _renderInqPaging(total, totalPages) {
+  let pagingEl = document.getElementById('inq-paging');
+  if (!pagingEl) {
+    pagingEl = document.createElement('div');
+    pagingEl.id = 'inq-paging';
+    const cardsEl = document.getElementById('inq-cards');
+    if (cardsEl && cardsEl.parentNode) cardsEl.parentNode.insertBefore(pagingEl, cardsEl.nextSibling);
+  }
+  if (totalPages <= 1 && total <= 50) { pagingEl.innerHTML = ''; return; }
+  const perPageOpts = [50, 100, 250].map(n =>
+    '<option value="'+n+'"'+(_inqPerPage===n?' selected':'')+'>'+n+' / page</option>'
+  ).join('');
+  pagingEl.innerHTML =
+    '<div class="inq-paging">'
+    + '<select class="inq-per-page-sel" id="inq-per-page">' + perPageOpts + '</select>'
+    + (totalPages > 1
+        ? '<button class="inq-pg-btn" data-paction="prev"'+(_inqPage===0?' disabled':'')+'>← Prev</button>'
+          + '<span class="inq-page-info">Page '+(_inqPage+1)+' of '+totalPages+' ('+total+' total)</span>'
+          + '<button class="inq-pg-btn" data-paction="next"'+(_inqPage>=totalPages-1?' disabled':'')+'>Next →</button>'
+        : '<span class="inq-page-info">'+total+' results</span>')
+    + '</div>';
+  document.getElementById('inq-per-page').onchange = function() {
+    _inqPerPage = parseInt(this.value, 10) || 50;
+    localStorage.setItem('inq_perPage', String(_inqPerPage));
+    _inqPage = 0;
+    renderInqCards();
+  };
+  pagingEl.querySelectorAll('.inq-pg-btn').forEach(function(btn) {
+    btn.onclick = function() {
+      const action = this.dataset.paction;
+      if (action === 'prev' && _inqPage > 0) { _inqPage--; renderInqCards(); }
+      if (action === 'next' && _inqPage < totalPages - 1) { _inqPage++; renderInqCards(); }
+    };
+  });
 }
 
 function getFilteredInquiries(filter) {
@@ -4076,6 +4597,16 @@ const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_
 
 async function loadPipelineInquiries() {
   try {
+    // init() calls this synchronously from the inline script before defer'd flags.js
+    // has even defined window.flags. Wait for the flags client to appear and hydrate,
+    // so the kanban_restructure gate sees a populated cache on first paint.
+    const _flagsWaitStart = Date.now();
+    while (!window.flags && (Date.now() - _flagsWaitStart) < 3000) {
+      await new Promise(function (r) { setTimeout(r, 50); });
+    }
+    if (window.flags && typeof window.flags.load === 'function') {
+      await window.flags.load();
+    }
     const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
     const d = await r.json();
     // Stage 2: only approved, non-archived; exclude test records unless showTestData is on
@@ -4089,6 +4620,16 @@ async function loadPipelineInquiries() {
       const lvContainer = document.getElementById('view-list');
       if (kbContainer && window.kanbanView) window.kanbanView.render(kbContainer);
       if (lvContainer  && window.listView)  window.listView.render(lvContainer);
+      // Init date picker on kanban if flag is ON and kanban tab is active
+      if (window.flags && window.flags.isEnabled('date_picker_v2') && _activePipelineTab === 'kanban') {
+        const dpRow = document.getElementById('kb-date-picker-row');
+        if (dpRow) {
+          dpRow.style.display = '';
+          if (window.kanbanView && typeof window.kanbanView.initDatePicker === 'function') {
+            window.kanbanView.initDatePicker(dpRow);
+          }
+        }
+      }
     } else {
       renderKanban(); renderTable();
     }
@@ -4209,6 +4750,29 @@ async function loadInquiries() {
     inquiriesCache = d.inquiries;
     renderInqChips();
     renderInqCards();
+    // Toggle date picker vs legacy chips based on flag
+    if (window.flags && window.flags.isEnabled('date_picker_v2')) {
+      const dpRow = document.getElementById('inq-date-picker-row');
+      const dateChips = document.getElementById('inq-date-chips');
+      if (dpRow) {
+        dpRow.style.display = '';
+        if (window.DatePickerV2 && !_inqDpPicker) {
+          _inqDpPicker = window.DatePickerV2.create({
+            container: dpRow,
+            presets: ['today', 'this_week', 'last_week', 'this_month', 'last_month'],
+            initialPreset: 'this_month',
+            onChange: function(range) {
+              inqCustomStart = range.start || null;
+              inqCustomEnd   = range.end   || null;
+              currentInqDateFilter = (inqCustomStart || inqCustomEnd) ? 'custom' : 'all';
+              renderInqCards();
+            }
+          });
+          _inqDpPicker.mount();
+        }
+      }
+      if (dateChips) dateChips.style.display = 'none';
+    }
   } catch(e) {
     loadEl.style.display = 'none';
     cardsEl.innerHTML = '<p style="color:var(--red);padding:16px">Failed to load: ' + e.message + '</p>';
@@ -4226,6 +4790,13 @@ async function openInquiry(threadId) {
     if (typeof depositsInit === 'function') depositsInit(d.inquiry);
     if (typeof repeatCustomerInit === 'function') repeatCustomerInit(d.inquiry);
     if (typeof customerProfileInit === 'function') customerProfileInit(d.inquiry);
+    // Wave 4: iMessage thread view (email_thread_v2 flag)
+    var tvEnabled = window.flags && window.flags.isEnabled('email_thread_v2');
+    var tvSection = document.getElementById('inq-thread-section');
+    var tvEmailBtn = document.getElementById('inq-view-email-btn');
+    if (tvSection) tvSection.style.display = tvEnabled ? '' : 'none';
+    if (tvEmailBtn) tvEmailBtn.style.display = tvEnabled ? 'none' : '';
+    if (tvEnabled && window.threadView) window.threadView.init('inq-thread-container', d.inquiry);
     document.getElementById('inq-list-view').style.display = 'none';
     document.getElementById('inq-list-topbar').style.display = 'none';
     document.getElementById('inq-detail-view').style.display = 'block';
@@ -4257,6 +4828,7 @@ function initCompletedOrdersToggle() {
 }
 
 function showInquiryList() {
+  if (window.threadView) window.threadView.destroy();
   currentInquiry = null;
   document.getElementById('inq-list-view').style.display = 'block';
   document.getElementById('inq-list-topbar').style.display = 'flex';
@@ -4888,6 +5460,7 @@ function init() {
   buildMenuPicker('extras', 'menu-extras');
   renderAll();
   loadPipelineInquiries(); // pre-load on startup (Pipeline is the default page)
+  loadShopOriginAddress(); // populate window.shopOriginAddress for PDF + chat
 }
 
 
@@ -5210,12 +5783,13 @@ window.addEventListener('load', function() {
   if (typeof notifInit === 'function') notifInit();
   if (typeof notifPanelInit === 'function') notifPanelInit();
   if (window.flags) window.flags.load().then(function() {
+    if (typeof updateShopAddressWarning === 'function') updateShopAddressWarning();
     if (window.testMode) window.testMode.init();
     if (window.navV2) window.navV2.init();
     var navToday = document.getElementById('nav-today');
     if (navToday && window.flags.isEnabled('event_day_view')) navToday.style.display = '';
     const navCust = document.getElementById('nav-customers');
-    if (navCust && window.flags && window.flags.isEnabled('customer_profile_v2')) navCust.style.display = '';
+    if (navCust && window.flags && (window.flags.isEnabled('customers_nav_v1') || window.flags.isEnabled('customer_profile_v2'))) navCust.style.display = '';
     initCompletedOrdersToggle();
     if (window.flags.isEnabled('quote_builder_v2')) {
       var qbDraftsBtn     = document.getElementById('qb-drafts-btn');
@@ -5230,7 +5804,29 @@ window.addEventListener('load', function() {
       if (bar && window.flags && window.flags.isEnabled('quote_templates')) bar.style.display = '';
     }
     if (window.overdueWidget) window.overdueWidget.init();
+    if (window.lostReasonsWidget) window.lostReasonsWidget.init();
     if (window.customerProfile) window.customerProfile.init();
+    if (window.flags.isEnabled('invoice_manager_v1')) {
+      var navInv = document.getElementById('nav-invoices');
+      if (navInv) navInv.style.display = '';
+      var spPanel = document.getElementById('pipeline-sales-panel');
+      if (spPanel) spPanel.style.display = '';
+      if (window.invoiceMgr) window.invoiceMgr.init();
+    }
+    if (window.flags.isEnabled('qb_ext_wave2')) {
+      var extFields = document.getElementById('qb-ext-fields');
+      if (extFields) extFields.style.display = '';
+      // Set deposit % default from engine constant
+      var depEl = document.getElementById('q-deposit-pct');
+      if (depEl && !depEl.value) depEl.value = String(window.DEFAULT_DEPOSIT_PCT || 50);
+    }
+    if (window.flags.isEnabled('notification_settings_v1')) {
+      var navNS = document.getElementById('nav-notif-settings');
+      if (navNS) navNS.style.display = 'flex';
+      var prefSection = document.getElementById('settings-preferences-section');
+      if (prefSection) prefSection.style.display = '';
+    }
+    if (window.qbQuarterChickenGate) window.qbQuarterChickenGate.init();
   });
 });
 // focus listener removed — visibilitychange below is sufficient and avoids
@@ -5271,8 +5867,12 @@ function closeMobileSidebar() {
 <script defer src="/static/js/completed-orders.js"></script>
 <script defer src="/static/js/quote-drafts.js"></script>
 <script defer src="/static/js/customer-profile.js"></script>
+<script defer src="/static/js/thread-view.js"></script>
+<script defer src="/static/js/components/date-picker/date-picker.js"></script>
+<script defer src="/static/js/invoice-manager/index.js"></script>
 <script defer src="/static/js/overdue-widget.js"></script>
 <script defer src="/static/js/quote-templates.js"></script>
+<script defer src="/static/js/qb-quarter-chicken-gate.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof twInit === 'function') twInit('input[type="time"]');

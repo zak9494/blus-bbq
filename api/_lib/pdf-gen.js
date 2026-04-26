@@ -87,6 +87,11 @@ function generateQuotePDF(q, customerName) {
 
   totRow('Food Subtotal', '$' + Number(q.food_subtotal || 0).toFixed(2), false);
 
+  if (q.discount_amt && Number(q.discount_amt) > 0) {
+    totRow('Discount', '-$' + Number(q.discount_amt).toFixed(2), false);
+    totRow('Discounted Subtotal', '$' + Number(q.discounted_subtotal || (q.food_subtotal - q.discount_amt) || 0).toFixed(2), false);
+  }
+
   if (q.service_charge_pct) {
     totRow('Service Charge (' + q.service_charge_pct + '%)',
            '$' + Number(q.service_charge || 0).toFixed(2), false);
@@ -94,14 +99,19 @@ function generateQuotePDF(q, customerName) {
   if (q.delivery_fee) {
     totRow('Delivery Fee', '$' + Number(q.delivery_fee || 0).toFixed(2), false);
   }
+  if (q.setup_fee && Number(q.setup_fee) > 0) {
+    totRow('Setup Fee', '$' + Number(q.setup_fee).toFixed(2), false);
+  }
 
   if (q.tax_exempt) {
     totRow('TX Sales Tax', 'Exempt', false);
   } else {
+    var taxRate = (typeof q.tax_rate === 'number') ? q.tax_rate : 0.0825;
+    var taxPct  = (taxRate * 100).toFixed(2).replace(/\.?0+$/, '');
     var tax = q.sales_tax !== undefined
       ? q.sales_tax
-      : Math.round(Number(q.food_subtotal || 0) * 0.0825 * 100) / 100;
-    totRow('TX Sales Tax (8.25%)', '$' + Number(tax).toFixed(2), false);
+      : Math.round(Number(q.discounted_subtotal || q.food_subtotal || 0) * taxRate * 100) / 100;
+    totRow('TX Sales Tax (' + taxPct + '%)', '$' + Number(tax).toFixed(2), false);
   }
 
   y += 2;
