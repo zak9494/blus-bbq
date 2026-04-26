@@ -89,7 +89,7 @@
     if (ef.service_type) {
       var svc = document.getElementById('q-service');
       if (svc) {
-        var vals = ['pickup', 'delivery', 'delivery_setup'];
+        var vals = ['pickup', 'delivery', 'delivery_setup', 'delivery_full'];
         var match = vals.find(function(v) { return v === ef.service_type; });
         if (match) svc.value = match;
       }
@@ -115,23 +115,22 @@
         }
       });
 
-      // Pre-fill pricing controls
+      // Pre-fill pricing controls (use the actual element IDs from index.html;
+      // the previous q-sc-pct / q-delivery-fee / q-tax-exempt IDs never existed
+      // in the markup, so the values silently dropped on the floor).
       if (q.service_charge_pct != null) {
-        var scEl = document.getElementById('q-sc-pct');
-        if (!scEl) scEl = document.getElementById('q-service-charge-pct');
+        var scEl = document.getElementById('charge-pct');
         if (scEl) scEl.value = q.service_charge_pct;
       }
       if (q.delivery_fee != null) {
-        var dfEl = document.getElementById('q-delivery-fee');
+        var dfEl = document.getElementById('delivery-fee-input');
         if (dfEl) dfEl.value = q.delivery_fee;
       }
 
       // Tax exempt
-      if (typeof qbTaxExempt !== 'undefined') {
-        window.qbTaxExempt = !!q.tax_exempt;
-        var texChk = document.getElementById('q-tax-exempt');
-        if (texChk) texChk.checked = !!q.tax_exempt;
-      }
+      window.qbTaxExempt = !!q.tax_exempt;
+      var texChk = document.getElementById('qb-tax-exempt-chk');
+      if (texChk) texChk.checked = !!q.tax_exempt;
 
       // Rebuild menu picker checkboxes to reflect selectedItems
       var catMap = {
