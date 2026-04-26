@@ -30,41 +30,42 @@ echo
 # Section 1 — Active worktrees
 # ---------------------------------------------------------------------------
 echo "--- Active worktrees ---"
-# `git worktree list --porcelain` emits records separated by blank lines:
-#   worktree <path>
-#   HEAD <sha>
-#   branch refs/heads/<branch>     (or `detached`)
+# `git worktree list --porcelain` emits multi-line records separated by blank
+# lines. Rather than parsing those records, extract the path list and query
+# each worktree directly — same data, simpler control flow.
 WORKTREE_COUNT=0
-while IFS= read -r record; do
-  [ -z "$record" ] && continue
-  wt_path=$(printf '%s\n' "$record" | awk '/^worktree / {print $2}')
-  wt_branch=$(printf '%s\n' "$record" | awk '/^branch / {print $2}' | sed 's|^refs/heads/||')
-  wt_head=$(printf '%s\n' "$record" | awk '/^HEAD / {print $2}')
+while IFS= read -r wt_path; do
   [ -z "$wt_path" ] && continue
   WORKTREE_COUNT=$((WORKTREE_COUNT + 1))
 
-  # Dirty status (modified + untracked counts) — run from the worktree itself.
-  modified=$(git -C "$wt_path" status --porcelain 2>/dev/null | grep -cE '^.M|^M.|^A.|^.A|^D.|^.D|^R.|^.R' || true)
+  # Branch (or "detached" if HEAD is detached).
+  wt_branch=$(git -C "$wt_path" symbolic-ref --short HEAD 2>/dev/null || echo "detached")
+
+  # Modified vs. untracked counts. Status codes:
+  #   ?? = untracked; everything else = tracked-but-modified/staged.
+  modified=$(git -C "$wt_path" status --porcelain 2>/dev/null | grep -vc '^??' || true)
   untracked=$(git -C "$wt_path" status --porcelain 2>/dev/null | grep -c '^??' || true)
+  # `grep -c` returns 1 with empty input on some versions when no match;
+  # normalize to plain integers.
+  modified=${modified:-0}
+  untracked=${untracked:-0}
 
-  # Last commit age (relative).
-  last_commit_age="unknown"
-  if [ -n "$wt_head" ]; then
-    last_commit_age=$(git -C "$wt_path" log -1 --format='%cr' "$wt_head" 2>/dev/null || echo "unknown")
-  fi
+  # Last commit age (relative). Falls back to "unknown" on detached/empty repos.
+  last_commit_age=$(git -C "$wt_path" log -1 --format='%cr' 2>/dev/null || echo "unknown")
+  [ -z "$last_commit_age" ] && last_commit_age="unknown"
 
-  status_str="clean"
   if [ "$modified" -gt 0 ] || [ "$untracked" -gt 0 ]; then
     status_str="${modified} modified, ${untracked} untracked"
+  else
+    status_str="clean"
   fi
 
-  branch_label="${wt_branch:-detached}"
-  echo "  ${wt_path}: branch ${branch_label}, status: ${status_str}, last commit ${last_commit_age}"
+  echo "  ${wt_path}: branch ${wt_branch}, status: ${status_str}, last commit ${last_commit_age}"
 
   if [ "$modified" -gt 0 ] || [ "$untracked" -gt 0 ]; then
     add_rec "Review uncommitted work in ${wt_path} (${status_str}); commit + push if meaningful"
   fi
-done < <(git worktree list --porcelain; echo)
+done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
 
 if [ "$WORKTREE_COUNT" -eq 0 ]; then
   echo "  (none)"
