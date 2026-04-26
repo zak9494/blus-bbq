@@ -292,8 +292,9 @@ test('calendar_filters_v2 ON — chip toggle activates Needs More Info', async (
   await page.screenshot({ path: `${OUT}/cal-chip-toggle-desktop.png` });
 });
 
-// ── calendar_filters_v2 ON: cannot deactivate all chips (min 1) ──────────────
-test('calendar_filters_v2 ON — cannot deactivate last active chip', async ({ page }) => {
+// ── calendar_filters_v2 ON: every chip can be deactivated, including the last
+// one. Deselecting all chips yields an empty grid (no force-1 guard). ────────
+test('calendar_filters_v2 ON — every chip can be deactivated, empty state reachable', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await setupMocks(page, [
     { name: 'calendar_v2',         enabled: true, description: '' },
@@ -309,10 +310,13 @@ test('calendar_filters_v2 ON — cannot deactivate last active chip', async ({ p
   const bar = page.locator('#cal-status-chips-bar');
   // Default: Booked + Completed active. Deactivate Booked first.
   await bar.locator('.cal-status-chip', { hasText: 'Booked' }).click();
-  // Now only Completed is active. Clicking Completed should NOT deactivate it.
+  // Now only Completed is active. After the fix, clicking it MUST deactivate
+  // it — the user must be able to reach a "no chips on" empty state.
   const completedChip = bar.locator('.cal-status-chip', { hasText: 'Completed' });
   await completedChip.click();
-  // Still active
-  await expect(completedChip).toHaveClass(/cal-status-chip-active/);
+  await expect(completedChip).not.toHaveClass(/cal-status-chip-active/);
+
+  // No chips active anywhere
+  await expect(bar.locator('.cal-status-chip-active')).toHaveCount(0);
   await page.screenshot({ path: `${OUT}/cal-chip-min-one-desktop.png` });
 });
