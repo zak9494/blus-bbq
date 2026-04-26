@@ -29,6 +29,14 @@
   var calPeriodEnd    = null;         // {year,month,day} — end of aggregate/custom range
   var calTotalsOpen   = false;        // monthly totals dropdown visible
   var calInqStatusMap = {};           // threadId → inquiry status string (for color-coding)
+  var calStatusFilters = new Set(['booked', 'completed']);
+  var CAL_STATUS_FILTER_DEFS = [
+    { key: 'needs_info',    label: 'Needs More Info', color: '#f59e0b' },
+    { key: 'quote_drafted', label: 'Quote Drafted',   color: '#f59e0b' },
+    { key: 'quote_sent',    label: 'Quote Sent',      color: '#3b82f6' },
+    { key: 'booked',        label: 'Booked',          color: '#22c55e' },
+    { key: 'completed',     label: 'Completed',       color: '#8b5cf6' },
+  ];
 
   /* ── Status colors (calendar_v2) ─────────────── */
   var STATUS_COLORS = {
@@ -141,7 +149,7 @@
     if (!threadIds.length) return;
     await Promise.all(threadIds.map(async function (tid) {
       try {
-        var r = await fetch('/api/inquiries/get?threadId=' + encodeURIComponent(tid));
+        var r = await fetch('/api/inquiries/get?threadId=' + encodeURIComponent(tid) + '&secret=' + encodeURIComponent(getSecret()));
         if (!r.ok) return;
         var d = await r.json();
         if (d.inquiry && d.inquiry.status) calInqStatusMap[tid] = d.inquiry.status;
@@ -231,6 +239,48 @@
   }
 
   /* ── Render dispatcher ───────────────────────── */
+  function eventPassesStatusFilter(ev) {
+    if (!(window.flags && typeof window.flags.isEnabled === 'function' && window.flags.isEnabled('calendar_filters_v2'))) return true;
+    var tid = bbqThreadId(ev);
+    var status = (tid && calInqStatusMap[tid]) || '';
+    if (!status) return true;
+    return calStatusFilters.has(status);
+  }
+
+  function toggleStatusFilter(key) {
+    if (calStatusFilters.has(key)) {
+      if (calStatusFilters.size > 1) calStatusFilters.delete(key);
+    } else {
+      calStatusFilters.add(key);
+    }
+    render();
+  }
+
+  function renderCalStatusChips() {
+    var bar = document.getElementById('cal-status-chips-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'cal-status-chips-bar';
+      bar.className = 'cal-status-chips-row';
+      var calPage = document.getElementById('page-calendar');
+      var hdr = calPage && calPage.querySelector('.cal-header');
+      if (hdr && hdr.nextSibling) {
+        hdr.parentNode.insertBefore(bar, hdr.nextSibling);
+      } else if (calPage) {
+        calPage.insertBefore(bar, calPage.firstChild);
+      }
+    }
+    bar.innerHTML = '';
+    CAL_STATUS_FILTER_DEFS.forEach(function (def) {
+      var btn = document.createElement('button');
+      btn.className = 'cal-status-chip' + (calStatusFilters.has(def.key) ? ' cal-status-chip-active' : '');
+      btn.textContent = def.label;
+      if (calStatusFilters.has(def.key)) btn.style.borderColor = def.color;
+      btn.onclick = function () { toggleStatusFilter(def.key); };
+      bar.appendChild(btn);
+    });
+  }
+
   function render() {
     updateHeader();
     updateViewButtons();
@@ -239,8 +289,12 @@
     if (calView === 'month')      renderMonth(container);
     else if (calView === 'week')  renderWeek(container);
     else                          renderDay(container);
-    renderPeriodChips();
-    renderTotalsBtn();
+    if (window.flags && typeof window.flags.isEnabled === 'function' && window.flags.isEnabled('calendar_filters_v2')) {
+      renderCalStatusChips();
+    } else {
+      renderPeriodChips();
+      renderTotalsBtn();
+    }
     if (window.flags && window.flags.isEnabled('calendar_v2')) renderLegend();
   }
 
@@ -287,6 +341,7 @@
     (calEventsCache[year + '-' + month] || []).forEach(function (ev) {
       var s = eventStart(ev);
       if (!s || s.year !== year || s.month !== month) return;
+      if (!eventPassesStatusFilter(ev)) return;
       (byDay[s.day] || (byDay[s.day] = [])).push(ev);
     });
 
@@ -427,6 +482,7 @@
     var allEvs = eventsInRange(first, last);
     var byKey = {};
     allEvs.forEach(function (ev) {
+      if (!eventPassesStatusFilter(ev)) return;
       var s = eventStart(ev);
       if (!s) return;
       var k = s.year + '-' + s.month + '-' + s.day;
@@ -472,7 +528,7 @@
     var y = calDate.getFullYear(), m = calDate.getMonth(), d = calDate.getDate();
     var today = todayChi();
     var isToday = today.year === y && today.month === m && today.day === d;
-    var evs = eventsInRange({year:y,month:m,day:d}, {year:y,month:m,day:d});
+    var evs = eventsInRange({year:y,month:m,day:d}, {year:y,month:m,day:d}).filter(eventPassesStatusFilter);
     var dateStr = y + '-' + pad2(m + 1) + '-' + pad2(d);
     var gridH = (DAY_END - DAY_START + 1) * HOUR_HEIGHT;
 
@@ -551,8 +607,48 @@
     document.getElementById('cal-em-time').textContent    = timeRange;
 
     var locEl = document.getElementById('cal-em-loc');
-    locEl.textContent    = ev.location || '';
-    locEl.style.display  = ev.location ? '' : 'none';
+    locEl.style.display = ev.location ? '' : 'none';
+    if (ev.location) {
+      var mapsEnabled = window.flags && window.flags.isEnabled('maps_v1');
+      if (mapsEnabled) {
+        var staticGmUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(ev.location);
+        var gmUrl = window.mapboxDistance ? window.mapboxDistance.mapsViewUrl(ev.location) : staticGmUrl;
+        locEl.innerHTML = '<div class="cal-em-loc-row">'
+          + '<span class="cal-em-loc-text">' + escHtml(ev.location) + '</span>'
+          + '<a class="maps-view-btn" id="cal-em-view-map" href="' + escHtml(gmUrl || '#') + '" target="_blank" rel="noopener">View Map</a>'
+          + (window.mapboxDistance ? '<span class="maps-dist-chip maps-loading" id="cal-em-dist-chip">\u2026</span>' : '')
+          + '</div>';
+        if (window.mapboxDistance) {
+          var departAt = (ev.start && ev.start.dateTime) ? ev.start.dateTime : null;
+          window.mapboxDistance.fetch('default', ev.location, departAt)
+            .then(function (result) {
+              var chip = document.getElementById('cal-em-dist-chip');
+              if (!chip) return;
+              if (result && result.ok) {
+                chip.textContent = window.mapboxDistance.fmtChip(result);
+                chip.classList.remove('maps-loading');
+                chip.title = 'Free-flow: ' + result.freeFlowMin + ' min \u00b7 With traffic: ' + result.trafficMin + ' min';
+                var btn = document.getElementById('cal-em-view-map');
+                if (btn) btn.href = window.mapboxDistance.mapsViewUrl(ev.location);
+              } else if (result && result.error === 'no_origin_address') {
+                var btn2 = document.getElementById('cal-em-view-map');
+                if (btn2) btn2.remove();
+                var notice = document.createElement('span');
+                notice.className = 'maps-empty-notice';
+                notice.setAttribute('data-testid', 'maps-empty-notice');
+                notice.innerHTML = 'Set your shop address in '
+                  + '<a href="#" class="maps-empty-link" onclick="window._calCloseEventModal&amp;&amp;window._calCloseEventModal();window.openShopAddressSetting&amp;&amp;window.openShopAddressSetting();return false;">Settings &rarr; Shop Info</a>'
+                  + ' to enable maps &amp; drive times.';
+                chip.replaceWith(notice);
+              } else {
+                chip.style.display = 'none';
+              }
+            });
+        }
+      } else {
+        locEl.textContent = ev.location;
+      }
+    }
 
     var descEl = document.getElementById('cal-em-desc');
     descEl.textContent   = desc;
@@ -773,11 +869,10 @@
     setError('');
     setLoading(true);
     try {
-      var tasks = [ensureLoaded()];
-      if (window.flags && window.flags.isEnabled('calendar_v2')) {
-        tasks.push(loadInqStatuses());
+      await ensureLoaded();
+      if (window.flags && (window.flags.isEnabled('calendar_v2') || window.flags.isEnabled('calendar_filters_v2'))) {
+        await loadInqStatuses();
       }
-      await Promise.all(tasks);
     } catch (e) {
       setError('Could not load calendar: ' + e.message);
     }
@@ -1109,6 +1204,7 @@
   window._calCloseEventModal = closeEventModal;
   window.calSetPeriod        = setPeriod;
   window.calApplyCustomRange = applyCustomRange;
-  window.calIsPastEvent      = isPastEvent;
+  window.calIsPastEvent         = isPastEvent;
+  window.calToggleStatusFilter = toggleStatusFilter;
 
 })();

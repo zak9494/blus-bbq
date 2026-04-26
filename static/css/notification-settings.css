@@ -1,0 +1,137 @@
+/* Notification Settings page styles */
+
+#page-notif-settings .topbar { display: flex; align-items: center; gap: 12px; }
+#page-notif-settings .ns-back-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+#page-notif-settings .ns-back-btn:hover { background: var(--surface2); }
+
+#page-notif-settings .ns-page-content {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px 16px 48px;
+}
+
+.ns-section {
+  margin-bottom: 28px;
+}
+
+.ns-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text3);
+  margin-bottom: 4px;
+}
+
+.ns-section-desc {
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 12px;
+}
+
+.ns-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ns-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--surface2);
+  gap: 12px;
+}
+
+.ns-row-label {
+  font-size: 15px;
+  color: var(--text1);
+  flex: 1;
+}
+
+/* iOS-style toggle (matches existing toggle-ios class pattern) */
+.ns-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.ns-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.ns-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--border);
+  border-radius: 34px;
+  transition: background 0.2s;
+}
+
+.ns-slider::before {
+  content: '';
+  position: absolute;
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+
+.ns-switch input:checked + .ns-slider {
+  background: #34c759;
+}
+
+.ns-switch input:checked + .ns-slider::before {
+  transform: translateX(18px);
+}
+
+/* Status message */
+.ns-save-status {
+  display: none;
+  font-size: 13px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.ns-status-ok  { background: #d1fae5; color: #065f46; }
+.ns-status-err { background: #fee2e2; color: #991b1b; }
+
+/* Empty / error states */
+.ns-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 14px;
+}
+
+.ns-empty-err { color: var(--danger, #dc2626); }
+
+@media (prefers-color-scheme: dark) {
+  .ns-status-ok  { background: #064e3b; color: #6ee7b7; }
+  .ns-status-err { background: #7f1d1d; color: #fca5a5; }
+}
