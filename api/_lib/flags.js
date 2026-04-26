@@ -101,6 +101,16 @@ const SEED_FLAGS = [
   { name: 'lost_reasons_v1',        description: 'Wave 1.5: past-event visual flag, Mark Lost modal (7-reason enum picker), Lost Reasons dashboard widget' },
   // Payment link abstraction
   { name: 'payment_links_v1',       description: 'Payment processing via provider-agnostic adapter (PAYMENT_PROVIDER=stripe|square|stub); default OFF' },
+  // Wave 3 — Editable pipeline notes on kanban cards (default OFF)
+  { name: 'pipeline_notes_v1',      description: 'Wave 3: inline-editable notes on kanban cards (mirrors list-view notes textarea)' },
+  // Wave 3 — Manually schedule advance follow-ups in calendar UI (default OFF)
+  { name: 'advance_followup_v1',    description: 'Wave 3: calendar UI to manually schedule advance customer follow-ups (creates a follow_up_due notification at the chosen time)' },
+  // Wave 3 — "Post Catering Emails" subsection in settings (default OFF)
+  { name: 'post_catering_emails_v1', description: 'Wave 3: Settings subsection for post-event email templates (thank-you, review request, repeat-customer offer)' },
+  // Wave 3 — Dessert email goes to approval queue (default OFF; ai_dessert_trigger emits notification only today)
+  { name: 'dessert_email_approval_v1', description: 'Wave 3: dessert-trigger drafts an actual email and routes it to /api/chat/approval queue (replaces notification-only flow when ON)' },
+  // Wave 5 — Monthly/YTD sales breakdown dropdown on calendar v2 (default OFF; partial impl exists in calendar_v2)
+  { name: 'sales_breakdown_dropdown_v1', description: 'Wave 5: Monthly/YTD sales breakdown dropdown on calendar — completes calendar_v2 monthly totals work' },
 ];
 
 async function getFlag(name, defaultValue) {
