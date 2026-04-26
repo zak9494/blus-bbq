@@ -18,14 +18,21 @@ test.beforeAll(async ({ request }) => {
 
 // ── flag-off (always run, no auth needed) ─────────────────────────────────────
 
-test('GET /api/notifications returns 404 when flag is off', async ({ request }) => {
+test('GET /api/notifications returns 200 with empty list when flag is off', async ({ request }) => {
   const res = await request.get(BASE_URL + '/api/notifications');
-  expect(res.status()).toBe(404);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body).toHaveProperty('ok', true);
+  expect(Array.isArray(body.notifications)).toBe(true);
+  expect(body.notifications.length).toBe(0);
 });
 
-test('GET /api/notifications/types returns 404 when flag is off', async ({ request }) => {
+test('GET /api/notifications/types returns 200 with seed types when flag is off', async ({ request }) => {
   const res = await request.get(BASE_URL + '/api/notifications/types');
-  expect(res.status()).toBe(404);
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body).toHaveProperty('ok', true);
+  expect(Array.isArray(body.types)).toBe(true);
 });
 
 test('POST /api/notifications/mark-all-read returns 404 when flag is off', async ({ request }) => {

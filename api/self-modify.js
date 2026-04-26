@@ -118,6 +118,8 @@ const STATIC_MODULE_FILES = [
   'api/quotes/duplicate.js',
   'api/quotes/templates.js',
   'api/settings/digest-recipient.js',
+  'api/settings/shop-origin.js',
+  'api/_lib/shop-origin.js',
   'api/cron/weekly-digest.js',
   // Wave 0.5 — iOS polish UI modules
   'static/js/ui/scroll-lock.js',
@@ -138,6 +140,13 @@ const STATIC_MODULE_FILES = [
   'static/css/notification-settings.css',
   'api/notification-settings/get.js',
   'api/notification-settings/save.js',
+  // Wave 1.5 — Lost system
+  'static/js/pipeline/mark-lost-modal.js',
+  'static/js/pipeline/lost-reasons-widget.js',
+  'static/css/mark-lost-modal.css',
+  'static/css/lost-reasons-widget.css',
+  'api/orders/mark-lost.js',
+  'api/invoices/lost-reasons.js',
   // Invoice Manager (full implementation)
   'static/js/invoice-manager/index.js',
   'static/css/invoice-manager.css',
@@ -151,6 +160,17 @@ const STATIC_MODULE_FILES = [
   'api/invoices/remind.js',
   'api/invoices/pdf.js',
   'api/invoices/export.js',
+  // Wave 4 — Maps
+  'api/_lib/shop-origin.js',
+  'api/maps/distance.js',
+  'static/js/maps/mapbox-distance.js',
+  'static/css/maps.css',
+  // Wave 4 — iMessage-style thread view
+  'static/js/thread-view.js',
+  'static/css/thread-view.css',
+  'api/inquiries/thread.js',
+  // Wave 2 — Quote Builder: Quarter Chicken 3+ meat gate
+  'static/js/qb-quarter-chicken-gate.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
