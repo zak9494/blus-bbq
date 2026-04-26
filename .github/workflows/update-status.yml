@@ -1,0 +1,71 @@
+name: Update STATUS.md
+
+# Auto-regenerate STATUS.md after every merge to main. Source of truth is
+# ROADMAP.md (waves) + git log (merges) + open PR list (red blockers).
+#
+# Loop avoidance:
+#   1. paths-ignore filters out pushes that ONLY touched STATUS.md (this
+#      action's own commits qualify since the script only writes that file).
+#   2. The commit step exits cleanly when there's no diff, so a no-op run
+#      doesn't push at all.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - STATUS.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  # If two merges land back-to-back, cancel the older run — the newer one
+  # will regenerate against the latest main and produce the correct state.
+  # Avoids a push race where two runs both try to commit to main.
+  group: update-status
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: Regenerate STATUS.md
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          # Need full history so `git log --since="24 hours ago"` works
+          fetch-depth: 0
+          # Use the default GITHUB_TOKEN; permissions: contents:write above
+          # is enough to push back to main (when branch protection allows it).
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Regenerate STATUS.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Important: write to a temp file first, THEN move into place. The
+        # script reads the existing STATUS.md to preserve manually-curated
+        # sections, so we cannot let shell `>` truncate it before node runs.
+        run: |
+          node scripts/regenerate-status.js > "$RUNNER_TEMP/STATUS.md.new"
+          mv "$RUNNER_TEMP/STATUS.md.new" STATUS.md
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet -- STATUS.md; then
+            echo "STATUS.md unchanged — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add STATUS.md
+          git commit -m "chore(status): auto-refresh STATUS.md [skip ci]"
+          git push origin main
