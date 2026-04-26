@@ -13,6 +13,7 @@
     today: 'today', settings: 'settings',
     quotes: 'settings', scheduled: 'settings', ai: 'settings',
     flags: 'settings', history: 'settings', invoices: 'settings', outbound: 'settings',
+    'notif-settings': 'settings',
   };
 
   var _active = false;

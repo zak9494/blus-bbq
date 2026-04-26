@@ -149,7 +149,7 @@
     if (!threadIds.length) return;
     await Promise.all(threadIds.map(async function (tid) {
       try {
-        var r = await fetch('/api/inquiries/get?threadId=' + encodeURIComponent(tid));
+        var r = await fetch('/api/inquiries/get?threadId=' + encodeURIComponent(tid) + '&secret=' + encodeURIComponent(getSecret()));
         if (!r.ok) return;
         var d = await r.json();
         if (d.inquiry && d.inquiry.status) calInqStatusMap[tid] = d.inquiry.status;
@@ -607,8 +607,38 @@
     document.getElementById('cal-em-time').textContent    = timeRange;
 
     var locEl = document.getElementById('cal-em-loc');
-    locEl.textContent    = ev.location || '';
-    locEl.style.display  = ev.location ? '' : 'none';
+    locEl.style.display = ev.location ? '' : 'none';
+    if (ev.location) {
+      var mapsEnabled = window.flags && window.flags.isEnabled('maps_v1');
+      if (mapsEnabled) {
+        var staticGmUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(ev.location);
+        var gmUrl = window.mapboxDistance ? window.mapboxDistance.mapsViewUrl(ev.location) : staticGmUrl;
+        locEl.innerHTML = '<div class="cal-em-loc-row">'
+          + '<span class="cal-em-loc-text">' + escHtml(ev.location) + '</span>'
+          + '<a class="maps-view-btn" id="cal-em-view-map" href="' + escHtml(gmUrl) + '" target="_blank" rel="noopener">View Map</a>'
+          + (window.mapboxDistance ? '<span class="maps-dist-chip maps-loading" id="cal-em-dist-chip">\u2026</span>' : '')
+          + '</div>';
+        if (window.mapboxDistance) {
+          var departAt = (ev.start && ev.start.dateTime) ? ev.start.dateTime : null;
+          window.mapboxDistance.fetch('default', ev.location, departAt)
+            .then(function (result) {
+              var chip = document.getElementById('cal-em-dist-chip');
+              if (!chip) return;
+              if (result) {
+                chip.textContent = window.mapboxDistance.fmtChip(result);
+                chip.classList.remove('maps-loading');
+                chip.title = 'Free-flow: ' + result.freeFlowMin + ' min \u00b7 With traffic: ' + result.trafficMin + ' min';
+                var btn = document.getElementById('cal-em-view-map');
+                if (btn) btn.href = window.mapboxDistance.mapsViewUrl(ev.location);
+              } else {
+                chip.style.display = 'none';
+              }
+            });
+        }
+      } else {
+        locEl.textContent = ev.location;
+      }
+    }
 
     var descEl = document.getElementById('cal-em-desc');
     descEl.textContent   = desc;
@@ -829,11 +859,10 @@
     setError('');
     setLoading(true);
     try {
-      var tasks = [ensureLoaded()];
-      if (window.flags && window.flags.isEnabled('calendar_v2')) {
-        tasks.push(loadInqStatuses());
+      await ensureLoaded();
+      if (window.flags && (window.flags.isEnabled('calendar_v2') || window.flags.isEnabled('calendar_filters_v2'))) {
+        await loadInqStatuses();
       }
-      await Promise.all(tasks);
     } catch (e) {
       setError('Could not load calendar: ' + e.message);
     }
