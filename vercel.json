@@ -71,7 +71,9 @@
     { "source": "/api/maps/distance",              "destination": "/api/maps/distance.js" },
     { "source": "/api/inquiries/thread",           "destination": "/api/inquiries/thread.js" },
     { "source": "/api/invoices/lost-reasons",      "destination": "/api/invoices/lost-reasons.js" },
-    { "source": "/api/orders/mark-lost",           "destination": "/api/orders/mark-lost.js" }
+    { "source": "/api/orders/mark-lost",           "destination": "/api/orders/mark-lost.js" },
+    { "source": "/api/sms/send",                   "destination": "/api/sms/send.js" },
+    { "source": "/api/sms/status",                 "destination": "/api/sms/status.js" }
   ],
   "crons": [
     {
