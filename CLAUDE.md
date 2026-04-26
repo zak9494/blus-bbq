@@ -243,6 +243,52 @@ Unit test files live next to their source:
 - `static/js/inquiries-filters.test.js`
 - `static/js/quote-engine.test.js`
 - `api/notifications/send.test.js`
+- `lib/logger.test.js`
+
+---
+
+## Structured Logging
+
+Server logs are emitted as **single-line JSON** so the Vercel log dashboard (and `vercel logs | jq …`) stays queryable. The shape is `{ ts, level, msg, ...ctx }`.
+
+### Using the logger
+
+```js
+const { log } = require('../../lib/logger'); // adjust depth from your file
+log.info('inquiry_saved', { thread_id, source: 'gmail' });
+log.warn('vapid_key_miss', { reason: 'env_unset' });
+log.error(err, { route: '/api/dispatch/email', thread_id });
+```
+
+`log.error(err, ctx)` accepts either an `Error` (stack + name auto-included) or a string. When the `sentry_enabled` flag is on (PR 1), it also forwards to `Sentry.captureException` via `api/_lib/sentry.js` — same call site, no extra wiring.
+
+### Per-request context
+
+Wrap any API handler with `withRequestId` to get a child logger pre-bound with `request_id`, `route`, and `method`, plus a `request_complete` line at the end of every request:
+
+```js
+const { withRequestId } = require('../_middleware/request-id');
+
+module.exports = withRequestId(async (req, res, ctx) => {
+  ctx.log.info('handling', { user: req.headers['x-user'] });
+  // ... do work ...
+  res.statusCode = 200;
+  res.end('ok');
+});
+```
+
+The wrapper also echoes `x-request-id` in the response, and reuses an inbound header if the caller supplies one (lets us trace a request across services later).
+
+### Migration policy
+
+This PR adds the logger and middleware **without** rewriting existing `console.log` calls — too big a change. Future work should:
+
+- Replace ad-hoc `console.log` with `log.info` (or `ctx.log.info`) when touching a handler for any other reason.
+- Use `log.error(err, …)` in catch blocks instead of `console.error(err)`.
+
+### Debugging hotfixes
+
+When investigating a prod issue, the **first step** is `vercel logs --since=1h | grep <request-id>` (or pipe through `jq 'select(.level=="error")'`). The structured fields make this much faster than grepping through ad-hoc strings.
 
 ---
 
