@@ -178,3 +178,57 @@
   color: var(--text2) !important;
   font-size: 12px !important;
 }
+
+/* Refine toolbar (ai_approval_actions_v1) */
+.approval-refine-toolbar {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.approval-regen,
+.approval-add-details {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text2) !important;
+  font-size: 12px !important;
+  padding: 4px 10px !important;
+}
+
+.approval-regen-row,
+.approval-details-row {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.approval-regen-input,
+.approval-details-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.approval-refine-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.approval-regen-submit,
+.approval-details-submit {
+  background: var(--surface2) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  white-space: nowrap;
+}

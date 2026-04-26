@@ -31,6 +31,13 @@
 <link rel="stylesheet" href="/static/css/customers/tag-picker.css">
 <link rel="stylesheet" href="/static/css/invoice-manager.css">
 <link rel="stylesheet" href="/static/css/components/date-picker.css">
+<link rel="stylesheet" href="/static/css/notification-settings.css">
+<!-- Wave 4: Maps -->
+<link rel="stylesheet" href="/static/css/maps.css">
+<link rel="stylesheet" href="/static/css/thread-view.css">
+<!-- Wave 1.5: Lost system -->
+<link rel="stylesheet" href="/static/css/mark-lost-modal.css">
+<link rel="stylesheet" href="/static/css/lost-reasons-widget.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { overflow-x: hidden; }
@@ -619,6 +626,7 @@ if (typeof marked !== 'undefined') {
     <div class="nav-section-label">Settings</div>
     <div class="nav-item" id="theme-toggle-btn" onclick="themeToggle()" title="Toggle light/dark mode"><span class="theme-icon">☾</span><span class="theme-label">Dark Mode</span></div>
     <div class="nav-item" onclick="showPage('flags')"><span class="nav-dot dot-amber"></span>Feature Flags</div>
+    <div class="nav-item" id="nav-notif-settings" onclick="showPage('notif-settings')" style="display:none"><span class="nav-dot dot-blue"></span>Notification Settings</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Integrations</div>
     <div class="nav-item disabled"><span class="nav-dot dot-gray"></span>Account</div>
 
@@ -693,6 +701,9 @@ if (typeof marked !== 'undefined') {
 
         <!-- Overdue widget (Group 9, flag-gated) -->
         <div id="overdue-widget-container" style="display:none;margin-bottom:12px"></div>
+
+        <!-- Lost Reasons widget (Wave 1.5, flag: lost_reasons_v1) -->
+        <div id="lost-reasons-widget-container" style="display:none;margin-bottom:12px"></div>
 
         <!-- Alerts: hidden (stale hardcoded data replaced by dynamic recent-replies-section) -->
         <div class="alerts-section" id="alerts-section" style="display:none"></div>
@@ -912,7 +923,7 @@ if (typeof marked !== 'undefined') {
           <div class="quote-preview">
             <div style="text-align:center; padding-bottom:14px; border-bottom:1px solid var(--border); margin-bottom:14px;">
               <div style="font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:0.05em; color:var(--text);">Blu's Barbeque</div>
-              <div style="font-size:11px; color:var(--text3); line-height:1.8;">17630 Preston Rd · Dallas, TX 75252<br>214-514-8684 · blusbarbeque.com</div>
+              <div style="font-size:11px; color:var(--text3); line-height:1.8;" id="quote-preview-shop-addr-wrap"><span id="quote-preview-shop-addr"></span><br>214-514-8684 · blusbarbeque.com</div>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
               <div>
@@ -1217,6 +1228,11 @@ if (typeof marked !== 'undefined') {
         </div>
         <div class="content inq-detail-scroll">
 
+          <!-- Thread view (Wave 4: email_thread_v2 flag) -->
+          <div class="inq-section" id="inq-thread-section" style="display:none;padding:0">
+            <div id="inq-thread-container"></div>
+          </div>
+
           <!-- Customer info (editable) -->
           <div class="inq-section">
             <div class="inq-section-title">Customer Info <span style="font-weight:400;font-style:italic;font-size:10px;text-transform:none">(edit and Save Draft to update)</span></div>
@@ -1454,7 +1470,6 @@ if (typeof marked !== 'undefined') {
 
     <div id="page-notifications" class="page">
       <div class="topbar">
-        <button class="hamburger-btn" onclick="openMobileSidebar()">&#9776;</button>
         <div class="topbar-title">Notifications</div>
         <button class="btn btn-sm" onclick="notifPanelOpenSettings()" style="margin-left:auto">&#9881; Settings</button>
       </div>
@@ -1471,6 +1486,18 @@ if (typeof marked !== 'undefined') {
           <button class="nc-btn-ghost" onclick="notifPanelOpenSettings()">&#10005;</button>
         </div>
         <div id="nc-settings-list" class="nc-settings-list"></div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION SETTINGS PAGE (notification_settings_v1 flag) -->
+    <div id="page-notif-settings" class="page">
+      <div class="topbar">
+        <button class="ns-back-btn btn" onclick="showPage('settings')" aria-label="Back to Settings">&#8592; Settings</button>
+        <div class="topbar-title">Notification Settings</div>
+      </div>
+      <div class="ns-page-content">
+        <div id="ns-save-status" class="ns-save-status"></div>
+        <div id="ns-page-body"></div>
       </div>
     </div>
 
@@ -1561,6 +1588,21 @@ if (typeof marked !== 'undefined') {
         </div>
 
         <div class="settings-section">
+          <div class="settings-section-title">Shop Info</div>
+          <div class="settings-row">
+            <div style="flex:1">
+              <div class="settings-row-label">Shop Address</div>
+              <div class="settings-row-sub" style="margin-bottom:8px">Used for distance calculations and quote PDFs. Leave empty to disable map features.</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input class="form-input" id="settings-shop-address" placeholder="123 Main St, City TX 12345" style="flex:1">
+                <button class="btn btn-primary" onclick="saveShopAddress()">Save</button>
+              </div>
+              <div id="settings-shop-address-status" style="font-size:12px;color:var(--text3);margin-top:6px"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
           <div class="settings-section-title">Connections</div>
           <div class="settings-row settings-row-tap" onclick="showPage('ai')">
             <div><div class="settings-row-label">Gmail</div><div class="settings-row-sub" id="settings-gmail-sub">Not connected</div></div>
@@ -1572,6 +1614,14 @@ if (typeof marked !== 'undefined') {
           </div>
           <div class="settings-row settings-row-tap" onclick="showPage('ai')">
             <div><div class="settings-row-label">Push Notifications</div><div class="settings-row-sub">Enable browser push alerts</div></div>
+            <div class="settings-row-right"><span class="settings-row-arrow">›</span></div>
+          </div>
+        </div>
+
+        <div class="settings-section" id="settings-preferences-section" style="display:none">
+          <div class="settings-section-title">Preferences</div>
+          <div class="settings-row settings-row-tap" id="settings-row-notifications" onclick="showPage('notif-settings')">
+            <div><div class="settings-row-label">Notifications</div><div class="settings-row-sub">Choose which events alert you and how</div></div>
             <div class="settings-row-right"><span class="settings-row-arrow">›</span></div>
           </div>
         </div>
@@ -1864,6 +1914,12 @@ if (typeof marked !== 'undefined') {
 <script src="/static/js/kanban/card-status-dropdown.js"></script>
 <script src="/static/js/widgets/todays-actions.js"></script>
 <script src="/static/js/customers/tag-picker.js"></script>
+<script src="/static/js/notification-settings.js"></script>
+<!-- Wave 4: Maps -->
+<script src="/static/js/maps/mapbox-distance.js"></script>
+<!-- Wave 1.5: Lost system -->
+<script src="/static/js/pipeline/mark-lost-modal.js"></script>
+<script src="/static/js/pipeline/lost-reasons-widget.js"></script>
 <script>
 /* ===== MODULE: CONSTANTS & STATIC DATA ===== */
 // D22: MENU is now loaded from /static/js/menu.js (window.MENU).
@@ -1919,14 +1975,15 @@ function showPage(page) {
   if (page === 'scheduled') renderScheduled();
   if (page === 'inquiries') loadInquiries();
   else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
-  if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); if (window.overdueWidget) window.overdueWidget.init(); }
+  if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); if (window.overdueWidget) window.overdueWidget.init(); if (window.lostReasonsWidget) window.lostReasonsWidget.init(); }
   if (page === 'calendar') { if (typeof calInit === 'function') calInit(); }
   if (page === 'customer') { if (window.customerProfile) window.customerProfile.init(); }
   if (page === 'ai') { loadChatHistory(); if (typeof chatApprovalInit === 'function') chatApprovalInit(); } // C21 + D24
   if (page === 'flags') loadFlagsPage();
   if (page === 'notifications' && typeof notifPanelRenderPage === 'function') notifPanelRenderPage();
+  if (page === 'notif-settings' && window.notifSettings) window.notifSettings.init();
   if (page === 'today') { if (typeof loadEventDayView === 'function') loadEventDayView(); }
-  if (page === 'settings') initLostReasonsSettings();
+  if (page === 'settings') { initLostReasonsSettings(); loadShopOriginAddress(); }
   if (page === 'invoices' && window.invoiceMgr) window.invoiceMgr.initPage();
   // customer profile is rendered on-demand by openCustomerProfile(); no init needed here
   document.querySelectorAll('.nav-item').forEach(n => {
@@ -2887,8 +2944,9 @@ async function generatePDF() {
   doc.rect(0, 62, W, 22, 'F');
   doc.setFontSize(8.5);
   doc.setTextColor(150, 150, 150);
+  const _pdfAddr = (window.shopOriginAddress || '').trim();
   doc.text(
-    '17630 Preston Rd, Dallas TX 75252   \u2022   blusbarbeque.com   \u2022   214-514-8684',
+    (_pdfAddr ? _pdfAddr + '   \u2022   ' : '') + 'blusbarbeque.com   \u2022   214-514-8684',
     W / 2, 77, { align: 'center' }
   );
 
@@ -3307,7 +3365,9 @@ async function clearChatHistory() {
 /* end C21 ============================= */
 
 /* ===== MODULE: AI CHAT ===== */
-const CHAT_SYSTEM = `You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque (17630 Preston Rd, Dallas TX 75252, 214-514-8684, blusbarbeque.com).
+function getChatSystem() {
+  const addr = (window.shopOriginAddress || '').trim();
+  return `You are the AI assistant built into Blu's Barbeque Operations Dashboard for Zach, the owner of Blu's Barbeque${addr ? ' (' + addr + ', 214-514-8684, blusbarbeque.com)' : ' (214-514-8684, blusbarbeque.com)'}.
 
 Current pipeline: ${JSON.stringify(leads)}
 
@@ -3323,6 +3383,7 @@ IMPORTANT — Clarifying choices: When the user asks you to do something that re
   <option value='Another reply text'>Another label</option>
 </options>
 Only include <options> when a clarifying choice would genuinely help the user move forward. Skip them for pure Q&A or explanations where you already have enough info to answer.`;
+}
 
 async function sendChat(textOverride) {
   const input = document.getElementById('chat-input');
@@ -3351,7 +3412,7 @@ async function sendChat(textOverride) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1500,
-        system: CHAT_SYSTEM,
+        system: getChatSystem(),
         messages: chatHistory
       })
     });
@@ -3492,7 +3553,7 @@ async function sendImageToChat(base64, mediaType, filename) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
         max_tokens: 1500,
-        system: CHAT_SYSTEM,
+        system: getChatSystem(),
         messages: [...chatHistory, {
           role: 'user',
           content: [
@@ -3873,6 +3934,42 @@ let proposalToken;
 
 /* ===== MODULE: INQUIRIES TRIAGE ===== */
 const INQ_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
+window.shopOriginAddress = '';
+
+async function loadShopOriginAddress() {
+  try {
+    const r = await fetch('/api/settings/shop-origin', { cache: 'no-store' });
+    const d = await r.json();
+    window.shopOriginAddress = d.address || '';
+    const addrEl = document.getElementById('quote-preview-shop-addr');
+    if (addrEl) addrEl.textContent = window.shopOriginAddress;
+    const inputEl = document.getElementById('settings-shop-address');
+    if (inputEl) inputEl.value = window.shopOriginAddress;
+  } catch (_) {}
+}
+
+async function saveShopAddress() {
+  const input  = document.getElementById('settings-shop-address');
+  const status = document.getElementById('settings-shop-address-status');
+  if (!input) return;
+  const address = input.value.trim();
+  if (status) status.textContent = 'Saving\u2026';
+  try {
+    const r = await fetch('/api/settings/shop-origin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: INQ_SECRET, address }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Failed');
+    window.shopOriginAddress = address;
+    const addrEl = document.getElementById('quote-preview-shop-addr');
+    if (addrEl) addrEl.textContent = window.shopOriginAddress;
+    if (status) { status.textContent = 'Saved \u2713'; setTimeout(() => { if (status) status.textContent = ''; }, 2500); }
+  } catch (e) {
+    if (status) status.textContent = 'Error: ' + e.message;
+  }
+}
 let currentInquiry = null;
 
 const INQ_STATUS_LABELS = {
@@ -4464,6 +4561,16 @@ const PIPELINE_STATUSES = ['needs_info','quote_drafted','quote_approved','quote_
 
 async function loadPipelineInquiries() {
   try {
+    // init() calls this synchronously from the inline script before defer'd flags.js
+    // has even defined window.flags. Wait for the flags client to appear and hydrate,
+    // so the kanban_restructure gate sees a populated cache on first paint.
+    const _flagsWaitStart = Date.now();
+    while (!window.flags && (Date.now() - _flagsWaitStart) < 3000) {
+      await new Promise(function (r) { setTimeout(r, 50); });
+    }
+    if (window.flags && typeof window.flags.load === 'function') {
+      await window.flags.load();
+    }
     const r = await fetch('/api/inquiries/list?secret=' + INQ_SECRET);
     const d = await r.json();
     // Stage 2: only approved, non-archived; exclude test records unless showTestData is on
@@ -4647,6 +4754,13 @@ async function openInquiry(threadId) {
     if (typeof depositsInit === 'function') depositsInit(d.inquiry);
     if (typeof repeatCustomerInit === 'function') repeatCustomerInit(d.inquiry);
     if (typeof customerProfileInit === 'function') customerProfileInit(d.inquiry);
+    // Wave 4: iMessage thread view (email_thread_v2 flag)
+    var tvEnabled = window.flags && window.flags.isEnabled('email_thread_v2');
+    var tvSection = document.getElementById('inq-thread-section');
+    var tvEmailBtn = document.getElementById('inq-view-email-btn');
+    if (tvSection) tvSection.style.display = tvEnabled ? '' : 'none';
+    if (tvEmailBtn) tvEmailBtn.style.display = tvEnabled ? 'none' : '';
+    if (tvEnabled && window.threadView) window.threadView.init('inq-thread-container', d.inquiry);
     document.getElementById('inq-list-view').style.display = 'none';
     document.getElementById('inq-list-topbar').style.display = 'none';
     document.getElementById('inq-detail-view').style.display = 'block';
@@ -4678,6 +4792,7 @@ function initCompletedOrdersToggle() {
 }
 
 function showInquiryList() {
+  if (window.threadView) window.threadView.destroy();
   currentInquiry = null;
   document.getElementById('inq-list-view').style.display = 'block';
   document.getElementById('inq-list-topbar').style.display = 'flex';
@@ -5309,6 +5424,7 @@ function init() {
   buildMenuPicker('extras', 'menu-extras');
   renderAll();
   loadPipelineInquiries(); // pre-load on startup (Pipeline is the default page)
+  loadShopOriginAddress(); // populate window.shopOriginAddress for PDF + chat
 }
 
 
@@ -5651,6 +5767,7 @@ window.addEventListener('load', function() {
       if (bar && window.flags && window.flags.isEnabled('quote_templates')) bar.style.display = '';
     }
     if (window.overdueWidget) window.overdueWidget.init();
+    if (window.lostReasonsWidget) window.lostReasonsWidget.init();
     if (window.customerProfile) window.customerProfile.init();
     if (window.flags.isEnabled('invoice_manager_v1')) {
       var navInv = document.getElementById('nav-invoices');
@@ -5666,6 +5783,13 @@ window.addEventListener('load', function() {
       var depEl = document.getElementById('q-deposit-pct');
       if (depEl && !depEl.value) depEl.value = String(window.DEFAULT_DEPOSIT_PCT || 50);
     }
+    if (window.flags.isEnabled('notification_settings_v1')) {
+      var navNS = document.getElementById('nav-notif-settings');
+      if (navNS) navNS.style.display = 'flex';
+      var prefSection = document.getElementById('settings-preferences-section');
+      if (prefSection) prefSection.style.display = '';
+    }
+    if (window.qbQuarterChickenGate) window.qbQuarterChickenGate.init();
   });
 });
 // focus listener removed — visibilitychange below is sufficient and avoids
@@ -5706,10 +5830,12 @@ function closeMobileSidebar() {
 <script defer src="/static/js/completed-orders.js"></script>
 <script defer src="/static/js/quote-drafts.js"></script>
 <script defer src="/static/js/customer-profile.js"></script>
+<script defer src="/static/js/thread-view.js"></script>
 <script defer src="/static/js/components/date-picker/date-picker.js"></script>
 <script defer src="/static/js/invoice-manager/index.js"></script>
 <script defer src="/static/js/overdue-widget.js"></script>
 <script defer src="/static/js/quote-templates.js"></script>
+<script defer src="/static/js/qb-quarter-chicken-gate.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof twInit === 'function') twInit('input[type="time"]');

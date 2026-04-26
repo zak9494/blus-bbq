@@ -15,6 +15,7 @@ window.MENU = {
     { id:'chicken-quarter',     name:'Chicken - Quarter',            unit:'ea',         price:5.5   },
     { id:'chicken-half',        name:'Chicken - Half',               unit:'ea',         price:11    },
     { id:'chicken-whole',       name:'Chicken - Whole',              unit:'ea',         price:18    },
+    { id:'chicken-quarter',     name:'Chicken - Quarter',            unit:'ea',         price:5.5,  requiresMeats:3 },
     { id:'burnt-ends-brisket',  name:'Burnt Ends (brisket)',         unit:'lbs',        price:31.99 },
     { id:'burnt-ends-pork',     name:'Burnt Ends (pork belly)',      unit:'lbs',        price:31.99 },
     { id:'rib-tips',            name:'Rib Tips',                     unit:'lbs',        price:24    },
