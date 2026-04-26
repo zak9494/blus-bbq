@@ -20,8 +20,11 @@ permissions:
   contents: write
 
 concurrency:
+  # If two merges land back-to-back, cancel the older run — the newer one
+  # will regenerate against the latest main and produce the correct state.
+  # Avoids a push race where two runs both try to commit to main.
   group: update-status
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   update:
