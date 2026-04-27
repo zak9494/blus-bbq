@@ -378,6 +378,24 @@ async function listNotifications(opts) {
 | **C — Postgres-read behind flag** | Reads come from Postgres when `pg_reads_<scope>` is ON. Writes still go to both. | KV (writes) + PG (reads, when flag on) | Bake ≥ 48h with flag ON. Compare `pg_reads_<scope>` counts to error rates. |
 | **D — KV-write removal** | Stop writing to KV. Keep one release cycle of `dual_write_<scope>` flag for emergency fallback. Delete the KV namespace after one week clean. | PG | Final. Drop the flag in a follow-up PR. |
 
+### Phase B Step 0 — Pre-backfill KV snapshot (REQUIRED, runs before any backfill)
+
+Before any backfill phase begins, dump the current KV state to disk as a recovery baseline:
+
+```bash
+node scripts/migration/dump-kv-snapshot.js > /Users/zach/Desktop/kv-snapshot-$(date +%Y%m%d-%H%M%S).json
+```
+
+The script (to be added in Phase 1 alongside `api/_lib/db.js`):
+- Iterates every KV namespace listed in Section 1 (KV inventory)
+- For each key, records: namespace, key, value (JSON), TTL if any
+- Writes a single JSON file to disk: ~10-50MB depending on data volume
+- Idempotent — can be re-run any time to refresh the baseline
+
+**Why:** if both KV and Postgres get corrupted during backfill (e.g. partial write + concurrent edit), we restore by replaying this JSON into KV. Two-independent-recovery-paths principle: snapshot is the third recovery layer beyond per-phase rollback and Postgres PITR.
+
+**Storage:** save to `/Users/zach/Desktop/` so it persists outside Dispatch and Vercel. Not committed to repo (data privacy + size).
+
 ### Atomic cross-key writes
 
 Today, several handlers write multiple KV keys without any atomicity (e.g. `inquiries/save.js` writes both `inquiries:{threadId}` and `inquiries:index` — a crash between them desyncs the index). Postgres fixes this by wrapping the handler in a single transaction:
@@ -405,6 +423,14 @@ Per phase, what's the path back?
 | **D** | Discovered a regression after KV writes were removed | Re-enable KV writes (the `dual_write_<scope>` flag stays in code for one release cycle for exactly this reason). Backfill any KV records lost during the gap from Postgres (reverse direction). After confirming clean, re-attempt D. |
 
 **Hard guarantee:** until Phase D ships AND the dual-write flag is removed, KV is always available as a source of truth. There is no point in the migration where reverting a single PR cannot restore the system.
+
+### Layer 3 — Pre-backfill KV snapshot
+
+Confirmed safety net per Zach 2026-04-27. Before Phase B backfill runs, full KV state dumped to `/Users/zach/Desktop/kv-snapshot-<timestamp>.json` via `scripts/migration/dump-kv-snapshot.js`. Idempotent; can refresh between phases.
+
+Recovery path: if both KV and Postgres get into a bad state simultaneously, replay the snapshot via `node scripts/migration/restore-kv-snapshot.js <file>` (also added in Phase 1). KV writes restore to last snapshot; downstream consumers see the pre-snapshot state.
+
+This is independent of Vercel Postgres PITR (Layer 4 recovery) — if either layer fails, the other still works.
 
 ---
 
