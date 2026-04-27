@@ -10,6 +10,6 @@
   "scripts": {
     "lint": "node scripts/lint.js",
     "install-hooks": "cp scripts/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit && echo 'Pre-commit hook installed.'",
-    "test": "node --test static/js/inquiries-filters.test.js static/js/quote-engine.test.js api/notifications/send.test.js static/js/theme.test.js api/_lib/flags.test.js api/_lib/settings.test.js static/js/test-mode.test.js api/_lib/notifications.test.js api/_lib/cadence-scheduler.test.js api/flags.test.js api/_lib/ai-draft.test.js api/_lib/quote-update-queue.test.js api/_lib/guest-count-lockin.test.js api/_lib/post-event-archive.test.js api/calendar/delete.test.js api/notifications/counts.test.js static/js/notifications-panel.test.js api/payments/adapter.test.js scripts/runbooks.test.js"
+    "test": "node --test static/js/inquiries-filters.test.js static/js/quote-engine.test.js api/notifications/send.test.js static/js/theme.test.js api/_lib/flags.test.js api/_lib/settings.test.js static/js/test-mode.test.js api/_lib/notifications.test.js api/_lib/cadence-scheduler.test.js api/flags.test.js api/_lib/ai-draft.test.js api/_lib/quote-update-queue.test.js api/_lib/guest-count-lockin.test.js api/_lib/post-event-archive.test.js api/calendar/delete.test.js api/notifications/counts.test.js static/js/notifications-panel.test.js api/payments/adapter.test.js scripts/runbooks.test.js scripts/post-restart-inventory.test.js"
   }
 }
