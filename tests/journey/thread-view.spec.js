@@ -2,19 +2,16 @@
  * Journey test — email_thread_v2 iMessage-style thread view.
  * Verifies: bubble clustering renders, SMS toggle disabled, AI Draft routes to approval queue.
  *
- * Requires: BASE_URL and INQ_SECRET env vars (or defaults to prod + hardcoded secret).
+ * Flag-state pattern: each describe block mocks /api/flags via mockFlagState() so
+ * the spec asserts on UI BEHAVIOR with the flag in a known state, regardless of
+ * what prod KV happens to hold. Production drift cannot break these assertions.
+ *
+ * Requires: BASE_URL env var (or defaults to prod).
  */
 const { test, expect } = require('@playwright/test');
-const { setFlagOrSkip } = require('../helpers/flags');
+const { mockFlagState } = require('../helpers/mock-flags');
 
 const BASE_URL  = process.env.SMOKE_BASE_URL || process.env.BASE_URL  || 'https://blus-bbq.vercel.app';
-const SECRET    = process.env.INQ_SECRET || 'c857eb539774b63cf0b0a09303adc78d';
-
-// ── Flag helpers ──────────────────────────────────────────────────────────────
-
-async function setFlag(request, name, enabled) {
-  return setFlagOrSkip(request, name, enabled, { secret: SECRET, baseUrl: BASE_URL });
-}
 
 // ── Shared navigation ─────────────────────────────────────────────────────────
 
@@ -48,12 +45,8 @@ async function openFirstInquiry(page) {
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 test.describe('email_thread_v2 — thread view', () => {
-  test.beforeAll(async ({ request }) => {
-    await setFlag(request, 'email_thread_v2', true);
-  });
-
-  test.afterAll(async ({ request }) => {
-    await setFlag(request, 'email_thread_v2', false);
+  test.beforeEach(async ({ page }) => {
+    await mockFlagState(page, { email_thread_v2: true });
   });
 
   test('thread section visible and contains .tv-thread when flag ON', async ({ page }) => {
@@ -151,8 +144,8 @@ test.describe('email_thread_v2 — thread view', () => {
 // ── Flag-OFF guard ────────────────────────────────────────────────────────────
 
 test.describe('email_thread_v2 OFF — legacy view unchanged', () => {
-  test.beforeAll(async ({ request }) => {
-    await setFlag(request, 'email_thread_v2', false);
+  test.beforeEach(async ({ page }) => {
+    await mockFlagState(page, { email_thread_v2: false });
   });
 
   test('thread section hidden and View Email button visible when flag OFF', async ({ page }) => {
