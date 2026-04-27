@@ -159,6 +159,8 @@ const SEED_FLAGS = [
   { name: 'lost_reasons_v1',        description: 'Wave 1.5: past-event visual flag, Mark Lost modal (7-reason enum picker), Lost Reasons dashboard widget' },
   // Payment link abstraction
   { name: 'payment_links_v1',       description: 'Payment processing via provider-agnostic adapter (PAYMENT_PROVIDER=stripe|square|stub); default OFF' },
+  // Wave 3 — dessert trigger routing
+  { name: 'dessert_to_approval_queue_v1', description: 'Route dessert-trigger offers through the AI approval queue instead of direct notification (requires ai_dessert_trigger ON; falls back to notification when OFF)' },
 ];
 
 async function getFlag(name, defaultValue) {
