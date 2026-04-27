@@ -1,6 +1,6 @@
 # Blu's BBQ — Status
 
-_Updated: 2026-04-27T04:45Z (post-cascade — Upstash PAYG didn't fix smoke; real root cause identified)_
+_Updated: 2026-04-27T05:55Z (added Usage tracking section)_
 
 ## Right now (max 5)
 [████░░░░░░] 40%  Inquiry notes editor (PR #115) — open, smoke red on baseline regression.
@@ -100,6 +100,28 @@ _Updated: 2026-04-27T04:45Z (post-cascade — Upstash PAYG didn't fix smoke; rea
 - Twilio 10DLC clearance     (waiting on approval)
 - Tenant-aware refactor      (Q4 2026 prep)
 - Postgres migration         (PR #108 scoping)
+
+## Usage tracking
+
+_For exact billing: claude.ai/settings/usage_
+
+**Today (2026-04-27):**
+- Code task spawns: ~12 (audit, cleanup, scoping, GH action, smoke harden v1, smoke harden v2, advance followup, inquiry notes, post catering, dessert, cascade, migration phase 1)
+- PRs opened: 6+ (#108, #110, #113, #115, #117, #118, #120, #121, plus migration phase 1 PR pending)
+- PRs merged: 9 cascaded after #96 admin-merge (#47, #48, #91, #95, #96, #101, #102, #103, #105) + STATUS refreshes
+- Peak active code tasks: 5 (hit cap, queue managed sequentially)
+- Wave Shepherd cron ticks: 12+ (every 30 min)
+- Standing rules saved to memory: 5 (auto-checkpoint, sequential delivery, concurrent cap, queue discipline, STATUS.md push, speak-up, verify external, flag flip priority)
+
+**Cumulative since 2026-04-22:**
+- Total PRs merged: ~30+ (see git log)
+- Active flags in production: ~40
+- Open PRs as of now: 18 (see "Failed to merge" + in-flight)
+
+**Rate-limit signals to watch for:**
+- Anthropic Pro plan: ~50 messages per 5 hours; heavy days can hit limit
+- If you hit a limit notice in claude.ai, the orchestrator will pause spawns until quota refreshes
+- Switch to Max ($100/mo) or API plan for more headroom if Pro feels tight
 
 ## Wave progress
 Wave 1 · Core UX + iOS feel               [██████████] 100%  2/2 ✓
