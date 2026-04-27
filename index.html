@@ -1154,6 +1154,19 @@ if (typeof marked !== 'undefined') {
           <p style="color:var(--text2);font-size:0.9em">Schedule emails from the Pipeline page.</p>
         </div>
         <div id="sched-list" class="sched-list-container"></div>
+
+        <!-- Post Catering Emails subsection (Wave 3) — gated by post_catering_emails_v1 -->
+        <div id="pce-section" style="display:none;margin-top:24px">
+          <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <h2 style="margin:0">🍽️ Post Catering Emails</h2>
+              <p class="page-subtitle">Thank-you, review-request, and anniversary emails queued to send AFTER the event</p>
+            </div>
+            <button class="btn btn-secondary" onclick="renderPostCatering()" style="font-size:12px;padding:6px 12px">🔄 Refresh</button>
+          </div>
+          <div id="pce-empty" class="empty-state" style="display:none"></div>
+          <div id="pce-list" class="sched-list-container"></div>
+        </div>
       </div>
 
     <!-- ══ INQUIRIES PAGE ══════════════════════════════════════════════════════ -->
@@ -1924,6 +1937,8 @@ if (typeof marked !== 'undefined') {
 <!-- Wave 1.5: Lost system -->
 <script src="/static/js/pipeline/mark-lost-modal.js"></script>
 <script src="/static/js/pipeline/lost-reasons-widget.js"></script>
+<!-- Wave 3: Post-catering emails subsection (gated: post_catering_emails_v1) -->
+<script src="/static/js/post-catering-emails.js"></script>
 <script>
 /* ===== MODULE: CONSTANTS & STATIC DATA ===== */
 // D22: MENU is now loaded from /static/js/menu.js (window.MENU).
@@ -1976,7 +1991,10 @@ function showPage(page) {
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
   if (window.innerWidth <= 768) closeMobileSidebar();
-  if (page === 'scheduled') renderScheduled();
+  if (page === 'scheduled') {
+    renderScheduled();
+    if (typeof window.renderPostCatering === 'function') window.renderPostCatering();
+  }
   if (page === 'inquiries') loadInquiries();
   else if (typeof clearInqSelection === 'function') clearInqSelection(); // C18: clear bulk selection on nav away
   if (page === 'pipeline') { loadPipelineInquiries(); if (typeof pipelineAlertsInit === 'function') pipelineAlertsInit(); if (window.overdueWidget) window.overdueWidget.init(); if (window.lostReasonsWidget) window.lostReasonsWidget.init(); }
@@ -5782,7 +5800,10 @@ function confirmImport() {
 }
 
 /* ===== STARTUP ===== */
-setInterval(() => { loadScheduled(); renderScheduled(); }, 60000);
+setInterval(() => {
+  loadScheduled(); renderScheduled();
+  if (typeof window.renderPostCatering === 'function') window.renderPostCatering();
+}, 60000);
 
 loadLeads();
 loadScheduled();
@@ -5845,6 +5866,7 @@ document.addEventListener('visibilitychange', () => {
 });
 init();
 renderScheduled();
+if (typeof window.renderPostCatering === 'function') window.renderPostCatering();
 
 
 /* ===== MODULE: MOBILE NAV UTILITIES ===== */

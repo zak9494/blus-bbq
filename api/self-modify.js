@@ -172,6 +172,9 @@ const STATIC_MODULE_FILES = [
   'api/inquiries/thread.js',
   // Wave 2 — Quote Builder: Quarter Chicken 3+ meat gate
   'static/js/qb-quarter-chicken-gate.js',
+  // Wave 3 — Post-catering emails subsection
+  'static/js/post-catering-emails.js',
+  'api/scheduled/post-catering.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
