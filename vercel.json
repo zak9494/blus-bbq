@@ -74,7 +74,8 @@
     { "source": "/api/orders/mark-lost",           "destination": "/api/orders/mark-lost.js" },
     { "source": "/api/sms/send",                   "destination": "/api/sms/send.js" },
     { "source": "/api/sms/status",                 "destination": "/api/sms/status.js" },
-    { "source": "/api/payments/charge",            "destination": "/api/payments/charge.js" }
+    { "source": "/api/payments/charge",            "destination": "/api/payments/charge.js" },
+    { "source": "/api/db/health",                  "destination": "/api/db/health.js" }
   ],
   "crons": [
     {
