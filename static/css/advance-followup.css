@@ -1,0 +1,124 @@
+/* ===== ADVANCE FOLLOW-UP CALENDAR (advance_followup_v1) ===================
+   Far-future booking surface — list of inquiries with event_date >30 days out
+   plus inline editor for next_followup_at.
+   ========================================================================== */
+
+#page-advance-followup .af-page-content {
+  padding: 16px 16px 32px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.af-summary {
+  font-size: 14px;
+  color: var(--text2);
+  margin: 0 0 16px;
+}
+.af-summary strong { color: var(--text); font-size: 16px; }
+
+.af-error {
+  background: var(--danger-bg, #fee2e2);
+  color: var(--danger, #b91c1c);
+  border: 1px solid var(--danger-border, #fecaca);
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+
+.af-empty {
+  padding: 36px 20px;
+  text-align: center;
+  background: var(--surface2);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+.af-empty-title { font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+.af-empty-sub   { color: var(--text3); font-size: 13px; line-height: 1.5; }
+
+.af-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.af-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.af-row-main { flex: 1 1 280px; min-width: 0; }
+.af-row-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.af-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text3);
+}
+.af-event-date { font-weight: 500; color: var(--text2); }
+.af-days-out   { color: var(--text3); }
+.af-status {
+  text-transform: capitalize;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 11px;
+  border: 1px solid var(--border);
+}
+
+.af-row-followup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.af-followup-label {
+  font-size: 12px;
+  color: var(--text3);
+}
+.af-followup-input {
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--text);
+  min-width: 140px;
+}
+.af-current-follow {
+  font-size: 12px;
+  color: var(--text3);
+}
+.af-current-follow strong { color: var(--text2); }
+
+.af-save-status {
+  font-size: 12px;
+  min-width: 80px;
+}
+.af-saving { color: var(--text3); }
+.af-saved  { color: var(--success, #15803d); }
+.af-save-err { color: var(--danger, #b91c1c); }
+
+@media (max-width: 600px) {
+  .af-row { flex-direction: column; align-items: flex-start; }
+  .af-row-followup { width: 100%; }
+  .af-followup-input { flex: 1 1 auto; }
+}
