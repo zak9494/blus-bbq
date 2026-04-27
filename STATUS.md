@@ -1,15 +1,15 @@
 # Blu's BBQ — Status
 
-_Updated: 2026-04-27T00:41Z (manual refresh — new tasks spawned; auto-update PR #110 still blocked by smoke wall)_
+_Updated: 2026-04-27T04:45Z (post-cascade — Upstash PAYG didn't fix smoke; real root cause identified)_
 
 ## Right now (max 5)
-[████░░░░░░] 40%  Inquiry notes editor (PR #115) — running.
-[██░░░░░░░░] 20%  Advance follow-up calendar UI (PR #118) — running.
-[█░░░░░░░░░] 10%  Post Catering Emails subsection — just spawned (no PR yet).
+[████░░░░░░] 40%  Inquiry notes editor (PR #115) — open, smoke red on baseline regression.
+[██░░░░░░░░] 20%  Advance follow-up calendar UI (PR #118) — open, smoke red on baseline regression.
+[█░░░░░░░░░] 10%  Post Catering Emails subsection (PR #120) — open, smoke red on baseline regression.
 
 ## Need your call (max 3)
-- **🚧 Smoke STILL failing post-quota-reset** — worth investigating the quota nature. 00:00 UTC daily reset was supposed to clear the 500K wall but smoke is still red. Possibilities: monthly cap, per-key limit, rate-limit floor, or the daily reset didn't actually fire. PAYG upgrade ($10/mo) remains the immediate-unblock option.
-- **📖 Review PR #108 (Postgres migration plan)** when ready — unblocks migration phase 1 (`api/_lib/db.js` scaffolding).
+- **🚧 Smoke wall is FLAG DRIFT, not KV.** Upstash PAYG cascade (10 PRs reran post-upgrade) merged 0 — every PR fails on `tests/smoke/core.spec.js:13` (Inquiries nav button visible) + `:31` (Calendar nav button visible). Root cause: `nav_v2` flag is OFF in production KV but `api/_lib/flags.js:113` declares `default: true`. The smoke test comment even claims "nav_v2 (default ON)". Fix options: (a) `setFlag('nav_v2', true)` via INQ_SECRET to align prod KV with seed, OR (b) update `tests/smoke/core.spec.js` to intercept `/api/flags` like `tests/smoke/nav-v2.spec.js` already does. Option (a) is one curl + a UI-impact decision; option (b) is the more durable fix.
+- **📖 Review PR #108 (Postgres migration plan)** when ready — unblocks migration phase 1 (`api/_lib/db.js` scaffolding). Doc-only PR; the only thing keeping it red is the nav-button regression above.
 
 ## Your todo (action when ready)
 
@@ -43,9 +43,14 @@ _Updated: 2026-04-27T00:41Z (manual refresh — new tasks spawned; auto-update P
 - First-run cron permission approvals (gh, git push) — approve once, future auto-approve
 
 ## Last 24 hours
-✅ Merged (no new functional merges since 19:43Z — Upstash quota wall holding everything; STATUS refresh PRs only)
-   #112 Manual STATUS.md refresh — task batch complete                ~1.5h ago
-   #111 Manual STATUS.md refresh (initial)                            ~4h ago
+✅ Merged (no new functional merges since 19:43Z — Upstash quota wall presumed cause; cascade attempt 04:45Z proved smoke wall is actually nav_v2 flag drift, see Need-your-call)
+   (cascade 2026-04-27T04:45Z — 0 PRs merged; 10 reran, all red on same baseline regression)
+   #119 Manual STATUS.md refresh — Wave 3 work in flight              ~5h ago
+   #117 Manual STATUS.md refresh — smoke wall persists                ~6h ago
+   #114 Manual STATUS.md refresh — new tasks spawned                  ~8h ago
+   #113 Smoke quota-aware setFlag (skip not fail on KV 500)           ~10h ago
+   #112 Manual STATUS.md refresh — task batch complete                ~12h ago
+   #111 Manual STATUS.md refresh (initial)                            ~14h ago
    #105 Flag toggle persistence — kvSet now loud on KV failure        ~4.5h ago
    #103 Wave Shepherd cron → GitHub Actions                           ~7h ago
    #47  AI-triggered sends route through approval queue               ~9h ago
@@ -65,16 +70,19 @@ _Updated: 2026-04-27T00:41Z (manual refresh — new tasks spawned; auto-update P
    #61  Wave 2 QB extensions (discount/fee/tax/dates)                 ~21h ago
    #86  post-merge smoke spec + cron prompt                           ~23h ago
 
-🛠 Recently spawned / completed (no PR or PR open + blocked)
-   #115  Inquiry notes editor — running
-   #118  Advance follow-up calendar UI — running
-   Post Catering Emails subsection — just spawned (no PR yet)
-   #113  Smoke hardening — admin-merge cascade in flight
-   #108  Postgres migration plan — scoping doc, opened on `docs/postgres-migration-plan-v2`
-   #110  Auto-update STATUS.md GH Action — opened, blocked by smoke wall
-   #94   Conv-commits — open, DIRTY (9 commits behind main), needs rebase post-quota-reset
-   #107  customer_profile_v2 assertion fix — open, blocked by smoke wall
-   #109  Post-restart recovery runbook — open, blocked by smoke wall
+🛠 Recently spawned / completed (no PR or PR open + blocked by nav_v2 flag drift)
+   #121  Dessert email → AI approval queue — open, smoke red (baseline 2 + 2 PR-specific)
+   #120  Post Catering Emails subsection — open, smoke red (baseline 2 + 6 PR-specific)
+   #118  Advance follow-up calendar UI — open, smoke red (baseline 2 + 5 PR-specific)
+   #115  Inquiry notes editor — open, smoke red (baseline 2 + 5 PR-specific)
+   #110  Auto-update STATUS.md GH Action — open, CONFLICTING + smoke red
+   #109  Post-restart recovery runbook (rebased) — open, smoke red (baseline 2 + 2 maps tests)
+   #108  Postgres migration plan — open, smoke red (baseline 2 only — pure doc)
+   #107  customer_profile_v2 assertion fix — open, smoke red (baseline 2 + 2 PR-specific)
+   #93   wave3+5 flag seeds — open, smoke red (baseline 2 only)
+   #67   audit batch C — open, smoke red (baseline 2 + 4 PR-specific)
+   #51   customer profile Previous Quotes — open, smoke red (baseline 2 + 9 PR-specific)
+   #94   Conv-commits — open, DIRTY (9 commits behind main), needs rebase
 
 ## Up next in queue (max 5)
 1. Dessert email → approval queue routing         → Wave 3 (last NOT-STARTED item)
