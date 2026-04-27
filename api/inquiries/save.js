@@ -151,6 +151,7 @@ async function handlePipelineSave(req, res, body) {
     last_processed_message_id:     body.last_processed_message_id     ?? existing?.last_processed_message_id     ?? null,
     message_count_at_last_process: body.message_count_at_last_process ?? existing?.message_count_at_last_process ?? 1,
     quote_total:      body.quote_total      ?? existing?.quote_total      ?? null,
+    notes:            body.notes            ?? existing?.notes            ?? null,
     created_at:       existing?.created_at  ?? now,
     updated_at:       now,
     history:          Array.isArray(existing?.history) ? [...existing.history] : [],
