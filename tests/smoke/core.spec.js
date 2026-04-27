@@ -1,7 +1,14 @@
 // @ts-check
 // Core smoke tests — page load, navigation, primary views.
 // Migrated from tests/smoke.spec.js.
+//
+// Flag dependencies: nav_v2 controls whether the inquiries / calendar nav
+// buttons are rendered as `[data-page="..."]` (nav_v2 ON) or `.nav-item`
+// (nav_v2 OFF). These specs assert the BEHAVIOR with nav_v2 ON, so they mock
+// the flag rather than depending on prod KV state. See PR #122 for the drift
+// incident that motivated this.
 const { test, expect } = require('@playwright/test');
+const { mockFlagState } = require('../helpers/mock-flags');
 
 const BASE_URL = process.env.SMOKE_BASE_URL || 'https://blus-bbq.vercel.app';
 
@@ -11,15 +18,17 @@ test('homepage loads (HTTP 200)', async ({ request }) => {
 });
 
 test('Inquiries nav button is present', async ({ page }) => {
+  await mockFlagState(page, { nav_v2: true });
   await page.goto(BASE_URL);
   await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
-  // nav_v2 (default ON) uses [data-page] buttons in sidebar; old .nav-item is hidden
+  // nav_v2 ON: [data-page] buttons in sidebar; old .nav-item is hidden
   const inqBtn = page.locator('[data-page="inquiries"]').first();
   await expect(inqBtn).toBeVisible();
 });
 
 test('Quote Builder is accessible', async ({ page }) => {
   // Quote Builder has no nav_v2 button — verify page is reachable via showPage()
+  await mockFlagState(page, { nav_v2: true });
   await page.goto(BASE_URL);
   await page.evaluate(async () => {
     if (window.flags) await window.flags.load();
@@ -29,6 +38,7 @@ test('Quote Builder is accessible', async ({ page }) => {
 });
 
 test('Calendar nav button is present', async ({ page }) => {
+  await mockFlagState(page, { nav_v2: true });
   await page.goto(BASE_URL);
   await page.evaluate(async () => { if (window.flags) await window.flags.load(); });
   const calBtn = page.locator('[data-page="calendar"]').first();
@@ -36,6 +46,7 @@ test('Calendar nav button is present', async ({ page }) => {
 });
 
 test('Calendar page has Day/Week/Month view switchers', async ({ page }) => {
+  await mockFlagState(page, { nav_v2: true });
   await page.goto(BASE_URL);
   await page.evaluate(async () => {
     if (window.flags) await window.flags.load();
