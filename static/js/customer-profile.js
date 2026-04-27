@@ -83,7 +83,7 @@
       quote_approved:['Quote Approved', 'var(--green)', '#d1fae5'],
       quote_sent:    ['Quote Sent', 'var(--orange)', '#fff7ed'],
       booked:        ['Booked ✓', 'var(--green)', '#d1fae5'],
-      declined:      ['Declined', 'var(--red)', '#fee2e2'],
+      declined:      ['Lost', 'var(--red)', '#fee2e2'],
       archived:      ['Archived', 'var(--text3)', 'var(--surface2)'],
       completed:     ['Completed', 'var(--green)', '#d1fae5'],
     };
@@ -116,6 +116,29 @@
 
       const initials  = avatarInitials(c.name, c.email);
       const totalBilled = fmtMoney(c.totalBilled);
+
+      // Previous Quotes: completed/declined entries that actually have a quote total
+      const prevQuotes = (c.events || []).filter(ev =>
+        ev.quoteTotal && ev.quoteTotal > 0 &&
+        (ev.status === 'completed' || ev.status === 'declined')
+      );
+      let prevQuotesHtml = '';
+      if (prevQuotes.length > 0) {
+        prevQuotesHtml = `
+          <div class="cp-timeline-hdr">Previous Quotes (${prevQuotes.length})</div>
+          <div class="cp-pq-list">
+            ${prevQuotes.map(ev => `
+              <div class="cp-pq-row" onclick="window.customerProfile.openEvent('${ev.threadId}')">
+                <div class="cp-pq-date">${fmtDate(ev.eventDate)}</div>
+                <div class="cp-pq-subject">${ev.subject || '(No subject)'}</div>
+                <div class="cp-pq-guests">${ev.guestCount ? '👥 ' + ev.guestCount : ''}</div>
+                <div class="cp-pq-total">${fmtMoney(ev.quoteTotal)}</div>
+                <div>${statusBadge(ev.status)}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
 
       let eventsHtml = '';
       if (!c.events || c.events.length === 0) {
@@ -186,6 +209,7 @@
           <div class="cp-notes-saving" id="cp-notes-status"></div>
         </div>
 
+        ${prevQuotesHtml}
         <div class="cp-timeline-hdr">Event History (${c.events.length})</div>
         ${eventsHtml}
       `;

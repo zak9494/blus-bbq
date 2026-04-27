@@ -332,10 +332,48 @@
   margin-bottom: 10px;
 }
 
+/* ── Previous Quotes ────────────────────────────────────────────────────────── */
+.cp-pq-list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.cp-pq-row {
+  display: grid;
+  grid-template-columns: 110px 1fr auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cp-pq-row:last-child { border-bottom: none; }
+.cp-pq-row:hover { background: var(--surface2); }
+.cp-pq-date {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 15px;
+  color: var(--orange);
+  white-space: nowrap;
+}
+.cp-pq-subject {
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cp-pq-guests { font-size: 11px; color: var(--text3); white-space: nowrap; }
+.cp-pq-total { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; }
+
 /* ── Mobile overrides ───────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
   .cp-stats { gap: 10px; }
   .cp-stat { padding: 10px 12px; min-width: 70px; }
   .cp-stat-val { font-size: 22px; }
   .cp-header { flex-direction: column; gap: 12px; }
+  .cp-pq-row { grid-template-columns: 90px 1fr auto; }
+  .cp-pq-guests { display: none; }
+  .cp-pq-total { font-size: 11px; color: var(--text3); }
 }
