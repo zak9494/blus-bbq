@@ -1,0 +1,9 @@
+# Postgres migrations directory.
+#
+# Migrations are managed by node-pg-migrate. Create a new migration with:
+#   npm run db:migrate:create -- short-name-of-change
+#
+# Migrations run against POSTGRES_URL_NON_POOLING (single connection,
+# stable session) per node-pg-migrate.config.json. Phase 1 ships zero
+# migrations — schema lands in Phase 2 alongside the first dual-write
+# entity (notifications).

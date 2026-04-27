@@ -159,6 +159,13 @@ const SEED_FLAGS = [
   { name: 'lost_reasons_v1',        description: 'Wave 1.5: past-event visual flag, Mark Lost modal (7-reason enum picker), Lost Reasons dashboard widget' },
   // Payment link abstraction
   { name: 'payment_links_v1',       description: 'Payment processing via provider-agnostic adapter (PAYMENT_PROVIDER=stripe|square|stub); default OFF' },
+  // Postgres migration — Phase 1 scaffolding (default OFF; Zach flips per-entity as Phases 2-6 land)
+  { name: 'pg_writes_enabled',         description: 'Master switch: when ON, entity stubs in api/_lib/data/* dual-write to Postgres (KV remains source of truth)' },
+  { name: 'pg_reads_notifications',    description: 'Cut notification reads over to Postgres (requires pg_writes_enabled and a completed backfill)' },
+  { name: 'pg_reads_deposits',         description: 'Cut deposit reads over to Postgres (requires pg_writes_enabled and a completed backfill)' },
+  { name: 'pg_reads_quotes',           description: 'Cut quote draft/template reads over to Postgres (requires pg_writes_enabled and a completed backfill)' },
+  { name: 'pg_reads_chat',             description: 'Cut chat history + approval reads over to Postgres (requires pg_writes_enabled and a completed backfill)' },
+  { name: 'pg_reads_inquiries',        description: 'Cut inquiry reads over to Postgres (requires pg_writes_enabled and a completed backfill — last entity to migrate)' },
 ];
 
 async function getFlag(name, defaultValue) {

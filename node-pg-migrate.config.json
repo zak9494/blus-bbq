@@ -1,0 +1,6 @@
+{
+  "databaseUrl": "POSTGRES_URL_NON_POOLING",
+  "migrationsTable": "pgmigrations",
+  "dir": "migrations",
+  "schema": "public"
+}

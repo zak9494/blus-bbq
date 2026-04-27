@@ -172,6 +172,15 @@ const STATIC_MODULE_FILES = [
   'api/inquiries/thread.js',
   // Wave 2 — Quote Builder: Quarter Chicken 3+ meat gate
   'static/js/qb-quarter-chicken-gate.js',
+  // Postgres migration — Phase 1 scaffolding
+  'api/_lib/db.js',
+  'api/_lib/data/_kv.js',
+  'api/_lib/data/notifications.js',
+  'api/_lib/data/deposits.js',
+  'api/_lib/data/quotes.js',
+  'api/_lib/data/chat.js',
+  'api/_lib/data/inquiries.js',
+  'api/db/health.js',
 ];
 const SECRET = process.env.SELF_MODIFY_SECRET || process.env.GITHUB_TOKEN || 'dev-fallback-secret';
 
