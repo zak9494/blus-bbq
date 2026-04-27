@@ -3,29 +3,28 @@
 // Verifies that test inquiries are filtered from default dashboard views.
 // Does NOT create real test inquiries against production KV.
 const { test, expect } = require('@playwright/test');
-const { setFlagOrSkip } = require('../helpers/flags');
+const { mockFlagState } = require('../helpers/mock-flags');
 
 const BASE_URL = process.env.SMOKE_BASE_URL || 'https://blus-bbq.vercel.app';
-const FLAG_SECRET = 'c857eb539774b63cf0b0a09303adc78d';
 
-// Ensure flag is off before tests run (guards against stale dev KV state)
-test.beforeAll(async ({ request }) => {
-  await setFlagOrSkip(request, 'test_customer_mode', false, {
-    secret: FLAG_SECRET,
-    baseUrl: BASE_URL,
-  });
-});
+// Note: previously this file used setFlagOrSkip() to flip prod KV before the
+// tests ran. That meant CI was actively writing to KV (burning quota) and
+// asserting on prod state (vulnerable to drift). The structural fix is to
+// mock /api/flags per page context — see PR #122 for the drift incident and
+// tests/helpers/mock-flags.js for the helper.
 
-test('test_customer_mode flag is present and disabled by default', async ({ request }) => {
+test('test_customer_mode flag is present in /api/flags response', async ({ request }) => {
   const res = await request.get(BASE_URL + '/api/flags');
   const body = await res.json();
   const flag = (body.flags || []).find((f) => f.name === 'test_customer_mode');
   expect(flag).toBeDefined();
-  // Default is off — test mode should not be active on a fresh deploy
-  expect(flag.enabled).toBe(false);
+  // Don't assert the enabled value — Zach may flip in prod and CI shouldn't
+  // care. UI behavior is exercised below with mockFlagState() instead.
+  expect(typeof flag.enabled).toBe('boolean');
 });
 
 test('+ Test Inquiry button is NOT visible when flag is off', async ({ page }) => {
+  await mockFlagState(page, { test_customer_mode: false });
   await page.goto(BASE_URL);
   await page.evaluate(async () => {
     if (window.flags) await window.flags.load();
@@ -37,7 +36,8 @@ test('+ Test Inquiry button is NOT visible when flag is off', async ({ page }) =
   await expect(btn).not.toBeVisible();
 });
 
-test('inquiries page does not show test- prefixed cards by default', async ({ page }) => {
+test('inquiries page does not show test- prefixed cards when flag is off', async ({ page }) => {
+  await mockFlagState(page, { test_customer_mode: false });
   await page.goto(BASE_URL);
   await page.evaluate(async () => {
     if (window.flags) await window.flags.load();
@@ -48,8 +48,6 @@ test('inquiries page does not show test- prefixed cards by default', async ({ pa
   await page.waitForTimeout(2000);
   // No card should have the TEST badge visible
   const testBadges = page.locator('.inq-card', { hasText: 'TEST' });
-  // Either zero test cards OR showTestData is off (cards are hidden)
-  // We assert count is 0 since showTestData defaults false
   expect(await testBadges.count()).toBe(0);
 });
 

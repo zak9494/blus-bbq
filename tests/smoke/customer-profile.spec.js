@@ -69,39 +69,46 @@ test('GET /api/cron/weekly-digest → 401 without cron secret', async ({ request
 });
 
 // ── Feature flags include Group 9 flags ─────────────────────────────────────
+//
+// These tests assert the flag is present in the seed list and has a boolean
+// enabled field. They INTENTIONALLY do not assert the enabled value — Zach
+// flips these in prod KV and the seed default may diverge, so pinning to a
+// specific value puts CI hostage to prod state (the same drift class that
+// killed PR #122). UI behavior gated on each flag is verified separately
+// using mockFlagState() in the spec for that feature.
 
-test('GET /api/flags includes customer_profile_v2 flag (currently ON)', async ({ request }) => {
+test('GET /api/flags includes customer_profile_v2 flag', async ({ request }) => {
   const res = await request.get(`${BASE_URL}/api/flags`);
   expect(res.status()).toBe(200);
   const body = await res.json();
   const flag = (body.flags || []).find(f => f.name === 'customer_profile_v2');
   expect(flag).toBeTruthy();
-  expect(flag.enabled).toBe(true);
+  expect(typeof flag.enabled).toBe('boolean');
 });
 
-test('GET /api/flags includes quote_templates flag (default off)', async ({ request }) => {
+test('GET /api/flags includes quote_templates flag', async ({ request }) => {
   const res = await request.get(`${BASE_URL}/api/flags`);
   expect(res.status()).toBe(200);
   const body = await res.json();
   const flag = (body.flags || []).find(f => f.name === 'quote_templates');
   expect(flag).toBeTruthy();
-  expect(flag.enabled).toBe(false);
+  expect(typeof flag.enabled).toBe('boolean');
 });
 
-test('GET /api/flags includes overdue_widget flag (default off)', async ({ request }) => {
+test('GET /api/flags includes overdue_widget flag', async ({ request }) => {
   const res = await request.get(`${BASE_URL}/api/flags`);
   expect(res.status()).toBe(200);
   const body = await res.json();
   const flag = (body.flags || []).find(f => f.name === 'overdue_widget');
   expect(flag).toBeTruthy();
-  expect(flag.enabled).toBe(false);
+  expect(typeof flag.enabled).toBe('boolean');
 });
 
-test('GET /api/flags includes weekly_digest flag (default off)', async ({ request }) => {
+test('GET /api/flags includes weekly_digest flag', async ({ request }) => {
   const res = await request.get(`${BASE_URL}/api/flags`);
   expect(res.status()).toBe(200);
   const body = await res.json();
   const flag = (body.flags || []).find(f => f.name === 'weekly_digest');
   expect(flag).toBeTruthy();
-  expect(flag.enabled).toBe(false);
+  expect(typeof flag.enabled).toBe('boolean');
 });
