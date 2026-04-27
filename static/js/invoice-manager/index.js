@@ -17,6 +17,11 @@
   function fmt(n)  { return '$' + Number(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
   function esc(s)  { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function qs(sel) { return document.querySelector(sel); }
+  function _toDateStr(d) {
+    if (!d) return '';
+    var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dy=String(d.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+dy;
+  }
   function qsa(sel){ return Array.from(document.querySelectorAll(sel)); }
 
   /* ─── payment method definitions ──────────────────────── */
@@ -208,15 +213,18 @@
   ════════════════════════════════════════════════════════ */
   var ALL_STATUSES  = ['draft','sent','partial','paid','past_due','void','refunded'];
   var ALL_SERVICES  = ['pickup','delivery','full_service','catering'];
+  var _invDpPicker  = null;
 
   function invRenderFilters() {
     var el = qs('#inv-filters-row');
     if (!el) return;
     el.innerHTML =
-      '<div class="inv-filter-group">' +
-        '<label>From <input type="date" id="inv-f-from" value="' + esc(inv.filterFrom) + '" onchange="window.invoiceMgr._filterDate()"></label>' +
-        '<label>To <input type="date" id="inv-f-to" value="' + esc(inv.filterTo) + '" onchange="window.invoiceMgr._filterDate()"></label>' +
-      '</div>' +
+      (window.DatePickerV2 && window.flags && window.flags.isEnabled('date_picker_v2')
+        ? '<div class="inv-filter-group"><div id="inv-dp-container"></div></div>'
+        : '<div class="inv-filter-group">' +
+            '<label>From <input type="date" id="inv-f-from" value="' + esc(inv.filterFrom) + '" onchange="window.invoiceMgr._filterDate()"></label>' +
+            '<label>To <input type="date" id="inv-f-to" value="' + esc(inv.filterTo) + '" onchange="window.invoiceMgr._filterDate()"></label>' +
+          '</div>') +
       '<div class="inv-filter-group">' +
         '<div class="inv-filter-label">Status</div>' +
         '<div class="inv-multiselect" id="inv-f-status">' +
@@ -251,6 +259,22 @@
           '<input type="checkbox" ' + (inv.pastDueOnly?'checked':'') + ' onchange="window.invoiceMgr._filterToggle(\'pastdue\',this.checked)"> Past due only</label>' +
       '</div>' +
       '<button class="inv-filter-reset" onclick="window.invoiceMgr._resetFilters()">Reset</button>';
+    if (window.DatePickerV2 && window.flags && window.flags.isEnabled('date_picker_v2')) {
+      if (_invDpPicker) { _invDpPicker.destroy(); _invDpPicker = null; }
+      var dpCont = qs('#inv-dp-container');
+      if (dpCont) {
+        _invDpPicker = window.DatePickerV2.create({
+          container: dpCont,
+          presets: ['today','yesterday','this_week','last_week','last_7_days','this_month'],
+          onChange: function (range) {
+            inv.filterFrom = _toDateStr(range.start);
+            inv.filterTo   = _toDateStr(range.end);
+            inv.offset = 0; invLoad();
+          }
+        });
+        _invDpPicker.mount();
+      }
+    }
   }
 
   function _filterDate() {
@@ -288,6 +312,7 @@
     inv.offset = 0; invLoad(); invRenderFilters();
   }
   function _resetFilters() {
+    if (_invDpPicker) { _invDpPicker.destroy(); _invDpPicker = null; }
     inv.filterFrom = ''; inv.filterTo = '';
     inv.filterStatus = []; inv.filterService = [];
     inv.filterMin = ''; inv.filterMax = '';
