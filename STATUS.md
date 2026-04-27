@@ -1,16 +1,15 @@
 # Blu's BBQ — Status
 
-_Updated: 2026-04-27T00:12Z (manual refresh — new tasks spawned; auto-update PR #110 still blocked by smoke wall)_
+_Updated: 2026-04-27T00:41Z (manual refresh — new tasks spawned; auto-update PR #110 still blocked by smoke wall)_
 
 ## Right now (max 5)
-[████░░░░░░] 40%  Editable inquiry notes (PR #115) — running.
-[██████░░░░] 60%  Smoke hardening (PR #113) — admin-merge cascade in flight.
-[█░░░░░░░░░] 10%  Advance follow-up calendar UI — just spawned.
+[████░░░░░░] 40%  Inquiry notes editor (PR #115) — running.
+[██░░░░░░░░] 20%  Advance follow-up calendar UI (PR #118) — running.
+[█░░░░░░░░░] 10%  Post Catering Emails subsection — just spawned (no PR yet).
 
 ## Need your call (max 3)
-- **🚧 Smoke STILL failing post-quota-reset on PR #115** — worth investigating whether Upstash quota actually reset at 00:00 UTC or if a different limit is in play (monthly plan? per-key cap? rate-limit floor?). The daily reset was supposed to clear the 500K wall but smoke is still red.
-- **🚧 Upstash KV quota** (original wall) — was 500K/500K daily; theoretically reset at 00:00 UTC (~12 min ago). PAYG upgrade ($10/mo) remains the immediate-unblock option if the reset didn't take.
-- **📖 Review PR #108 (Postgres migration plan)** when you have time — unblocks migration phase 1 (`api/_lib/db.js` scaffolding).
+- **🚧 Smoke STILL failing post-quota-reset** — worth investigating the quota nature. 00:00 UTC daily reset was supposed to clear the 500K wall but smoke is still red. Possibilities: monthly cap, per-key limit, rate-limit floor, or the daily reset didn't actually fire. PAYG upgrade ($10/mo) remains the immediate-unblock option.
+- **📖 Review PR #108 (Postgres migration plan)** when ready — unblocks migration phase 1 (`api/_lib/db.js` scaffolding).
 
 ## Your todo (action when ready)
 
@@ -67,8 +66,9 @@ _Updated: 2026-04-27T00:12Z (manual refresh — new tasks spawned; auto-update P
    #86  post-merge smoke spec + cron prompt                           ~23h ago
 
 🛠 Recently spawned / completed (no PR or PR open + blocked)
-   #115  Editable inquiry notes — running
-   Advance follow-up calendar UI — just spawned (no PR yet)
+   #115  Inquiry notes editor — running
+   #118  Advance follow-up calendar UI — running
+   Post Catering Emails subsection — just spawned (no PR yet)
    #113  Smoke hardening — admin-merge cascade in flight
    #108  Postgres migration plan — scoping doc, opened on `docs/postgres-migration-plan-v2`
    #110  Auto-update STATUS.md GH Action — opened, blocked by smoke wall
@@ -77,10 +77,13 @@ _Updated: 2026-04-27T00:12Z (manual refresh — new tasks spawned; auto-update P
    #109  Post-restart recovery runbook — open, blocked by smoke wall
 
 ## Up next in queue (max 5)
-1. Post Catering Emails subsection                → Wave 3
-2. Dessert email → approval queue routing         → Wave 3
-3. Migration phase 1 — `api/_lib/db.js` scaffolding → gated on PR #108 review
-4. PR #94 rebase                                  → after smoke wall unblocks
+1. Dessert email → approval queue routing         → Wave 3 (last NOT-STARTED item)
+
+## Gated waiting
+- Migration phase 1 — `api/_lib/db.js` scaffolding  → pending PR #108 review
+- PR #94 rebase                                     → pending smoke-stable
+- Tier 1 flag flips                                 → pending smoke-stable
+- Wave 4 external-creds items                       → pending Mapbox / Sentry / Twilio / Stripe creds (see Your todo)
 
 ## Discussed, not queued (max 10)
 - AI phone ordering          (SaaS scope)
