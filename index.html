@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="/static/css/notifications.css">
 <link rel="stylesheet" href="/static/css/kanban.css">
 <link rel="stylesheet" href="/static/css/notifications-panel.css">
+<link rel="stylesheet" href="/static/css/advance-followup.css">
 <link rel="stylesheet" href="/static/css/event-day.css">
 <link rel="stylesheet" href="/static/css/nav-v2.css">
 <link rel="stylesheet" href="/static/css/completed-orders.css">
@@ -595,6 +596,7 @@ if (typeof marked !== 'undefined') {
     <div class="nav-item" onclick="showPage('quotes')"><span class="nav-dot dot-amber"></span>Quote Builder</div>
     <div class="nav-item" onclick="showPage('inquiries')"><span class="nav-dot dot-blue"></span>Inquiries <span class="notif-badge" id="inq-badge" style="display:none">0</span></div>
     <div class="nav-item" onclick="showPage('calendar');calInit()"><span class="nav-dot dot-green"></span>Calendar</div>
+    <div class="nav-item" id="nav-advance-followup" style="display:none" onclick="showPage('advance-followup')"><span class="nav-dot dot-amber"></span>Advance Follow-up</div>
     <div class="nav-item" id="nav-today" style="display:none" onclick="showPage('today')"><span class="nav-dot dot-orange"></span>Today's Gigs</div>
     <div class="nav-item" id="nav-customers" onclick="showPage('customer')" style="display:none"><span class="nav-dot dot-amber"></span>Customers</div>
     <div class="nav-item" id="nav-invoices" onclick="showPage('invoices')" style="display:none"><span class="nav-dot dot-green"></span>Invoices</div>
@@ -1423,6 +1425,21 @@ if (typeof marked !== 'undefined') {
       </div>
     </div><!-- /page-calendar -->
 
+    <!-- ADVANCE FOLLOW-UP CALENDAR (advance_followup_v1) -->
+    <div id="page-advance-followup" class="page">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div>
+            <div class="topbar-title">Advance Follow-up</div>
+            <div class="topbar-sub">Far-future bookings — set a follow-up date for events more than 30 days out</div>
+          </div>
+        </div>
+      </div>
+      <div class="af-page-content">
+        <div id="af-page-body"><div class="af-empty">Loading…</div></div>
+      </div>
+    </div><!-- /page-advance-followup -->
+
     <!-- COMING SOON PAGES -->
     <div id="page-invoices" class="page">
       <div class="inv-topbar topbar">
@@ -1921,6 +1938,8 @@ if (typeof marked !== 'undefined') {
 <script src="/static/js/notification-settings.js"></script>
 <!-- Wave 4: Maps -->
 <script src="/static/js/maps/mapbox-distance.js"></script>
+<!-- Wave 3: Advance follow-up calendar (advance_followup_v1) -->
+<script src="/static/js/advance-followup.js"></script>
 <!-- Wave 1.5: Lost system -->
 <script src="/static/js/pipeline/mark-lost-modal.js"></script>
 <script src="/static/js/pipeline/lost-reasons-widget.js"></script>
@@ -1987,6 +2006,7 @@ function showPage(page) {
   if (page === 'notifications' && typeof notifPanelRenderPage === 'function') notifPanelRenderPage();
   if (page === 'notif-settings' && window.notifSettings) window.notifSettings.init();
   if (page === 'today') { if (typeof loadEventDayView === 'function') loadEventDayView(); }
+  if (page === 'advance-followup' && window.advanceFollowup) window.advanceFollowup.init();
   if (page === 'settings') { initLostReasonsSettings(); loadShopOriginAddress(); }
   if (page === 'invoices' && window.invoiceMgr) window.invoiceMgr.initPage();
   // customer profile is rendered on-demand by openCustomerProfile(); no init needed here
@@ -5836,6 +5856,10 @@ window.addEventListener('load', function() {
       if (prefSection) prefSection.style.display = '';
     }
     if (window.qbQuarterChickenGate) window.qbQuarterChickenGate.init();
+    if (window.flags.isEnabled('advance_followup_v1')) {
+      var navAF = document.getElementById('nav-advance-followup');
+      if (navAF) navAF.style.display = '';
+    }
   });
 });
 // focus listener removed — visibilitychange below is sufficient and avoids

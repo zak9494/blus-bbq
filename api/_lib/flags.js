@@ -159,6 +159,8 @@ const SEED_FLAGS = [
   { name: 'lost_reasons_v1',        description: 'Wave 1.5: past-event visual flag, Mark Lost modal (7-reason enum picker), Lost Reasons dashboard widget' },
   // Payment link abstraction
   { name: 'payment_links_v1',       description: 'Payment processing via provider-agnostic adapter (PAYMENT_PROVIDER=stripe|square|stub); default OFF' },
+  // Wave 3 — Advance follow-up calendar
+  { name: 'advance_followup_v1',    description: 'Far-future booking follow-up calendar surface — lists inquiries with event_date >30 days out, lets user set next_followup_at per inquiry (default OFF)' },
 ];
 
 async function getFlag(name, defaultValue) {

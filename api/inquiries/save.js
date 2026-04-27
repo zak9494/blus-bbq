@@ -151,6 +151,7 @@ async function handlePipelineSave(req, res, body) {
     last_processed_message_id:     body.last_processed_message_id     ?? existing?.last_processed_message_id     ?? null,
     message_count_at_last_process: body.message_count_at_last_process ?? existing?.message_count_at_last_process ?? 1,
     quote_total:      body.quote_total      ?? existing?.quote_total      ?? null,
+    next_followup_at: body.next_followup_at !== undefined ? body.next_followup_at : (existing?.next_followup_at ?? null),
     created_at:       existing?.created_at  ?? now,
     updated_at:       now,
     history:          Array.isArray(existing?.history) ? [...existing.history] : [],
@@ -192,6 +193,7 @@ async function handlePipelineSave(req, res, body) {
       has_unreviewed_update: record.has_unreviewed_update || false,
       email_date:      record.date || null,
       quote_total:     record.quote_total || null,
+      next_followup_at: record.next_followup_at || null,
       lost_at:         lostAt,
       updated_at:      now,
     });
